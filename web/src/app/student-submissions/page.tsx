@@ -21,6 +21,8 @@ export default function StudentSubmissionsPage() {
       setError(null);
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) {
+        setWorksheets([]);
+        setSubmissions([]);
         setError("Niet ingelogd");
         setLoading(false);
         return;
