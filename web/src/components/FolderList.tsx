@@ -51,6 +51,10 @@ export default function FolderList() {
     setEditingId(null);
     // Refresh
     const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
+      setFolders([]);
+      return;
+    }
     const { data } = await supabase
       .from("folders")
       .select("id, name, owner_id")
