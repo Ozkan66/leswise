@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./web
+        working-directory: ./  # NIET ./web
 
     steps:
       - name: Checkout code
