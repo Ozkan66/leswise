@@ -39,17 +39,26 @@ leswise/
    ```
 
 3. **Create a `.env.local` file**
-   - Add your Supabase URL and Anon Key:
+   - Copy the example file:
+     ```bash
+     cp .env.example .env.local
      ```
-     NEXT_PUBLIC_SUPABASE_URL=...
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-     ```
+   - Fill in your Supabase credentials (see [DEPLOYMENT.md](DEPLOYMENT.md) for details)
 
 4. **Start the development server**
    ```bash
    npm run dev
    ```
    The app will run at [http://localhost:3000](http://localhost:3000) by default.
+
+## Deployment
+
+This project includes automated CI/CD deployment to Vercel. See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions.
+
+### Quick Deployment Setup
+1. Configure GitHub repository secrets for Supabase and Vercel
+2. Push to `main` branch for automatic deployment
+3. Monitor deployment status in GitHub Actions
 
 ## Testing
 
