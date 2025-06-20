@@ -59,7 +59,7 @@ export default function FolderList() {
       .from("folders")
       .select("id, name, owner_id")
       .eq("owner_id", user.id);
-    setFolders(data);
+    setFolders(data || []);
   };
 
   const handleDelete = async (folder: any) => {
