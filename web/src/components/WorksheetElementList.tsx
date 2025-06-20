@@ -36,7 +36,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
             .order("position", { ascending: true });
           setElements(newData || []);
         } else {
-          setElements(data);
+          setElements(data || []);
         }
       }
       setLoading(false);
