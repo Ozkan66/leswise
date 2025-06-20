@@ -1,0 +1,2 @@
+web/.vercel
+!web/.vercel/project.json
