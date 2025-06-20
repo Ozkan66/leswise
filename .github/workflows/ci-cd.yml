@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./web  # NIET ./
+        working-directory: ./  # NIET ./
 
     steps:
       - name: Checkout code
@@ -111,10 +111,15 @@ jobs:
       - name: Show project structure
         run: ls -l
 
+      - name: echo ids
+        run: |
+          echo "ORG=$VERCEL_ORG_ID"
+          echo "PROJ=$VERCEL_PROJECT_ID"
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           vercel-args: '--prod --confirm'
-          working-directory: ./web
+          working-directory: ./
