@@ -51,6 +51,10 @@ export default function GroupList() {
     setEditingId(null);
     // Refresh
     const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
+      setGroups([]);
+      return;
+    }
     const { data } = await supabase
       .from("group_members")
       .select("group_id, groups(id, name, jumper_code, created_by), role")
