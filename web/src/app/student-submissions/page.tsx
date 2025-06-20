@@ -74,7 +74,7 @@ export default function StudentSubmissionsPage() {
     const sub = submissions.find((s) => s.worksheet_id === worksheetId);
     if (!sub) return { label: "Niet ingediend", color: "#f77", action: "submit" };
     const elems = subDetails[worksheetId] || [];
-    const verbeterd = elems.some(e => (e.feedback && e.feedback.trim() !== "") || (typeof e.score === "number" && e.score !== null));
+    const verbeterd = elems.some((e: any) => (e.feedback && e.feedback.trim() !== "") || (typeof e.score === "number" && e.score !== null));
     if (verbeterd) return { label: "Verbeterd", color: "#6f6", action: "view", submissionId: sub.id };
     return { label: "Ingediend (wacht op feedback)", color: "#7af", action: "view", submissionId: sub.id };
   };
