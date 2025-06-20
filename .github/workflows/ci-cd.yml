@@ -9,69 +9,108 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         working-directory: ./web
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
+      - name: Log start build-and-test
+        run: echo "🚀 Start build-and-test job"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: ./web/package-lock.json
-          
+
+      - name: Print Node.js version
+        run: node -v
+
       - name: Install dependencies
-        run: npm ci
-        
+        run: |
+          echo "📦 Installing dependencies"
+          npm ci
+
+      - name: List installed packages
+        run: npm list --depth=0 || true
+
       - name: Run linting
-        run: npm run lint
+        run: |
+          echo "🔎 Running lint"
+          npm run lint
         continue-on-error: true
-        
+
       - name: Run tests
-        run: npm run test
-        
+        run: |
+          echo "🧪 Running tests"
+          npm run test
+
       - name: Build application
-        run: npm run build:ci
+        run: |
+          echo "🏗️ Building app"
+          npm run build:ci
         env:
           NEXT_IGNORE_TS_ERRORS: true
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
+      - name: Log end build-and-test
+        run: echo "✅ build-and-test job finished"
+
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
+
     defaults:
       run:
         working-directory: ./web
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
+      - name: Log start deploy
+        run: echo "🚀 Start deploy job"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: ./web/package-lock.json
-          
+
+      - name: Print Node.js version
+        run: node -v
+
       - name: Install dependencies
-        run: npm ci
-        
+        run: |
+          echo "📦 Installing dependencies"
+          npm ci
+
+      - name: List installed packages
+        run: npm list --depth=0 || true
+
       - name: Build for production
-        run: npm run build:ci
+        run: |
+          echo "🏗️ Building app for production"
+          npm run build:ci
         env:
           NEXT_IGNORE_TS_ERRORS: true
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          
+
+      - name: Show Vercel CLI version
+        run: npx vercel --version
+
+      - name: Show project structure
+        run: ls -l
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
