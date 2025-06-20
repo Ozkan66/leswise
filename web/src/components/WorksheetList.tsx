@@ -24,7 +24,7 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
       if (error) {
         setWorksheets([]);
       } else {
-        setWorksheets(data);
+        setWorksheets(data || []);
       }
       setUserId(user.id);
       setLoading(false);
@@ -46,6 +46,10 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
     setEditingId(null);
     // Refresh
     const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
+      setWorksheets([]);
+      return;
+    }
     const { data } = await supabase
       .from("worksheets")
       .select("id, title, description, folder_id, owner_id")
