@@ -45,7 +45,11 @@ function WorksheetSubmissionContent() {
     const fetchSubmission = async () => {
       setLoading(true);
       const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
+      if (!user) {
+        setMySubmission(null);
+        setMySubmissionElements([]);
+        return;
+      }
       const { data: submission, error: subError } = await supabase
         .from("submissions")
         .select("id, created_at")
