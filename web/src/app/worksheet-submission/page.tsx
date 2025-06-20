@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default function WorksheetSubmissionPage() {
+function WorksheetSubmissionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const worksheetId = searchParams.get("worksheetId");
@@ -184,5 +184,13 @@ export default function WorksheetSubmissionPage() {
         <button type="submit" style={{ padding: "8px 24px" }}>Indienen</button>
       </form>
     </div>
+  );
+}
+
+export default function WorksheetSubmissionPage() {
+  return (
+    <Suspense fallback={<div>Loading worksheet...</div>}>
+      <WorksheetSubmissionContent />
+    </Suspense>
   );
 }
