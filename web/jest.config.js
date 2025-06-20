@@ -1,6 +1,4 @@
 module.exports = {
-  // Use custom Babel config for tests
-  babelConfig: './test-config/babel.config.js',
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
@@ -9,7 +7,7 @@ module.exports = {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   transform: {
-    '^.+\\.(ts|tsx)$': 'babel-jest',
+    '^.+\\.(ts|tsx)$': ['babel-jest', { configFile: './test-config/babel.config.js' }],
   },
   transformIgnorePatterns: [
     '/node_modules/(?!(react|react-dom|@testing-library|@babel|jest-.*|@types)/)'
