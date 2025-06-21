@@ -23,6 +23,18 @@ export interface GroupMember {
   joined_at: string;
 }
 
+// Extended Group with member role
+export interface GroupWithRole extends Group {
+  role: 'leader' | 'member';
+}
+
+// Supabase query result type for group_members with groups
+export interface GroupMemberWithGroup {
+  group_id: string;
+  role: 'leader' | 'member';
+  groups: Group;
+}
+
 export interface Folder {
   id: string;
   name: string;
