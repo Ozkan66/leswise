@@ -12,6 +12,7 @@ const supabase = createClient(
 function WorksheetSubmissionContent() {
   const searchParams = useSearchParams();
   const worksheetId = searchParams.get("worksheetId");
+  const anonymousCode = searchParams.get("anonymous");
   const [elements, setElements] = useState<WorksheetElement[]>([]);
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
@@ -19,29 +20,109 @@ function WorksheetSubmissionContent() {
   const [error, setError] = useState<string | null>(null);
   const [mySubmission, setMySubmission] = useState<Submission | null>(null);
   const [mySubmissionElements, setMySubmissionElements] = useState<SubmissionElement[]>([]);
+  
+  // Anonymous submission state
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [anonymousName, setAnonymousName] = useState("");
+  const [anonymousLink, setAnonymousLink] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [attemptLimitReached, setAttemptLimitReached] = useState(false);
 
   useEffect(() => {
-    if (!worksheetId) return;
-    const fetchElements = async () => {
+    if (!worksheetId && !anonymousCode) return;
+    const checkAccessAndFetchElements = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("worksheet_elements")
-        .select("id, content, max_score")
-        .eq("worksheet_id", worksheetId)
-        .order("position");
-      if (error) {
-        setError(error.message);
-      } else {
-        setElements(data || []);
+      setError(null);
+      
+      try {
+        let currentWorksheetId = worksheetId;
+        
+        // Handle anonymous access
+        if (anonymousCode) {
+          const { data: linkData, error: linkError } = await supabase
+            .from("anonymous_links")
+            .select("*, worksheets(id, title)")
+            .eq("link_code", anonymousCode)
+            .eq("is_active", true)
+            .single();
+            
+          if (linkError || !linkData) {
+            setError("Invalid or expired anonymous link");
+            setLoading(false);
+            return;
+          }
+          
+          // Check if link has expired
+          if (linkData.expires_at && new Date(linkData.expires_at) < new Date()) {
+            setError("This anonymous link has expired");
+            setLoading(false);
+            return;
+          }
+          
+          // Check attempt limits
+          if (linkData.max_attempts && linkData.attempts_used >= linkData.max_attempts) {
+            setAttemptLimitReached(true);
+            setError(`Maximum attempts (${linkData.max_attempts}) reached for this worksheet`);
+            setLoading(false);
+            return;
+          }
+          
+          setAnonymousLink(linkData);
+          setIsAnonymous(true);
+          setHasAccess(true);
+          currentWorksheetId = linkData.worksheet_id;
+        } else {
+          // Check user access for regular sharing
+          const user = (await supabase.auth.getUser()).data.user;
+          if (!user) {
+            setError("You must be logged in to access this worksheet");
+            setLoading(false);
+            return;
+          }
+          
+          // Check if user has access to this worksheet
+          const { data: hasAccessData } = await supabase
+            .rpc('user_has_worksheet_access', {
+              p_user_id: user.id,
+              p_worksheet_id: worksheetId,
+              p_required_permission: 'submit'
+            });
+            
+          if (!hasAccessData) {
+            setError("You don't have permission to access this worksheet");
+            setLoading(false);
+            return;
+          }
+          
+          setHasAccess(true);
+        }
+        
+        // Fetch worksheet elements
+        const { data, error } = await supabase
+          .from("worksheet_elements")
+          .select("id, content, max_score")
+          .eq("worksheet_id", currentWorksheetId)
+          .order("position");
+          
+        if (error) {
+          setError(error.message);
+        } else {
+          setElements(data || []);
+        }
+        
+      } catch (err: any) {
+        setError(err.message || "Failed to load worksheet");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchElements();
-  }, [worksheetId]);
+    
+    checkAccessAndFetchElements();
+  }, [worksheetId, anonymousCode]);
 
-  // Fetch latest submission for this worksheet by the logged-in user
+  // Fetch latest submission for this worksheet by the logged-in user (skip for anonymous)
   useEffect(() => {
-    if (!worksheetId) return;
+    if (!worksheetId || isAnonymous) return;
     const fetchSubmission = async () => {
       setLoading(true);
       const user = (await supabase.auth.getUser()).data.user;
@@ -73,7 +154,7 @@ function WorksheetSubmissionContent() {
       setLoading(false);
     };
     fetchSubmission();
-  }, [worksheetId, submitted]);
+  }, [worksheetId, submitted, isAnonymous]);
 
   const handleChange = (id: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -82,41 +163,111 @@ function WorksheetSubmissionContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!worksheetId) return;
-    // Validatie: alle velden moeten ingevuld zijn
+    
+    const currentWorksheetId = isAnonymous ? anonymousLink?.worksheet_id : worksheetId;
+    if (!currentWorksheetId) return;
+    
+    // Validation: all fields must be filled
     const emptyFields = elements.filter(el => !answers[el.id] || answers[el.id].trim() === "");
     if (emptyFields.length > 0) {
       setError("Vul alle vragen in voordat je indient.");
       return;
     }
+    
+    // Anonymous submission validation
+    if (isAnonymous && !anonymousName.trim()) {
+      setError("Vul je naam in om door te gaan.");
+      return;
+    }
+    
     try {
-      // 1. Maak een submission aan
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error("Niet ingelogd");
-      const { data: submission, error: subError } = await supabase
-        .from("submissions")
-        .insert({ worksheet_id: worksheetId, user_id: user.id })
-        .select()
-        .single();
-      if (subError) throw subError;
-      // 2. Per element een submission_element aanmaken
-      const answerRows = elements.map((el) => ({
-        submission_id: submission.id,
-        worksheet_element_id: el.id,
-        answer: answers[el.id] || ""
-      }));
-      const { error: elemError } = await supabase
-        .from("submission_elements")
-        .insert(answerRows);
-      if (elemError) throw elemError;
-      setSubmitted(true);
+      if (isAnonymous) {
+        // Handle anonymous submission
+        // First check and increment attempts
+        const { data: canSubmit } = await supabase
+          .rpc('check_and_increment_attempts', {
+            p_user_id: null,
+            p_worksheet_id: currentWorksheetId,
+            p_anonymous_link_id: anonymousLink.id
+          });
+          
+        if (!canSubmit) {
+          setError("Maximum attempts reached for this worksheet.");
+          return;
+        }
+        
+        // Create anonymous submission record
+        const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const { data: anonSubmission, error: anonSubError } = await supabase
+          .from("anonymous_submissions")
+          .insert({
+            anonymous_link_id: anonymousLink.id,
+            worksheet_id: currentWorksheetId,
+            participant_name: anonymousName,
+            session_id: sessionId
+          })
+          .select()
+          .single();
+          
+        if (anonSubError) throw anonSubError;
+        
+        // For now, we don't store the actual answers for anonymous submissions
+        // This could be extended if needed
+        alert(`Thank you ${anonymousName}! Your anonymous submission has been recorded.`);
+        setSubmitted(true);
+        
+      } else {
+        // Handle regular user submission
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) throw new Error("Niet ingelogd");
+        
+        // Check attempt limits for regular users
+        const { data: canSubmit } = await supabase
+          .rpc('check_and_increment_attempts', {
+            p_user_id: user.id,
+            p_worksheet_id: currentWorksheetId,
+            p_anonymous_link_id: null
+          });
+          
+        if (!canSubmit) {
+          setError("Maximum attempts reached for this worksheet.");
+          return;
+        }
+        
+        // Create submission
+        const { data: submission, error: subError } = await supabase
+          .from("submissions")
+          .insert({ worksheet_id: currentWorksheetId, user_id: user.id })
+          .select()
+          .single();
+          
+        if (subError) throw subError;
+        
+        // Create submission elements
+        const answerRows = elements.map((el) => ({
+          submission_id: submission.id,
+          worksheet_element_id: el.id,
+          answer: answers[el.id] || ""
+        }));
+        
+        const { error: elemError } = await supabase
+          .from("submission_elements")
+          .insert(answerRows);
+          
+        if (elemError) throw elemError;
+        setSubmitted(true);
+      }
+      
     } catch (err: unknown) {
       setError((err as Error).message || "Onbekende fout bij indienen");
     }
   };
 
-  if (!worksheetId) return <div>Worksheet ID ontbreekt in de URL.</div>;
+  const currentWorksheetId = isAnonymous ? anonymousLink?.worksheet_id : worksheetId;
+  if (!currentWorksheetId && !loading) return <div>Worksheet ID ontbreekt in de URL.</div>;
   if (loading) return <div>Vragen laden...</div>;
+  if (!hasAccess) return <div>{error || "You don't have access to this worksheet."}</div>;
+  if (attemptLimitReached) return <div>{error}</div>;
 
   // Student view: show submission if exists
   if (mySubmission && mySubmissionElements.length > 0) {
@@ -167,9 +318,34 @@ function WorksheetSubmissionContent() {
 
   return (
     <div style={{ maxWidth: 600, margin: "2rem auto" }}>
-      <h2>Beantwoord de vragen</h2>
+      <h2>{isAnonymous ? "Anonymous Worksheet" : "Beantwoord de vragen"}</h2>
+      {isAnonymous && anonymousLink && (
+        <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#e8f5e8', borderRadius: 4 }}>
+          <p><strong>Anonymous Access</strong></p>
+          <p>Worksheet: {anonymousLink.worksheets?.title}</p>
+          {anonymousLink.max_attempts && (
+            <p>Attempts used: {anonymousLink.attempts_used} / {anonymousLink.max_attempts}</p>
+          )}
+        </div>
+      )}
       {error && <div style={{ color: "red" }}>{error}</div>}
       <form onSubmit={handleSubmit}>
+        {isAnonymous && (
+          <div style={{ marginBottom: 24 }}>
+            <label>
+              <b>Your Name (optional but recommended):</b>
+              <br />
+              <input
+                type="text"
+                value={anonymousName}
+                onChange={(e) => setAnonymousName(e.target.value)}
+                style={{ width: "100%", padding: 8, marginTop: 8 }}
+                placeholder="Enter your name or alias"
+                required
+              />
+            </label>
+          </div>
+        )}
         {elements.map((el) => (
           <div key={el.id} style={{ marginBottom: 24 }}>
             <label>
@@ -185,7 +361,9 @@ function WorksheetSubmissionContent() {
             </label>
           </div>
         ))}
-        <button type="submit" style={{ padding: "8px 24px" }}>Indienen</button>
+        <button type="submit" style={{ padding: "8px 24px" }}>
+          {isAnonymous ? "Submit Anonymous Response" : "Indienen"}
+        </button>
       </form>
     </div>
   );
