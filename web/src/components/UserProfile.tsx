@@ -20,6 +20,21 @@ interface UserProfileData {
   profilePhotoUrl?: string;
   // 2FA settings
   twoFactorEnabled?: boolean;
+  // Personal preferences (Epic 1.4)
+  language?: string;
+  notificationSettings?: {
+    emailNotifications: boolean;
+    worksheetReminders: boolean;
+    submissionNotifications: boolean;
+    systemUpdates: boolean;
+  };
+  // Privacy settings (Epic 1.4)
+  privacySettings?: {
+    profileVisibility: 'public' | 'private' | 'institutional';
+    dataProcessingConsent: boolean;
+    marketingConsent: boolean;
+    analyticsConsent: boolean;
+  };
 }
 
 interface PasswordChangeData {
@@ -64,6 +79,21 @@ export default function UserProfile() {
         subjects: user.user_metadata?.subjects || '',
         profilePhotoUrl: user.user_metadata?.profile_photo_url || '',
         twoFactorEnabled: user.user_metadata?.two_factor_enabled || false,
+        // Personal preferences (Epic 1.4)
+        language: user.user_metadata?.language || 'nl',
+        notificationSettings: {
+          emailNotifications: user.user_metadata?.notification_email ?? true,
+          worksheetReminders: user.user_metadata?.notification_worksheets ?? true,
+          submissionNotifications: user.user_metadata?.notification_submissions ?? true,
+          systemUpdates: user.user_metadata?.notification_system ?? true,
+        },
+        // Privacy settings (Epic 1.4)
+        privacySettings: {
+          profileVisibility: user.user_metadata?.privacy_profile_visibility || 'institutional',
+          dataProcessingConsent: user.user_metadata?.privacy_data_processing ?? true,
+          marketingConsent: user.user_metadata?.privacy_marketing ?? false,
+          analyticsConsent: user.user_metadata?.privacy_analytics ?? true,
+        },
       });
       
       if (user.user_metadata?.profile_photo_url) {
@@ -76,6 +106,26 @@ export default function UserProfile() {
     setProfileData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handleNotificationChange = (field: keyof UserProfileData['notificationSettings'], value: boolean) => {
+    setProfileData(prev => ({
+      ...prev,
+      notificationSettings: {
+        ...prev.notificationSettings!,
+        [field]: value
+      }
+    }));
+  };
+
+  const handlePrivacyChange = (field: keyof UserProfileData['privacySettings'], value: string | boolean) => {
+    setProfileData(prev => ({
+      ...prev,
+      privacySettings: {
+        ...prev.privacySettings!,
+        [field]: value
+      }
     }));
   };
 
@@ -205,7 +255,7 @@ export default function UserProfile() {
     const filePath = `${userDataRes.user.id}/${photoFile.name}`;
   
     // Upload het bestand
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('profile-photos')
       .upload(filePath, photoFile);
   
@@ -254,6 +304,17 @@ export default function UserProfile() {
           subjects: profileData.subjects,
         }),
         ...(photoUrl && { profile_photo_url: photoUrl }),
+        // Personal preferences (Epic 1.4)
+        language: profileData.language,
+        notification_email: profileData.notificationSettings?.emailNotifications ?? true,
+        notification_worksheets: profileData.notificationSettings?.worksheetReminders ?? true,
+        notification_submissions: profileData.notificationSettings?.submissionNotifications ?? true,
+        notification_system: profileData.notificationSettings?.systemUpdates ?? true,
+        // Privacy settings (Epic 1.4)
+        privacy_profile_visibility: profileData.privacySettings?.profileVisibility || 'institutional',
+        privacy_data_processing: profileData.privacySettings?.dataProcessingConsent ?? true,
+        privacy_marketing: profileData.privacySettings?.marketingConsent ?? false,
+        privacy_analytics: profileData.privacySettings?.analyticsConsent ?? true,
       };
 
       const { error } = await supabase.auth.updateUser({
@@ -543,6 +604,211 @@ export default function UserProfile() {
             </div>
           </div>
         )}
+
+        {/* Personal Preferences Section (Epic 1.4) */}
+        <div style={{ marginBottom: '24px', marginTop: '32px' }}>
+          <h3>Persoonlijke Voorkeuren</h3>
+          
+          <div style={{ marginBottom: '16px' }}>
+            <label htmlFor="language">
+              Taal:
+              <select
+                id="language"
+                value={profileData.language || 'nl'}
+                onChange={(e) => handleInputChange('language', e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '8px', 
+                  marginTop: '4px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px'
+                }}
+              >
+                <option value="nl">Nederlands</option>
+                <option value="en">English</option>
+                <option value="pl">Polski</option>
+                <option value="pt">Português</option>
+                <option value="sv">Svenska</option>
+              </select>
+            </label>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <h4 style={{ marginBottom: '12px' }}>Notificatie-instellingen</h4>
+            
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={profileData.notificationSettings?.emailNotifications ?? true}
+                  onChange={(e) => handleNotificationChange('emailNotifications', e.target.checked)}
+                />
+                E-mail notificaties ontvangen
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginLeft: '24px' }}>
+                Algemene systeem berichten en updates
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={profileData.notificationSettings?.worksheetReminders ?? true}
+                  onChange={(e) => handleNotificationChange('worksheetReminders', e.target.checked)}
+                />
+                Herinneringen voor werkbladen
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginLeft: '24px' }}>
+                Herinnering bij nieuwe werkbladen en deadlines
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={profileData.notificationSettings?.submissionNotifications ?? true}
+                  onChange={(e) => handleNotificationChange('submissionNotifications', e.target.checked)}
+                />
+                Inzending notificaties
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginLeft: '24px' }}>
+                Bevestigingen en feedback over ingezonden werk
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={profileData.notificationSettings?.systemUpdates ?? true}
+                  onChange={(e) => handleNotificationChange('systemUpdates', e.target.checked)}
+                />
+                Systeem updates
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginLeft: '24px' }}>
+                Belangrijke platform updates en onderhoud berichten
+              </small>
+            </div>
+          </div>
+        </div>
+
+        {/* Privacy Settings Section (Epic 1.4) */}
+        <div style={{ marginBottom: '24px', marginTop: '32px' }}>
+          <h3>Privacy-instellingen</h3>
+          
+          <div style={{ 
+            padding: '16px', 
+            backgroundColor: '#f8f9fa', 
+            borderRadius: '6px', 
+            marginBottom: '16px',
+            border: '1px solid #e9ecef'
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', color: '#495057' }}>AVG/GDPR Compliance</h4>
+            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#6c757d' }}>
+              Je hebt volledige controle over je persoonlijke gegevens. Wijzig hieronder je privacy-voorkeuren.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label htmlFor="profileVisibility">
+              Profiel zichtbaarheid:
+              <select
+                id="profileVisibility"
+                value={profileData.privacySettings?.profileVisibility || 'institutional'}
+                onChange={(e) => handlePrivacyChange('profileVisibility', e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '8px', 
+                  marginTop: '4px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px'
+                }}
+              >
+                <option value="private">Privé (alleen jij)</option>
+                <option value="institutional">Institutioneel (binnen je school/organisatie)</option>
+                <option value="public">Openbaar (iedereen)</option>
+              </select>
+            </label>
+            <small style={{ color: '#666', fontSize: '12px' }}>
+              Bepaal wie je profiel informatie kan zien
+            </small>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <h4 style={{ marginBottom: '12px' }}>Toestemmingen voor gegevensverwerking</h4>
+            
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={profileData.privacySettings?.dataProcessingConsent ?? true}
+                  onChange={(e) => handlePrivacyChange('dataProcessingConsent', e.target.checked)}
+                />
+                Verwerking van persoonlijke gegevens (vereist)
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginLeft: '24px' }}>
+                Noodzakelijk voor het functioneren van het platform
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={profileData.privacySettings?.analyticsConsent ?? true}
+                  onChange={(e) => handlePrivacyChange('analyticsConsent', e.target.checked)}
+                />
+                Analytics en prestatie analyse
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginLeft: '24px' }}>
+                Helpt ons het platform te verbeteren (anoniem)
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={profileData.privacySettings?.marketingConsent ?? false}
+                  onChange={(e) => handlePrivacyChange('marketingConsent', e.target.checked)}
+                />
+                Marketing communicatie
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginLeft: '24px' }}>
+                E-mails over nieuwe functies en educatieve content
+              </small>
+            </div>
+          </div>
+
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: '#e3f2fd', 
+            borderRadius: '6px', 
+            border: '1px solid #bbdefb'
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', color: '#1565c0' }}>🔒 Privacy Bescherming</h4>
+            <p style={{ margin: '0', fontSize: '14px', color: '#1976d2' }}>
+              Voor leerlingen onder 16 jaar gelden extra privacybeschermingen conform AVG/GDPR. 
+              Gegevens worden minimaal verzameld en veilig opgeslagen.{' '}
+              <button
+                type="button"
+                onClick={() => window.open('/privacy-policy', '_blank')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#1565c0',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Lees ons privacybeleid
+              </button>
+            </p>
+          </div>
+        </div>
 
         <button
           type="submit"
