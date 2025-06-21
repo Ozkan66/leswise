@@ -1,125 +1,114 @@
 name: CI/CD
 
+############################################
+# 1)  Globale omgevings­variabelen         #
+############################################
+env:
+  VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}      # vereist
+  VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}     # team_…
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }} # prj_…
+  VERCEL_SCOPE:      ozkan66s-projects                # team-slug (optioneel, maar veilig)
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+########################################################
+# 2)  BUILD- & TEST-JOB  – blijft in ./web werken      #
+########################################################
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: ./web  # NIET ./
+        working-directory: ./web
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Log start build-and-test
         run: echo "🚀 Start build-and-test job"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: ./web/package-lock.json
 
-      - name: Print Node.js version
-        run: node -v
+      - run: node -v
 
       - name: Install dependencies
-        run: |
-          echo "📦 Installing dependencies"
-          npm ci
+        run: npm ci --ignore-scripts   # geen postinstall-wizard
 
-      - name: List installed packages
-        run: npm list --depth=0 || true
+      - run: npm list --depth=0 || true
 
       - name: Run linting
-        run: |
-          echo "🔎 Running lint"
-          npm run lint
+        run: npm run lint
         continue-on-error: true
 
       - name: Run tests
-        run: |
-          echo "🧪 Running tests"
-          npm run test
+        run: npm run test
 
       - name: Build application
-        run: |
-          echo "🏗️ Building app"
-          npm run build:ci
+        run: npm run build:ci
         env:
-          NEXT_IGNORE_TS_ERRORS: true
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_IGNORE_TS_ERRORS:        true
+          NEXT_PUBLIC_SUPABASE_URL:     ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY:${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      - name: Log end build-and-test
-        run: echo "✅ build-and-test job finished"
+      - run: echo "✅ build-and-test job finished"
 
+########################################################
+# 3)  DEPLOY-JOB  – bouwt nog steeds in ./web,         #
+#     maar DEPLOY draait vanuit repo-root (./)         #
+########################################################
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    defaults:
-      run:
-        working-directory: ./web
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Log start deploy
         run: echo "🚀 Start deploy job"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: ./web/package-lock.json
 
-      - name: Print Node.js version
-        run: node -v
+      - run: node -v
 
       - name: Install dependencies
-        run: |
-          echo "📦 Installing dependencies"
-          npm ci
-
-      - name: List installed packages
-        run: npm list --depth=0 || true
+        run: npm ci --ignore-scripts
+        working-directory: ./web
 
       - name: Build for production
-        run: |
-          echo "🏗️ Building app for production"
-          npm run build:ci
+        run: npm run build:ci
+        working-directory: ./web
         env:
-          NEXT_IGNORE_TS_ERRORS: true
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_IGNORE_TS_ERRORS:        true
+          NEXT_PUBLIC_SUPABASE_URL:     ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY:${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      - name: Show Vercel CLI version
-        run: npx vercel --version
-
-      - name: Show project structure
-        run: ls -l
-
-      - name: echo ids
-        run: |
-          echo "ORG=$VERCEL_ORG_ID"
-          echo "PROJ=$VERCEL_PROJECT_ID"
+      # optioneel – handigheidje voor log-controle
+      - run: npx vercel --version
+      - run: ls -l
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          vercel-args: '--prod --confirm'
-          working-directory: ./web
+          vercel-token:      ${{ env.VERCEL_TOKEN }}
+          vercel-org-id:     ${{ env.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ env.VERCEL_PROJECT_ID }}
+          scope:             ${{ env.VERCEL_SCOPE }}
+          vercel-args:       '--prod --confirm --yes'
+          working-directory: ./          # <- repo-root!
+          github-token:      ${{ secrets.GITHUB_TOKEN }}
+
+      - run: echo "🎉 Deployment finished"
