@@ -55,13 +55,10 @@ describe('AuthContext OAuth', () => {
       );
     });
 
-    // Wait for the AuthProvider to finish loading
-    await waitFor(() => {
-      expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
-    });
-
     const googleButton = screen.getByText('Sign in with Google');
-    fireEvent.click(googleButton);
+    await act(async () => {
+      fireEvent.click(googleButton);
+    });
 
     await waitFor(() => {
       expect(mockSupabase.auth.signInWithOAuth).toHaveBeenCalledWith({
@@ -104,13 +101,11 @@ describe('AuthContext OAuth', () => {
       );
     });
 
-    // Wait for the AuthProvider to finish loading
-    await waitFor(() => {
-      expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
-    });
 
     const googleButton = screen.getByText('Sign in with Google');
-    fireEvent.click(googleButton);
+    await act(async () => {
+      fireEvent.click(googleButton);
+    });
 
     await waitFor(() => {
       const call = mockSupabase.auth.signInWithOAuth.mock.calls[0];

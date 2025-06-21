@@ -23,8 +23,8 @@ export default function Home() {
         setUsers(data || []);
       }
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-      setSupabaseStatus("Fout: " + errorMessage);
+      setSupabaseStatus("Fout: " + (e as Error).message);
+
       setUsers([]);
     }
   }

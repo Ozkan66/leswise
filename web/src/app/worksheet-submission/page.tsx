@@ -1,7 +1,8 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { WorksheetElement, Submission, SubmissionElement } from "../../../types/database";
+import { WorksheetElement, Submission, SubmissionElement } from "../../types/database";
+
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -110,8 +111,7 @@ function WorksheetSubmissionContent() {
       if (elemError) throw elemError;
       setSubmitted(true);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Onbekende fout bij indienen";
-      setError(errorMessage);
+      setError((err as Error).message || "Onbekende fout bij indienen");
     }
   };
 
@@ -126,8 +126,8 @@ function WorksheetSubmissionContent() {
     // Total score
     const scored = mySubmissionElements
       .map(a => {
-        const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score.toString()) : null);
-        const max = elMap[a.worksheet_element_id]?.max_score || 1;
+        const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score) : null);
+        const max = a.worksheet_element_id ? (elMap[a.worksheet_element_id]?.max_score || 1) : 1;
         return score !== null ? { score, max } : null;
       })
       .filter(Boolean) as { score: number; max: number }[];

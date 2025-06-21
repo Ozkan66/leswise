@@ -1,3 +1,4 @@
+"use client";
 import { User } from "../types/database";
 
 export default function UserList({ users }: { users: User[] }) {

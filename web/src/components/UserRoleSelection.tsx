@@ -29,8 +29,7 @@ export default function UserRoleSelection() {
         router.push('/');
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-      setError(errorMessage);
+      setError((err as Error).message);
     }
     
     setIsLoading(false);

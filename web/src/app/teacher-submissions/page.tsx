@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { Worksheet, Submission, SubmissionElement, WorksheetElement } from "../../types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,16 +21,14 @@ export default function TeacherSubmissionsPage() {
   // Fetch worksheets owned by the teacher
   useEffect(() => {
     const fetchWorksheets = async () => {
-      setLoading(true);
       const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return setLoading(false);
+      if (!user) return;
       const { data, error } = await supabase
         .from("worksheets")
         .select("id, title")
         .eq("owner_id", user.id);
       if (error) setError(error.message);
       else setWorksheets(data || []);
-      setLoading(false);
     };
     fetchWorksheets();
   }, []);
@@ -40,7 +39,7 @@ export default function TeacherSubmissionsPage() {
     setSelectedSubmission(null); // Reset detail panel every time worksheet changes
     setAnswers([]);
     setElements([]);
-    setLoading(true);
+    
     const fetchSubmissions = async () => {
       const { data, error } = await supabase
         .from("submissions")
@@ -49,7 +48,7 @@ export default function TeacherSubmissionsPage() {
         .order("created_at", { ascending: false });
       if (error) setError(error.message);
       else setSubmissions(data || []);
-      setLoading(false);
+      
     };
     fetchSubmissions();
   }, [selectedWorksheet]);
@@ -57,7 +56,7 @@ export default function TeacherSubmissionsPage() {
   // Fetch answers for selected submission
   useEffect(() => {
     if (!selectedSubmission) return;
-    setLoading(true);
+    
     const fetchElements = async () => {
       const { data: elementsData, error: elError } = await supabase
         .from("worksheet_elements")
@@ -65,7 +64,7 @@ export default function TeacherSubmissionsPage() {
         .eq("worksheet_id", selectedWorksheet);
       if (elError) setError(elError.message);
       else setElements(elementsData || []);
-      setLoading(false);
+      
     };
     fetchElements();
   }, [selectedSubmission, selectedWorksheet]);
@@ -75,7 +74,6 @@ export default function TeacherSubmissionsPage() {
   useEffect(() => {
     setAnswers([]);
     if (!selectedSubmission) return;
-    setLoading(true);
     const fetchAnswers = async () => {
       const { data, error } = await supabase
         .from("submission_elements")
@@ -83,7 +81,7 @@ export default function TeacherSubmissionsPage() {
         .eq("submission_id", selectedSubmission.id);
       if (error) setError(error.message);
       else setAnswers(data || []);
-      setLoading(false);
+      
     };
     fetchAnswers();
   }, [selectedSubmission, selectedWorksheet]);
@@ -147,7 +145,7 @@ export default function TeacherSubmissionsPage() {
             const scored = answers
               .map(a => {
                 const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score) : null);
-                const max = elMaxScores[a.worksheet_element_id] || 1;
+                const max = a.worksheet_element_id ? (elMaxScores[a.worksheet_element_id] || 1) : 1;
                 return score !== null ? { score, max } : null;
               })
               .filter(Boolean) as { score: number; max: number }[];
@@ -174,17 +172,17 @@ export default function TeacherSubmissionsPage() {
                     const form = e.target as HTMLFormElement;
                     const feedback = (form.elements.namedItem('feedback') as HTMLInputElement).value;
                     const score = (form.elements.namedItem('score') as HTMLInputElement).value;
-                    setLoading(true);
+                    
                     setError(null);
                     const { error } = await supabase
                       .from('submission_elements')
                       .update({ feedback, score: score ? parseInt(score) : null })
                       .eq('submission_id', selectedSubmission.id)
                       .eq('worksheet_element_id', el.id);
-                    setLoading(false);
+                    
                     if (error) setError(error.message);
                     else {
-                      setAnswers(answers.map(a => a.worksheet_element_id === el.id ? { ...a, feedback, score } : a));
+                      setAnswers(answers.map(a => a.worksheet_element_id === el.id ? { ...a, feedback, score: parseFloat(score) || 0 } : a));
                     }
                   }}
                   style={{ marginTop: 8 }}
