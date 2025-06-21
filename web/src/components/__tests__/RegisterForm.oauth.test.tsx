@@ -83,7 +83,16 @@ describe('RegisterForm OAuth Integration', () => {
       } 
     });
 
-    mockSignUp.mockResolvedValue({ error: null });
+    mockSignUp.mockResolvedValue({ 
+      data: { 
+        user: { 
+          id: 'test-user-id', 
+          email: 'jan@example.com',
+          email_confirmed_at: new Date().toISOString()
+        } 
+      }, 
+      error: null 
+    });
 
     render(<RegisterForm />);
 

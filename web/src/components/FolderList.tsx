@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
+import { Folder } from "../types/database";
 
 export default function FolderList() {
-  const [folders, setFolders] = useState<any[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -37,12 +38,12 @@ export default function FolderList() {
   if (loading) return <div>Loading folders...</div>;
   if (!folders.length) return <div>No folders found.</div>;
 
-  const handleEdit = (folder: any) => {
+  const handleEdit = (folder: Folder) => {
     setEditingId(folder.id);
     setEditName(folder.name);
   };
 
-  const handleEditSave = async (folder: any) => {
+  const handleEditSave = async (folder: Folder) => {
     if (!editName.trim() || editName === folder.name) {
       setEditingId(null);
       return;
@@ -62,7 +63,7 @@ export default function FolderList() {
     setFolders(data || []);
   };
 
-  const handleDelete = async (folder: any) => {
+  const handleDelete = async (folder: Folder) => {
     if (!window.confirm(`Delete folder '${folder.name}'? This cannot be undone.`)) return;
     await supabase.from("folders").delete().eq("id", folder.id);
     // Refresh

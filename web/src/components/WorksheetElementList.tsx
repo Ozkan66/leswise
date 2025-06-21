@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
+import { WorksheetElement } from "../types/database";
 
 export default function WorksheetElementList({ worksheetId }: { worksheetId: string }) {
-  const [elements, setElements] = useState<any[]>([]);
+  const [elements, setElements] = useState<WorksheetElement[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -13,7 +14,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       setLoading(true);
       const user = (await supabase.auth.getUser()).data.user;
       setUserId(user?.id || null);
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from("worksheet_elements")
         .select("id, type, content, position, worksheet_id, max_score, worksheets(owner_id)")
         .eq("worksheet_id", worksheetId)
@@ -44,12 +45,12 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     if (worksheetId) fetchElements();
   }, [worksheetId]);
 
-  const handleEdit = (el: any) => {
+  const handleEdit = (el: WorksheetElement) => {
     setEditingId(el.id);
     setEditText(el.type === "text" ? JSON.parse(el.content).text : "");
   };
 
-  const handleEditSave = async (el: any) => {
+  const handleEditSave = async (el: WorksheetElement) => {
     if (!editText.trim() || (el.type === "text" && editText === JSON.parse(el.content).text)) {
       setEditingId(null);
       return;
@@ -68,7 +69,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     setElements(data || []);
   };
 
-  const handleDelete = async (el: any) => {
+  const handleDelete = async (el: WorksheetElement) => {
     if (!window.confirm(`Delete element? This cannot be undone.`)) return;
     const { error: deleteError } = await supabase.from("worksheet_elements").delete().eq("id", el.id);
     if (deleteError) {
@@ -77,7 +78,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       return;
     }
     // Refresh from backend after delete
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from("worksheet_elements")
       .select("id, type, content, position, worksheet_id, worksheets(owner_id)")
       .eq("worksheet_id", worksheetId)
@@ -87,14 +88,14 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       console.error("Supabase fetch error:", error);
       return;
     }
-    data = data || [];
+    const elements = data || [];
     // Renumber positions
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].position !== i + 1) {
+    for (let i = 0; i < elements.length; i++) {
+      if (elements[i].position !== i + 1) {
         const { error: updateError } = await supabase
           .from("worksheet_elements")
           .update({ position: i + 1 })
-          .eq("id", data[i].id);
+          .eq("id", elements[i].id);
         if (updateError) {
           alert("Position update failed: " + updateError.message);
           console.error("Supabase update error:", updateError);
