@@ -14,7 +14,7 @@ interface SecurityEventDetails {
   method?: string;
   provider?: string;
   error_message?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SecurityEvent {
@@ -34,7 +34,7 @@ export async function logSecurityEvent(
   userAgent?: string
 ): Promise<void> {
   try {
-    const { data, error } = await supabase.rpc('log_security_event', {
+    const { error } = await supabase.rpc('log_security_event', {
       p_user_id: event.user_id || null,
       p_event_type: event.event_type,
       p_event_details: event.event_details || null,

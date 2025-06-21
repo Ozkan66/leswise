@@ -1,12 +1,19 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
+
+interface SecurityEventDetails {
+  method?: string;
+  provider?: string;
+  error_message?: string;
+  [key: string]: unknown;
+}
 
 interface SecurityLog {
   id: number;
   event_type: string;
-  event_details: any;
+  event_details: SecurityEventDetails | null;
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
@@ -18,15 +25,7 @@ export default function SecurityLogs() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchSecurityLogs();
-    } else {
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  const fetchSecurityLogs = async () => {
+  const fetchSecurityLogs = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -47,7 +46,15 @@ export default function SecurityLogs() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchSecurityLogs();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user, fetchSecurityLogs]);
 
   const formatEventType = (eventType: string): string => {
     return eventType
