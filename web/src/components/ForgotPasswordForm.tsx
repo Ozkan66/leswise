@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { logPasswordResetRequested } from '../utils/securityLogger';
 import Link from 'next/link';
 
 export default function ForgotPasswordForm() {
@@ -23,6 +24,8 @@ export default function ForgotPasswordForm() {
         setError(error.message);
       } else {
         setSuccess(true);
+        // Log security event
+        await logPasswordResetRequested(email);
       }
     } catch (err: unknown) {
       setError((err as Error).message);

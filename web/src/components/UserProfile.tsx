@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
+import { logPasswordChanged } from '../utils/securityLogger';
 
 interface UserProfileData {
   firstName: string;
@@ -149,6 +150,9 @@ export default function UserProfile() {
           confirmPassword: ''
         });
         setShowPasswordForm(false);
+        
+        // Log security event
+        await logPasswordChanged(user.id);
       }
     } catch (err: unknown) {
       setPasswordError((err as Error).message);
