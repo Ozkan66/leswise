@@ -122,6 +122,12 @@ export default function LoginForm() {
         >
           {isLoading ? 'Inloggen...' : 'Inloggen'}
         </button>
+
+        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+          <Link href="/forgot-password" style={{ color: '#0070f3', textDecoration: 'underline', fontSize: '14px' }}>
+            Wachtwoord vergeten?
+          </Link>
+        </div>
       </form>
 
       <div style={{ textAlign: 'center', marginBottom: '20px' }}>
