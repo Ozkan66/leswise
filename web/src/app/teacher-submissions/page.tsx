@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Worksheet, Submission, SubmissionElement } from "../../types/database";
+import { Worksheet, Submission, SubmissionElement, WorksheetElement } from "../../types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,7 +13,7 @@ export default function TeacherSubmissionsPage() {
   const [selectedWorksheet, setSelectedWorksheet] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [elements, setElements] = useState<SubmissionElement[]>([]);
+  const [elements, setElements] = useState<WorksheetElement[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch worksheets owned by the teacher
@@ -143,7 +143,7 @@ export default function TeacherSubmissionsPage() {
             const scored = answers
               .map(a => {
                 const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score) : null);
-                const max = elMaxScores[a.worksheet_element_id] || 1;
+                const max = a.worksheet_element_id ? (elMaxScores[a.worksheet_element_id] || 1) : 1;
                 return score !== null ? { score, max } : null;
               })
               .filter(Boolean) as { score: number; max: number }[];
@@ -180,7 +180,7 @@ export default function TeacherSubmissionsPage() {
                     
                     if (error) setError(error.message);
                     else {
-                      setAnswers(answers.map(a => a.worksheet_element_id === el.id ? { ...a, feedback, score } : a));
+                      setAnswers(answers.map(a => a.worksheet_element_id === el.id ? { ...a, feedback, score: parseFloat(score) || 0 } : a));
                     }
                   }}
                   style={{ marginTop: 8 }}

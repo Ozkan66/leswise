@@ -88,14 +88,14 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       console.error("Supabase fetch error:", error);
       return;
     }
-    data = data || [];
+    const elements = data || [];
     // Renumber positions
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].position !== i + 1) {
+    for (let i = 0; i < elements.length; i++) {
+      if (elements[i].position !== i + 1) {
         const { error: updateError } = await supabase
           .from("worksheet_elements")
           .update({ position: i + 1 })
-          .eq("id", data[i].id);
+          .eq("id", elements[i].id);
         if (updateError) {
           alert("Position update failed: " + updateError.message);
           console.error("Supabase update error:", updateError);

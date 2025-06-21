@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
+import { Group } from "../types/database";
 
 export default function GroupList() {
-  const [groups, setGroups] = useState<any[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -26,9 +26,8 @@ export default function GroupList() {
       if (error || !data) {
         setGroups([]);
       } else {
-        setGroups(data.map((gm: any) => ({ ...gm.groups, role: gm.role })));
+        setGroups(data.map((gm: any) => ({ ...gm.groups, role: gm.role }))); // eslint-disable-line @typescript-eslint/no-explicit-any
       }
-      setUserId(user.id);
       setLoading(false);
     };
     fetchGroups();
@@ -37,12 +36,12 @@ export default function GroupList() {
   if (loading) return <div>Loading groups...</div>;
   if (!groups.length) return <div>No groups found.</div>;
 
-  const handleEdit = (group: any) => {
+  const handleEdit = (group: Group) => {
     setEditingId(group.id);
     setEditName(group.name);
   };
 
-  const handleEditSave = async (group: any) => {
+  const handleEditSave = async (group: Group) => {
     if (!editName.trim() || editName === group.name) {
       setEditingId(null);
       return;
@@ -60,13 +59,13 @@ export default function GroupList() {
       .select("group_id, groups(id, name, jumper_code, created_by), role")
       .eq("user_id", user.id);
     if (data) {
-      setGroups(data.map((gm: any) => ({ ...gm.groups, role: gm.role })));
+      setGroups(data.map((gm: any) => ({ ...gm.groups, role: gm.role }))); // eslint-disable-line @typescript-eslint/no-explicit-any
     } else {
       setGroups([]);
     }
   };
 
-  const handleDelete = async (group: any) => {
+  const handleDelete = async (group: Group) => {
     if (!window.confirm(`Delete group '${group.name}'? This cannot be undone.`)) return;
     await supabase.from("groups").delete().eq("id", group.id);
     // Refresh
@@ -77,7 +76,7 @@ export default function GroupList() {
     <div>
       <h2>Your Groups</h2>
       <ul>
-        {groups.map((group, idx) => (
+        {groups.map((group) => (
           <li key={group.id}>
             {editingId === group.id ? (
               <>

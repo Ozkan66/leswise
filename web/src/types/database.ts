@@ -15,34 +15,41 @@ export interface Worksheet {
   title: string;
   description?: string;
   folder_id?: string;
-  owner_id: string;
+  owner_id?: string;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface WorksheetElement {
   id: string;
-  worksheet_id: string;
+  worksheet_id?: string;
   content: string;
-  position: number;
+  position?: number;
   type?: string;
   max_score?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  worksheets?: any; // For joins 
   created_at?: string;
   updated_at?: string;
 }
 
 export interface Submission {
   id: string;
-  worksheet_id: string;
-  user_id: string;
+  worksheet_id?: string;
+  user_id?: string;
   created_at: string;
   updated_at?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  users?: any; // For joins - flexible to handle different query structures
+  feedback?: string;
+  score?: number;
 }
 
 export interface SubmissionElement {
-  id: string;
-  submission_id: string;
-  worksheet_element_id: string;
+  id?: string;
+  submission_id?: string;
+  worksheet_element_id?: string;
+  content?: string;
   answer?: string;
   score?: number;
   feedback?: string;
@@ -53,7 +60,7 @@ export interface SubmissionElement {
 export interface Folder {
   id: string;
   name: string;
-  owner_id: string;
+  owner_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -62,7 +69,9 @@ export interface Group {
   id: string;
   name: string;
   description?: string;
-  owner_id: string;
+  owner_id?: string;
+  jumper_code?: string;
+  role?: string; // For joined data
   created_at?: string;
   updated_at?: string;
 }
