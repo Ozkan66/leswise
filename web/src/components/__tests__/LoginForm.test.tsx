@@ -58,4 +58,12 @@ describe('LoginForm', () => {
     expect(screen.getByText('Google')).toBeInTheDocument();
     expect(screen.getByText('Microsoft')).toBeInTheDocument();
   });
+
+  it('toont wachtwoord vergeten link', () => {
+    render(<LoginForm />);
+    
+    const forgotPasswordLink = screen.getByRole('link', { name: 'Wachtwoord vergeten?' });
+    expect(forgotPasswordLink).toBeInTheDocument();
+    expect(forgotPasswordLink).toHaveAttribute('href', '/forgot-password');
+  });
 });
