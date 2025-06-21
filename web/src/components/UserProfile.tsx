@@ -19,6 +19,12 @@ interface UserProfileData {
   profilePhotoUrl?: string;
 }
 
+interface PasswordChangeData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export default function UserProfile() {
   const { user } = useAuth();
   const [profileData, setProfileData] = useState<UserProfileData>({
@@ -32,6 +38,14 @@ export default function UserProfile() {
   const [success, setSuccess] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordData, setPasswordData] = useState<PasswordChangeData>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -58,6 +72,89 @@ export default function UserProfile() {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handlePasswordChange = (field: keyof PasswordChangeData, value: string) => {
+    setPasswordData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setPasswordError(null);
+  };
+
+  const validatePassword = (password: string): string | null => {
+    if (password.length < 8) {
+      return 'Wachtwoord moet minimaal 8 karakters lang zijn';
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      return 'Wachtwoord moet minimaal één kleine letter bevatten';
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      return 'Wachtwoord moet minimaal één hoofdletter bevatten';
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      return 'Wachtwoord moet minimaal één cijfer bevatten';
+    }
+    return null;
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsLoading(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    // Validate new password
+    const passwordValidation = validatePassword(passwordData.newPassword);
+    if (passwordValidation) {
+      setPasswordError(passwordValidation);
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if passwords match
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Nieuwe wachtwoorden komen niet overeen');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // First verify current password by trying to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: passwordData.currentPassword,
+      });
+
+      if (signInError) {
+        setPasswordError('Huidig wachtwoord is onjuist');
+        setIsLoading(false);
+        return;
+      }
+
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (updateError) {
+        setPasswordError(updateError.message);
+      } else {
+        setPasswordSuccess('Wachtwoord succesvol gewijzigd!');
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setShowPasswordForm(false);
+      }
+    } catch (err: unknown) {
+      setPasswordError((err as Error).message);
+    }
+
+    setIsLoading(false);
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -458,6 +555,157 @@ export default function UserProfile() {
           {isLoading ? 'Opslaan...' : 'Profiel Opslaan'}
         </button>
       </form>
+
+      {/* Password Change Section - Separate form to avoid nesting */}
+      <div style={{ marginBottom: '24px', marginTop: '32px' }}>
+        <h3>Wachtwoord</h3>
+        
+        {passwordSuccess && (
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: '#efe', 
+            color: '#060', 
+            borderRadius: '6px', 
+            marginBottom: '16px' 
+          }}>
+            {passwordSuccess}
+          </div>
+        )}
+
+        {!showPasswordForm ? (
+          <button
+            type="button"
+            onClick={() => setShowPasswordForm(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Wachtwoord wijzigen
+          </button>
+        ) : (
+          <form onSubmit={handlePasswordSubmit} style={{ border: '1px solid #ddd', padding: '16px', borderRadius: '6px' }}>
+            {passwordError && (
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#fee', 
+                color: '#c00', 
+                borderRadius: '6px', 
+                marginBottom: '16px' 
+              }}>
+                {passwordError}
+              </div>
+            )}
+
+            <div style={{ marginBottom: '16px' }}>
+              <label htmlFor="currentPassword">
+                Huidig wachtwoord:
+                <input
+                  id="currentPassword"
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                  required
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    marginTop: '4px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                />
+              </label>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label htmlFor="newPassword">
+                Nieuw wachtwoord:
+                <input
+                  id="newPassword"
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                  required
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    marginTop: '4px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                />
+              </label>
+              <small style={{ color: '#666', fontSize: '12px' }}>
+                Minimaal 8 tekens, met hoofdletter, kleine letter en cijfer
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label htmlFor="confirmPassword">
+                Bevestig nieuw wachtwoord:
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                  required
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    marginTop: '4px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="submit"
+                disabled={isLoading}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1
+                }}
+              >
+                {isLoading ? 'Wijzigen...' : 'Wachtwoord wijzigen'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setPasswordData({
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                  });
+                  setPasswordError(null);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Annuleren
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
 
       <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
         <h4 style={{ margin: '0 0 8px 0', color: '#666' }}>Privacy & Gegevensverwerking</h4>
