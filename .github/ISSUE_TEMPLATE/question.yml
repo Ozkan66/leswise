@@ -1,0 +1,82 @@
+name: Vraag of Discussie
+description: Stel een vraag of start een discussie
+title: "[VRAAG] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Heb je een vraag over Leswise of wil je iets bespreken? Je bent op de juiste plek!
+
+  - type: textarea
+    id: vraag
+    attributes:
+      label: Je vraag
+      description: Wat wil je weten of bespreken?
+      placeholder: Ik heb een vraag over...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: categorie
+    attributes:
+      label: Categorie
+      description: Waar gaat je vraag over?
+      options:
+        - Gebruik van Leswise
+        - Technische ondersteuning
+        - Functies en mogelijkheden  
+        - Account en instellingen
+        - Samenwerking en feedback
+        - Andere
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Geef wat achtergrondinfo over je situatie
+      placeholder: Ik probeer... / Ik werk aan... / Ik zou graag...
+    validations:
+      required: false
+
+  - type: textarea
+    id: geprobeerd
+    attributes:
+      label: Wat heb je al geprobeerd?
+      description: Welke stappen heb je al ondernomen?
+      placeholder: Ik heb al geprobeerd om...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: gebruikerstype
+    attributes:
+      label: Gebruikerstype
+      description: Ben je docent of leerling?
+      options:
+        - Docent
+        - Leerling
+        - Andere
+        - Geen voorkeur om te delen
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Als het helpt, voeg screenshots toe
+      placeholder: Sleep hier je afbeeldingen naartoe...
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra-info
+    attributes:
+      label: Extra informatie
+      description: Is er nog iets anders dat we moeten weten?
+      placeholder: Andere relevante informatie...
+    validations:
+      required: false

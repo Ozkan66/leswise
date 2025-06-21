@@ -1,0 +1,102 @@
+name: Bug Report
+description: Meld een bug of probleem in Leswise
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bedankt voor het melden van een bug! Vul zoveel mogelijk velden in om ons te helpen het probleem op te lossen.
+
+  - type: textarea
+    id: beschrijving
+    attributes:
+      label: Beschrijving van het probleem
+      description: Beschrijf het probleem dat je hebt ondervonden
+      placeholder: Vertel ons wat er mis ging...
+    validations:
+      required: true
+
+  - type: textarea
+    id: stappen
+    attributes:
+      label: Stappen om het probleem te reproduceren
+      description: Welke stappen moet je nemen om dit probleem opnieuw te laten optreden?
+      placeholder: |
+        1. Ga naar...
+        2. Klik op...
+        3. Scroll naar beneden naar...
+        4. Zie fout
+    validations:
+      required: true
+
+  - type: textarea
+    id: verwacht-gedrag
+    attributes:
+      label: Verwacht gedrag
+      description: Wat verwachtte je dat er zou gebeuren?
+      placeholder: Vertel ons wat je verwachtte...
+    validations:
+      required: true
+
+  - type: textarea
+    id: werkelijk-gedrag
+    attributes:
+      label: Werkelijk gedrag
+      description: Wat gebeurde er in plaats daarvan?
+      placeholder: Vertel ons wat er werkelijk gebeurde...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      description: In welke browser deed dit probleem zich voor?
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Andere
+    validations:
+      required: false
+
+  - type: input
+    id: browser-versie
+    attributes:
+      label: Browser versie
+      description: Welke versie van je browser gebruik je?
+      placeholder: b.v. 91.0.4472.124
+    validations:
+      required: false
+
+  - type: dropdown
+    id: apparaat
+    attributes:
+      label: Apparaat
+      description: Op wat voor apparaat deed dit probleem zich voor?
+      options:
+        - Desktop
+        - Tablet
+        - Mobiel
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots of video's
+      description: Als van toepassing, voeg screenshots of video's toe om het probleem te verduidelijken
+      placeholder: Sleep hier je afbeeldingen of video's naartoe...
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra-context
+    attributes:
+      label: Extra context
+      description: Voeg hier eventuele andere context over het probleem toe
+      placeholder: Andere relevante informatie...
+    validations:
+      required: false
