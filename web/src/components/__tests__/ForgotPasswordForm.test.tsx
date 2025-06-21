@@ -3,12 +3,30 @@ import '@testing-library/jest-dom';
 import ForgotPasswordForm from '../ForgotPasswordForm';
 import { supabase } from '../../utils/supabaseClient';
 
+// Custom text matcher that handles HTML-interrupted text
+const getTextMatcher = (text: string) => {
+  return (content: string, element?: Element | null) => {
+    if (!element) return false;
+    
+    // Get all text content from the element and its children
+    const hasText = (el: Element, searchText: string) => {
+      const textContent = el.textContent || '';
+      const normalizedText = textContent.replace(/\s+/g, ' ').trim().toLowerCase();
+      const normalizedSearch = searchText.replace(/\s+/g, ' ').trim().toLowerCase();
+      return normalizedText.includes(normalizedSearch);
+    };
+    
+    return hasText(element, text);
+  };
+};
+
 // Mock Supabase
 jest.mock('../../utils/supabaseClient', () => ({
   supabase: {
     auth: {
       resetPasswordForEmail: jest.fn(),
     },
+    rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
   },
 }));
 
@@ -52,7 +70,9 @@ describe('ForgotPasswordForm', () => {
     });
     
     expect(screen.getByText('E-mail verzonden!')).toBeInTheDocument();
-    expect(screen.getByText(/we hebben een e-mail.*naar.*test@example.com.*gestuurd/i)).toBeInTheDocument();
+    expect(screen.getByText(/We hebben een e-mail/i)).toBeInTheDocument();
+    expect(screen.getByText('test@example.com')).toBeInTheDocument();
+    expect(screen.getByText(/gestuurd/i)).toBeInTheDocument();
   });
 
   it('toont foutmelding bij mislukte reset', async () => {

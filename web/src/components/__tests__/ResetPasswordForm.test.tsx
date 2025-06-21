@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ResetPasswordForm from '../ResetPasswordForm';
 import { supabase } from '../../utils/supabaseClient';
@@ -9,7 +9,9 @@ jest.mock('../../utils/supabaseClient', () => ({
     auth: {
       getSession: jest.fn(),
       updateUser: jest.fn(),
+      getUser: jest.fn(),
     },
+    rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
   },
 }));
 
@@ -137,9 +139,14 @@ describe('ResetPasswordForm', () => {
       error: null 
     });
     const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
+    const mockGetUser = jest.fn().mockResolvedValue({ 
+      data: { user: { id: '123' } }, 
+      error: null 
+    });
     
     (supabase.auth.getSession as jest.Mock) = mockGetSession;
     (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
+    (supabase.auth.getUser as jest.Mock) = mockGetUser;
 
     render(<ResetPasswordForm />);
     
@@ -153,7 +160,10 @@ describe('ResetPasswordForm', () => {
     
     fireEvent.change(passwordInput, { target: { value: 'NewPass123!' } });
     fireEvent.change(confirmPasswordInput, { target: { value: 'NewPass123!' } });
-    fireEvent.click(submitButton);
+    
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
     
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({
@@ -163,7 +173,9 @@ describe('ResetPasswordForm', () => {
     });
     
     // Check if redirect is scheduled
-    jest.advanceTimersByTime(3000);
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
     expect(mockPush).toHaveBeenCalledWith('/login');
   });
 
