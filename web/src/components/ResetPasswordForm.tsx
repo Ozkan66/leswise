@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../utils/supabaseClient';
+import { logPasswordResetCompleted } from '../utils/securityLogger';
 import Link from 'next/link';
 
 function ResetPasswordFormContent() {
@@ -74,6 +75,13 @@ function ResetPasswordFormContent() {
         setError(error.message);
       } else {
         setSuccess(true);
+        
+        // Get current user to log the event
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await logPasswordResetCompleted(user.id);
+        }
+        
         // Redirect to login after 3 seconds
         setTimeout(() => {
           router.push('/login');

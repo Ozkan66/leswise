@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../utils/supabaseClient';
+import { logLoginSuccess, logLoginFailed } from '../utils/securityLogger';
 import Link from 'next/link';
 
 export default function LoginForm() {
@@ -23,9 +24,14 @@ export default function LoginForm() {
     
     if (error) {
       setError(error.message);
+      await logLoginFailed(email, 'email', undefined, error.message);
     } else {
       // Check if user needs to select role
       const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await logLoginSuccess(user.id, 'email');
+      }
+      
       if (user && !user.user_metadata?.role) {
         router.push('/role-selection');
       } else {
@@ -44,6 +50,10 @@ export default function LoginForm() {
     
     if (error) {
       setError(error.message);
+      await logLoginFailed(undefined, 'oauth', provider, error.message);
+    } else {
+      // OAuth success will be handled by the auth state change
+      // We'll log it in the AuthContext when the session is established
     }
     
     setIsLoading(false);
