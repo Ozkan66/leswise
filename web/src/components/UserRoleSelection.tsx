@@ -26,7 +26,8 @@ export default function UserRoleSelection() {
       if (error) {
         setError(error.message);
       } else {
-        router.push('/');
+        // Redirect to profile page after role selection so user can complete their profile
+        router.push('/profile');
       }
     } catch (err: unknown) {
       setError((err as Error).message);
