@@ -14,8 +14,10 @@ export interface Worksheet {
   id: string;
   title: string;
   description?: string;
+  instructions?: string;
   folder_id?: string;
   owner_id?: string;
+  status?: 'draft' | 'published';
   created_at?: string;
   updated_at?: string;
 }
