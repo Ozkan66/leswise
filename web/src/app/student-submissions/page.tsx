@@ -1,7 +1,7 @@
-"use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { Worksheet, Submission, SubmissionElement } from "../../../types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,8 +10,8 @@ const supabase = createClient(
 
 export default function StudentSubmissionsPage() {
   const router = useRouter();
-  const [worksheets, setWorksheets] = useState<any[]>([]);
-  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,11 +55,11 @@ export default function StudentSubmissionsPage() {
   }, []);
 
   // Helper to get submission status
-  const [subDetails, setSubDetails] = useState<Record<string, any>>({});
+  const [subDetails, setSubDetails] = useState<Record<string, SubmissionElement[]>>({});
   useEffect(() => {
     const fetchDetails = async () => {
       // For each submission, fetch submission_elements for feedback/score
-      const details: Record<string, any> = {};
+      const details: Record<string, SubmissionElement[]> = {};
       for (const sub of submissions) {
         const { data: elems } = await supabase
           .from("submission_elements")
@@ -76,7 +76,7 @@ export default function StudentSubmissionsPage() {
     const sub = submissions.find((s) => s.worksheet_id === worksheetId);
     if (!sub) return { label: "Niet ingediend", color: "#f77", action: "submit" };
     const elems = subDetails[worksheetId] || [];
-    const verbeterd = elems.some((e: any) => (e.feedback && e.feedback.trim() !== "") || (typeof e.score === "number" && e.score !== null));
+    const verbeterd = elems.some((e: SubmissionElement) => (e.feedback && e.feedback.trim() !== "") || (typeof e.score === "number" && e.score !== null));
     if (verbeterd) return { label: "Verbeterd", color: "#6f6", action: "view", submissionId: sub.id };
     return { label: "Ingediend (wacht op feedback)", color: "#7af", action: "view", submissionId: sub.id };
   };

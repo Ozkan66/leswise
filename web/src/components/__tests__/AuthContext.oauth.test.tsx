@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider, useAuth } from '../../contexts/AuthContext';
@@ -47,11 +47,18 @@ describe('AuthContext OAuth', () => {
       error: null
     });
 
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
+
+    // Wait for the AuthProvider to finish loading
+    await waitFor(() => {
+      expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
+    });
 
     const googleButton = screen.getByText('Sign in with Google');
     fireEvent.click(googleButton);
@@ -89,11 +96,18 @@ describe('AuthContext OAuth', () => {
   });
 
   it('should validate provider parameter', async () => {
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
+
+    // Wait for the AuthProvider to finish loading
+    await waitFor(() => {
+      expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
+    });
 
     const googleButton = screen.getByText('Sign in with Google');
     fireEvent.click(googleButton);

@@ -28,7 +28,7 @@ export default function RegisterForm() {
       setSuccess(true);
       // Check if the user needs email confirmation
       // If user is null or email_confirmed_at is null, then confirmation is needed
-      setNeedsConfirmation(!data.user || !data.user.email_confirmed_at);
+      setNeedsConfirmation(!data?.user || !data?.user?.email_confirmed_at);
     }
     
     setIsLoading(false);

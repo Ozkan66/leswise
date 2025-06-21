@@ -1,7 +1,7 @@
-"use client";
 import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { WorksheetElement, Submission, SubmissionElement } from "../../../types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,16 +9,15 @@ const supabase = createClient(
 );
 
 function WorksheetSubmissionContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const worksheetId = searchParams.get("worksheetId");
-  const [elements, setElements] = useState<any[]>([]);
+  const [elements, setElements] = useState<WorksheetElement[]>([]);
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mySubmission, setMySubmission] = useState<any | null>(null);
-  const [mySubmissionElements, setMySubmissionElements] = useState<any[]>([]);
+  const [mySubmission, setMySubmission] = useState<Submission | null>(null);
+  const [mySubmissionElements, setMySubmissionElements] = useState<SubmissionElement[]>([]);
 
   useEffect(() => {
     if (!worksheetId) return;
@@ -50,7 +49,7 @@ function WorksheetSubmissionContent() {
         setMySubmissionElements([]);
         return;
       }
-      const { data: submission, error: subError } = await supabase
+      const { data: submission } = await supabase
         .from("submissions")
         .select("id, created_at")
         .eq("worksheet_id", worksheetId)
@@ -110,8 +109,9 @@ function WorksheetSubmissionContent() {
         .insert(answerRows);
       if (elemError) throw elemError;
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || "Onbekende fout bij indienen");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Onbekende fout bij indienen";
+      setError(errorMessage);
     }
   };
 
@@ -121,12 +121,12 @@ function WorksheetSubmissionContent() {
   // Student view: show submission if exists
   if (mySubmission && mySubmissionElements.length > 0) {
     // Map: elementId -> element
-    const elMap: Record<string, any> = {};
+    const elMap: Record<string, WorksheetElement> = {};
     elements.forEach(el => { elMap[el.id] = el; });
     // Total score
     const scored = mySubmissionElements
       .map(a => {
-        const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score) : null);
+        const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score.toString()) : null);
         const max = elMap[a.worksheet_element_id]?.max_score || 1;
         return score !== null ? { score, max } : null;
       })

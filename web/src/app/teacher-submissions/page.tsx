@@ -7,13 +7,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+import { Worksheet, Submission, WorksheetElement, SubmissionElement } from "../../../types/database";
+
 export default function TeacherSubmissionsPage() {
-  const [worksheets, setWorksheets] = useState<any[]>([]);
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [selectedWorksheet, setSelectedWorksheet] = useState<string | null>(null);
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
-  const [elements, setElements] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [elements, setElements] = useState<WorksheetElement[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch worksheets owned by the teacher
@@ -70,7 +71,7 @@ export default function TeacherSubmissionsPage() {
   }, [selectedSubmission, selectedWorksheet]);
 
   // Fetch answers for selected submission
-  const [answers, setAnswers] = useState<any[]>([]);
+  const [answers, setAnswers] = useState<SubmissionElement[]>([]);
   useEffect(() => {
     setAnswers([]);
     if (!selectedSubmission) return;
