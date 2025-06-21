@@ -13,6 +13,7 @@ jest.mock('../../utils/supabaseClient', () => ({
   supabase: {
     auth: {
       updateUser: jest.fn(),
+      signInWithPassword: jest.fn(),
     },
     storage: {
       from: jest.fn(() => ({
@@ -213,5 +214,133 @@ describe('UserProfile', () => {
     
     expect(screen.getByText('Docent Informatie')).toBeInTheDocument();
     expect(screen.queryByText('Leerling Informatie')).not.toBeInTheDocument();
+  });
+
+  // Password change tests
+  it('toont wachtwoord wijzig knop', () => {
+    render(<UserProfile />);
+    
+    expect(screen.getByText('Wachtwoord')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Wachtwoord wijzigen' })).toBeInTheDocument();
+  });
+
+  it('toont wachtwoord formulier wanneer wijzig knop wordt geklikt', () => {
+    render(<UserProfile />);
+    
+    const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(changePasswordButton);
+    
+    expect(screen.getByLabelText('Huidig wachtwoord:')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nieuw wachtwoord:')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bevestig nieuw wachtwoord:')).toBeInTheDocument();
+    expect(screen.getByText('Minimaal 8 tekens, met hoofdletter, kleine letter en cijfer')).toBeInTheDocument();
+  });
+
+  it('valideert wachtwoord sterkte', async () => {
+    render(<UserProfile />);
+    
+    const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(changePasswordButton);
+    
+    const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
+    const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
+    
+    // Zwak wachtwoord testen
+    fireEvent.change(currentPasswordInput, { target: { value: 'current123' } });
+    fireEvent.change(newPasswordInput, { target: { value: 'weak' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'weak' } });
+    
+    const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(submitButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Wachtwoord moet minimaal 8 karakters lang zijn')).toBeInTheDocument();
+    });
+  });
+
+  it('valideert wachtwoord bevestiging', async () => {
+    render(<UserProfile />);
+    
+    const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(changePasswordButton);
+    
+    const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
+    const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
+    
+    fireEvent.change(currentPasswordInput, { target: { value: 'current123' } });
+    fireEvent.change(newPasswordInput, { target: { value: 'NewPass123!' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'DifferentPass123!' } });
+    
+    const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(submitButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Nieuwe wachtwoorden komen niet overeen')).toBeInTheDocument();
+    });
+  });
+
+  it('wijzigt wachtwoord succesvol', async () => {
+    const mockSignIn = jest.fn().mockResolvedValue({ error: null });
+    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
+    
+    (supabase.auth.signInWithPassword as jest.Mock) = mockSignIn;
+    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
+    
+    render(<UserProfile />);
+    
+    const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(changePasswordButton);
+    
+    const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
+    const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
+    
+    fireEvent.change(currentPasswordInput, { target: { value: 'current123' } });
+    fireEvent.change(newPasswordInput, { target: { value: 'NewPass123!' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'NewPass123!' } });
+    
+    const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(submitButton);
+    
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'current123',
+      });
+      expect(mockUpdateUser).toHaveBeenCalledWith({
+        password: 'NewPass123!'
+      });
+      expect(screen.getByText('Wachtwoord succesvol gewijzigd!')).toBeInTheDocument();
+    });
+  });
+
+  it('toont fout bij onjuist huidig wachtwoord', async () => {
+    const mockSignIn = jest.fn().mockResolvedValue({ 
+      error: { message: 'Invalid credentials' } 
+    });
+    
+    (supabase.auth.signInWithPassword as jest.Mock) = mockSignIn;
+    
+    render(<UserProfile />);
+    
+    const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(changePasswordButton);
+    
+    const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
+    const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
+    
+    fireEvent.change(currentPasswordInput, { target: { value: 'wrongpassword' } });
+    fireEvent.change(newPasswordInput, { target: { value: 'NewPass123!' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'NewPass123!' } });
+    
+    const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
+    fireEvent.click(submitButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Huidig wachtwoord is onjuist')).toBeInTheDocument();
+    });
   });
 });
