@@ -1,6 +1,7 @@
 "use client";
+import { User } from "../types/database";
 
-export default function UserList({ users }: { users: any[] }) {
+export default function UserList({ users }: { users: User[] }) {
   return (
     <div style={{margin: '16px 0', padding: '12px', background: '#f8f8ff', borderRadius: '8px'}}>
       <strong>Alle gebruikers:</strong>

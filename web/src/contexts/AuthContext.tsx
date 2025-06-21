@@ -15,7 +15,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper function to check if OAuth providers are properly configured
-const logOAuthConfigurationHint = (provider: string, error: any) => {
+const logOAuthConfigurationHint = (provider: string, error: { message?: string }) => {
   if (process.env.NODE_ENV === 'development' && error?.message?.includes('provider is not enabled')) {
     console.warn(
       `🔧 OAuth Configuration Hint: ${provider} provider appears to be disabled.\n` +

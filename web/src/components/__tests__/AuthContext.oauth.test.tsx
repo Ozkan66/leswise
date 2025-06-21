@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider, useAuth } from '../../contexts/AuthContext';
@@ -47,14 +47,18 @@ describe('AuthContext OAuth', () => {
       error: null
     });
 
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
 
     const googleButton = screen.getByText('Sign in with Google');
-    fireEvent.click(googleButton);
+    await act(async () => {
+      fireEvent.click(googleButton);
+    });
 
     await waitFor(() => {
       expect(mockSupabase.auth.signInWithOAuth).toHaveBeenCalledWith({
@@ -89,14 +93,18 @@ describe('AuthContext OAuth', () => {
   });
 
   it('should validate provider parameter', async () => {
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
 
     const googleButton = screen.getByText('Sign in with Google');
-    fireEvent.click(googleButton);
+    await act(async () => {
+      fireEvent.click(googleButton);
+    });
 
     await waitFor(() => {
       const call = mockSupabase.auth.signInWithOAuth.mock.calls[0];
