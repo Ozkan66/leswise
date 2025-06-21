@@ -205,7 +205,7 @@ export default function UserProfile() {
     const filePath = `${userDataRes.user.id}/${photoFile.name}`;
   
     // Upload het bestand
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('profile-photos')
       .upload(filePath, photoFile);
   

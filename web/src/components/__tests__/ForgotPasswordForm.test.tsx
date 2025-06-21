@@ -3,23 +3,6 @@ import '@testing-library/jest-dom';
 import ForgotPasswordForm from '../ForgotPasswordForm';
 import { supabase } from '../../utils/supabaseClient';
 
-// Custom text matcher that handles HTML-interrupted text
-const getTextMatcher = (text: string) => {
-  return (content: string, element?: Element | null) => {
-    if (!element) return false;
-    
-    // Get all text content from the element and its children
-    const hasText = (el: Element, searchText: string) => {
-      const textContent = el.textContent || '';
-      const normalizedText = textContent.replace(/\s+/g, ' ').trim().toLowerCase();
-      const normalizedSearch = searchText.replace(/\s+/g, ' ').trim().toLowerCase();
-      return normalizedText.includes(normalizedSearch);
-    };
-    
-    return hasText(element, text);
-  };
-};
-
 // Mock Supabase
 jest.mock('../../utils/supabaseClient', () => ({
   supabase: {
