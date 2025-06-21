@@ -42,8 +42,7 @@ interface PasswordChangeData {
   newPassword: string;
   confirmPassword: string;
 }
-
-// Type definitions for notification settings to avoid TypeScript 'never' type inference
+// Type definitions for notification settings to fix TypeScript 'never' issue
 type NotificationSettings = NonNullable<UserProfileData['notificationSettings']>;
 type NotificationKey = keyof NotificationSettings;
 
