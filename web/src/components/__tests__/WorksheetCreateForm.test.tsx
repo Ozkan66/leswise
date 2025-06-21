@@ -52,7 +52,8 @@ describe('WorksheetCreateForm', () => {
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
     
     expect(screen.getByPlaceholderText('Worksheet title')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Description')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Brief description (optional)')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Instructions for students (optional)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create Worksheet' })).toBeInTheDocument();
   });
 
@@ -77,7 +78,7 @@ describe('WorksheetCreateForm', () => {
     fireEvent.change(screen.getByPlaceholderText('Worksheet title'), {
       target: { value: 'Test Worksheet' }
     });
-    fireEvent.change(screen.getByPlaceholderText('Description'), {
+    fireEvent.change(screen.getByPlaceholderText('Brief description (optional)'), {
       target: { value: 'Test Description' }
     });
     
@@ -156,9 +157,11 @@ describe('WorksheetCreateForm', () => {
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
     
     await waitFor(() => {
-      const select = screen.getByRole('combobox');
-      expect(select).toBeInTheDocument();
+      const selects = screen.getAllByRole('combobox');
+      expect(selects).toHaveLength(2); // Folder and Status selects
       expect(screen.getByText('Test Folder')).toBeInTheDocument();
+      expect(screen.getByText('Folder:')).toBeInTheDocument();
+      expect(screen.getByText('Status:')).toBeInTheDocument();
     });
   });
 });
