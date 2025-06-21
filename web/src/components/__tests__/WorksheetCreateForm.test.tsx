@@ -43,7 +43,7 @@ describe('WorksheetCreateForm', () => {
           error: null
         })
       })
-    } as any);
+    });
 
     jest.clearAllMocks();
   });
@@ -69,7 +69,7 @@ describe('WorksheetCreateForm', () => {
         data: [{ id: 'worksheet-123', title: 'Test Worksheet' }],
         error: null
       })
-    } as any);
+    });
 
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
     
@@ -113,7 +113,7 @@ describe('WorksheetCreateForm', () => {
         data: null,
         error: { message: 'Failed to create worksheet' }
       })
-    } as any);
+    });
 
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
     
