@@ -343,4 +343,50 @@ describe('UserProfile', () => {
       expect(screen.getByText('Huidig wachtwoord is onjuist')).toBeInTheDocument();
     });
   });
+
+  // 2FA tests
+  it('toont 2FA sectie met status', () => {
+    render(<UserProfile />);
+    
+    expect(screen.getByText('Two-Factor Authentication (2FA)')).toBeInTheDocument();
+    expect(screen.getByText(/Status:/)).toBeInTheDocument();
+    expect(screen.getByText('Uitgeschakeld')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2FA inschakelen' })).toBeInTheDocument();
+  });
+
+  it('toont 2FA instellingen wanneer knop wordt geklikt', () => {
+    render(<UserProfile />);
+    
+    const enable2FAButton = screen.getByRole('button', { name: '2FA inschakelen' });
+    fireEvent.click(enable2FAButton);
+    
+    expect(screen.getByText('🚧 Functie in ontwikkeling')).toBeInTheDocument();
+    expect(screen.getByText(/TOTP authenticator apps/)).toBeInTheDocument();
+    expect(screen.getByText(/E-mail verificatie codes/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sluiten' })).toBeInTheDocument();
+  });
+
+  it('toont 2FA als ingeschakeld voor gebruiker met 2FA', () => {
+    const userWith2FA = {
+      ...mockUser,
+      user_metadata: {
+        ...mockUser.user_metadata,
+        two_factor_enabled: true,
+      },
+    };
+
+    mockUseAuth.mockReturnValue({
+      user: userWith2FA,
+      loading: false,
+      signUp: jest.fn(),
+      signIn: jest.fn(),
+      signInWithProvider: jest.fn(),
+      signOut: jest.fn(),
+    });
+
+    render(<UserProfile />);
+    
+    expect(screen.getByText('Ingeschakeld')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2FA uitschakelen' })).toBeInTheDocument();
+  });
 });
