@@ -89,24 +89,31 @@ export default function UserProfile() {
 
   const uploadPhoto = async (): Promise<string | null> => {
     if (!photoFile || !user) return null;
-    
-    const fileExt = photoFile.name.split('.').pop();
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    
-    const { error } = await supabase.storage
+  
+    // Haal de user op via Supabase (jouw voorbeeld)
+    const { data: userDataRes, error: userError } = await supabase.auth.getUser();
+    if (userError || !userDataRes?.user) {
+      throw new Error('Kon gebruiker niet ophalen');
+    }
+  
+    // Zet het pad op <user-id>/<bestandsnaam>
+    const filePath = `${userDataRes.user.id}/${photoFile.name}`;
+  
+    // Upload het bestand
+    const { data, error } = await supabase.storage
       .from('profile-photos')
-      .upload(fileName, photoFile);
-    
+      .upload(filePath, photoFile);
+  
     if (error) {
       throw new Error(`Foto upload mislukt: ${error.message}`);
     }
-    
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+  
+    // Haal de public URL op van het geüploade bestand
+    const { data: publicUrlData } = supabase.storage
       .from('profile-photos')
-      .getPublicUrl(fileName);
-    
-    return publicUrl;
+      .getPublicUrl(filePath);
+  
+    return publicUrlData?.publicUrl || null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
