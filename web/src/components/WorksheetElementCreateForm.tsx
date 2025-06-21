@@ -1,16 +1,53 @@
 import { useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 
-type TaskType = "text" | "multiple_choice" | "single_choice" | "short_answer" | "essay";
+type TaskType = "text" | "multiple_choice" | "single_choice" | "short_answer" | "essay" | "matching" | "ordering" | "fill_gaps";
 
 export default function WorksheetElementCreateForm({ worksheetId, onElementCreated }: { worksheetId: string, onElementCreated?: () => void }) {
   const [taskType, setTaskType] = useState<TaskType>("text");
   const [text, setText] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [correctAnswers, setCorrectAnswers] = useState<number[]>([]);
+  const [pairs, setPairs] = useState<{left: string, right: string}[]>([{left: "", right: ""}, {left: "", right: ""}]);
+  const [itemsToOrder, setItemsToOrder] = useState<string[]>(["", ""]);
+  const [gapText, setGapText] = useState("");
   const [maxScore, setMaxScore] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const addPair = () => {
+    setPairs([...pairs, {left: "", right: ""}]);
+  };
+
+  const removePair = (index: number) => {
+    if (pairs.length > 2) {
+      const newPairs = pairs.filter((_, i) => i !== index);
+      setPairs(newPairs);
+    }
+  };
+
+  const updatePair = (index: number, side: 'left' | 'right', value: string) => {
+    const newPairs = [...pairs];
+    newPairs[index][side] = value;
+    setPairs(newPairs);
+  };
+
+  const addOrderItem = () => {
+    setItemsToOrder([...itemsToOrder, ""]);
+  };
+
+  const removeOrderItem = (index: number) => {
+    if (itemsToOrder.length > 2) {
+      const newItems = itemsToOrder.filter((_, i) => i !== index);
+      setItemsToOrder(newItems);
+    }
+  };
+
+  const updateOrderItem = (index: number, value: string) => {
+    const newItems = [...itemsToOrder];
+    newItems[index] = value;
+    setItemsToOrder(newItems);
+  };
 
   const addOption = () => {
     setOptions([...options, ""]);
@@ -46,6 +83,9 @@ export default function WorksheetElementCreateForm({ worksheetId, onElementCreat
     setText("");
     setOptions(["", ""]);
     setCorrectAnswers([]);
+    setPairs([{left: "", right: ""}, {left: "", right: ""}]);
+    setItemsToOrder(["", ""]);
+    setGapText("");
     setMaxScore(1);
   };
 
@@ -63,6 +103,21 @@ export default function WorksheetElementCreateForm({ worksheetId, onElementCreat
       case "short_answer":
       case "essay":
         return { question: text };
+      case "matching":
+        return {
+          question: text,
+          pairs: pairs.filter(pair => pair.left.trim() && pair.right.trim())
+        };
+      case "ordering":
+        return {
+          question: text,
+          correctOrder: itemsToOrder.filter(item => item.trim())
+        };
+      case "fill_gaps":
+        return {
+          question: text,
+          textWithGaps: gapText
+        };
       default:
         return { text };
     }
@@ -80,6 +135,21 @@ export default function WorksheetElementCreateForm({ worksheetId, onElementCreat
       if (correctAnswers.length === 0) {
         return "Selecteer minimaal één correct antwoord.";
       }
+    }
+    if (taskType === "matching") {
+      const validPairs = pairs.filter(pair => pair.left.trim() && pair.right.trim());
+      if (validPairs.length < 2) {
+        return "Voeg minimaal 2 volledige paren toe.";
+      }
+    }
+    if (taskType === "ordering") {
+      const validItems = itemsToOrder.filter(item => item.trim());
+      if (validItems.length < 2) {
+        return "Voeg minimaal 2 items toe om te ordenen.";
+      }
+    }
+    if (taskType === "fill_gaps" && !gapText.trim()) {
+      return "Voeg tekst toe met gaten (gebruik [gap] om gaten aan te duiden).";
     }
     if (!maxScore || isNaN(Number(maxScore)) || Number(maxScore) <= 0) {
       return "Geef een geldig puntenaantal (>0) op.";
@@ -139,6 +209,9 @@ export default function WorksheetElementCreateForm({ worksheetId, onElementCreat
           <option value="single_choice">Single Choice</option>
           <option value="short_answer">Short Answer</option>
           <option value="essay">Essay</option>
+          <option value="matching">Matching Pairs</option>
+          <option value="ordering">Put in Order</option>
+          <option value="fill_gaps">Fill in the Gaps</option>
         </select>
       </div>
 
@@ -194,6 +267,104 @@ export default function WorksheetElementCreateForm({ worksheetId, onElementCreat
           </button>
           <div style={{ fontSize: '0.9em', color: '#666', marginTop: 4 }}>
             {taskType === "single_choice" ? "Select one correct answer" : "Select all correct answers"}
+          </div>
+        </div>
+      )}
+
+      {taskType === "matching" && (
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4 }}>Matching Pairs:</label>
+          {pairs.map((pair, index) => (
+            <div key={index} style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="text"
+                value={pair.left}
+                onChange={(e) => updatePair(index, 'left', e.target.value)}
+                placeholder={`Left item ${index + 1}`}
+                style={{ flex: 1, padding: 4 }}
+              />
+              <span>→</span>
+              <input
+                type="text"
+                value={pair.right}
+                onChange={(e) => updatePair(index, 'right', e.target.value)}
+                placeholder={`Right item ${index + 1}`}
+                style={{ flex: 1, padding: 4 }}
+              />
+              {pairs.length > 2 && (
+                <button 
+                  type="button" 
+                  onClick={() => removePair(index)}
+                  style={{ color: 'red', padding: '4px 8px' }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <button 
+            type="button" 
+            onClick={addPair}
+            style={{ marginTop: 8, padding: '4px 8px' }}
+          >
+            Add Pair
+          </button>
+          <div style={{ fontSize: '0.9em', color: '#666', marginTop: 4 }}>
+            Students will match items from left column to right column
+          </div>
+        </div>
+      )}
+
+      {taskType === "ordering" && (
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4 }}>Items to Order:</label>
+          {itemsToOrder.map((item, index) => (
+            <div key={index} style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+              <span style={{ marginRight: 8, minWidth: 20, textAlign: 'center', fontSize: '0.9em', color: '#666' }}>
+                {index + 1}.
+              </span>
+              <input
+                type="text"
+                value={item}
+                onChange={(e) => updateOrderItem(index, e.target.value)}
+                placeholder={`Item ${index + 1} (in correct order)`}
+                style={{ flex: 1, marginRight: 8, padding: 4 }}
+              />
+              {itemsToOrder.length > 2 && (
+                <button 
+                  type="button" 
+                  onClick={() => removeOrderItem(index)}
+                  style={{ color: 'red', padding: '4px 8px' }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <button 
+            type="button" 
+            onClick={addOrderItem}
+            style={{ marginTop: 8, padding: '4px 8px' }}
+          >
+            Add Item
+          </button>
+          <div style={{ fontSize: '0.9em', color: '#666', marginTop: 4 }}>
+            Enter items in the correct order. Students will arrange them correctly.
+          </div>
+        </div>
+      )}
+
+      {taskType === "fill_gaps" && (
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4 }}>Text with Gaps:</label>
+          <textarea
+            value={gapText}
+            onChange={(e) => setGapText(e.target.value)}
+            placeholder="Enter text with [gap] markers where students should fill in. Example: The capital of France is [gap]."
+            style={{ width: '100%', minHeight: 80, padding: 4 }}
+          />
+          <div style={{ fontSize: '0.9em', color: '#666', marginTop: 4 }}>
+            Use [gap] to mark where students should fill in answers
           </div>
         </div>
       )}

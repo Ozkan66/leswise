@@ -73,6 +73,42 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
         case "short_answer":
         case "essay":
           return <div><strong>Q:</strong> {content.question}</div>;
+        case "matching":
+          return (
+            <div>
+              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{content.question}</div>
+              <div style={{ marginLeft: 16 }}>
+                {content.pairs?.map((pair: {left: string, right: string}, index: number) => (
+                  <div key={index} style={{ marginBottom: 2 }}>
+                    <span>{pair.left}</span> → <span>{pair.right}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        case "ordering":
+          return (
+            <div>
+              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{content.question}</div>
+              <div style={{ marginLeft: 16 }}>
+                <div style={{ fontSize: '0.9em', color: '#666' }}>Correct order:</div>
+                {content.correctOrder?.map((item: string, index: number) => (
+                  <div key={index} style={{ marginBottom: 2 }}>
+                    {index + 1}. {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        case "fill_gaps":
+          return (
+            <div>
+              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{content.question}</div>
+              <div style={{ marginLeft: 16, fontFamily: 'monospace', fontSize: '0.9em' }}>
+                {content.textWithGaps?.replace(/\[gap\]/g, '___')}
+              </div>
+            </div>
+          );
         default:
           return <div>{content.text || JSON.stringify(content)}</div>;
       }
@@ -101,7 +137,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       alert("Content cannot be empty");
       return;
     }
-    if ((el.type === "multiple_choice" || el.type === "single_choice" || el.type === "short_answer" || el.type === "essay") && !editContent.question?.trim()) {
+    if ((el.type === "multiple_choice" || el.type === "single_choice" || el.type === "short_answer" || el.type === "essay" || el.type === "matching" || el.type === "ordering" || el.type === "fill_gaps") && !editContent.question?.trim()) {
       alert("Question cannot be empty");
       return;
     }
@@ -196,6 +232,106 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
               style={{ width: '100%', minHeight: 60 }}
               autoFocus
             />
+          </div>
+        );
+      case "matching":
+        return (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Question:</label>
+              <textarea
+                value={editContent.question || ""}
+                onChange={e => setEditContent({ ...editContent, question: e.target.value })}
+                style={{ width: '100%', minHeight: 40 }}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label>Pairs:</label>
+              {(editContent.pairs || []).map((pair: {left: string, right: string}, index: number) => (
+                <div key={index} style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={pair.left}
+                    onChange={e => {
+                      const newPairs = [...(editContent.pairs || [])];
+                      newPairs[index] = { ...newPairs[index], left: e.target.value };
+                      setEditContent({ ...editContent, pairs: newPairs });
+                    }}
+                    style={{ flex: 1 }}
+                    placeholder="Left item"
+                  />
+                  <span>→</span>
+                  <input
+                    type="text"
+                    value={pair.right}
+                    onChange={e => {
+                      const newPairs = [...(editContent.pairs || [])];
+                      newPairs[index] = { ...newPairs[index], right: e.target.value };
+                      setEditContent({ ...editContent, pairs: newPairs });
+                    }}
+                    style={{ flex: 1 }}
+                    placeholder="Right item"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case "ordering":
+        return (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Question:</label>
+              <textarea
+                value={editContent.question || ""}
+                onChange={e => setEditContent({ ...editContent, question: e.target.value })}
+                style={{ width: '100%', minHeight: 40 }}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label>Items (in correct order):</label>
+              {(editContent.correctOrder || []).map((item: string, index: number) => (
+                <div key={index} style={{ marginBottom: 4, display: 'flex', alignItems: 'center' }}>
+                  <span style={{ marginRight: 8, minWidth: 20, textAlign: 'center' }}>{index + 1}.</span>
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={e => {
+                      const newOrder = [...(editContent.correctOrder || [])];
+                      newOrder[index] = e.target.value;
+                      setEditContent({ ...editContent, correctOrder: newOrder });
+                    }}
+                    style={{ flex: 1 }}
+                    placeholder={`Item ${index + 1}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case "fill_gaps":
+        return (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Question:</label>
+              <textarea
+                value={editContent.question || ""}
+                onChange={e => setEditContent({ ...editContent, question: e.target.value })}
+                style={{ width: '100%', minHeight: 40 }}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label>Text with gaps (use [gap] for gaps):</label>
+              <textarea
+                value={editContent.textWithGaps || ""}
+                onChange={e => setEditContent({ ...editContent, textWithGaps: e.target.value })}
+                style={{ width: '100%', minHeight: 60 }}
+                placeholder="Enter text with [gap] markers"
+              />
+            </div>
           </div>
         );
       default:
