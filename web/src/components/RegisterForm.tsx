@@ -11,6 +11,7 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   const { signUp, signInWithProvider } = useAuth();
 
@@ -19,12 +20,15 @@ export default function RegisterForm() {
     setIsLoading(true);
     setError(null);
 
-    const { error } = await signUp(email, password, firstName, lastName);
+    const { data, error } = await signUp(email, password, firstName, lastName);
     
     if (error) {
       setError(error.message);
     } else {
       setSuccess(true);
+      // Check if the user needs email confirmation
+      // If user is null or email_confirmed_at is null, then confirmation is needed
+      setNeedsConfirmation(!data.user || !data.user.email_confirmed_at);
     }
     
     setIsLoading(false);
@@ -47,8 +51,17 @@ export default function RegisterForm() {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <h2>Registratie voltooid!</h2>
-        <p>Controleer je e-mail voor een bevestigingslink om je account te activeren.</p>
-        <p>Na het activeren van je account kun je inloggen en je rol selecteren.</p>
+        {needsConfirmation ? (
+          <>
+            <p>Controleer je e-mail voor een bevestigingslink om je account te activeren.</p>
+            <p>Na het activeren van je account kun je inloggen en je rol selecteren.</p>
+          </>
+        ) : (
+          <>
+            <p>Je account is succesvol aangemaakt en je bent automatisch ingelogd.</p>
+            <p>Je kunt nu beginnen met het gebruik van de applicatie.</p>
+          </>
+        )}
         <Link href="/login" style={{ color: '#0070f3', textDecoration: 'underline' }}>
           Ga naar inloggen
         </Link>
