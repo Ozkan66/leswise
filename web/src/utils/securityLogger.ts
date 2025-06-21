@@ -28,29 +28,26 @@ export interface SecurityEvent {
 /**
  * Log a security event to the database
  */
-type SecurityEvent = {
-  user_id?: string;
-  event_type: string;
-  event_details?: string;
-};
 
 export async function logSecurityEvent(
   event: SecurityEvent,
   userAgent?: string
 ): Promise<void> {
-  const { data, error } = await supabase.functions.invoke('log_security_event', {
-    body: {
+  try {
+    const { data, error } = await supabase.rpc('log_security_event', {
       p_user_id: event.user_id || null,
       p_event_type: event.event_type,
       p_event_details: event.event_details || null,
       p_ip_address: null,
-      p_user_agent: userAgent || null
-    }
-  });
+      p_user_agent: userAgent || (typeof window !== 'undefined' ? window.navigator?.userAgent : null) || null
+    });
 
-  if (error) {
-    // Optioneel: log error of throw
-    console.error('Failed to log security event:', error);
+    if (error) {
+      // Optioneel: log error of throw
+      console.error('Failed to log security event:', error);
+    }
+  } catch (error) {
+    console.error('Error logging security event:', error);
   }
 }
 

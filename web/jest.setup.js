@@ -37,6 +37,10 @@ jest.mock('./src/utils/supabaseClient', () => ({
           select: jest.fn()
         }))
       }))
-    }))
+    })),
+    rpc: jest.fn(),
+    functions: {
+      invoke: jest.fn()
+    }
   }
 }));
