@@ -30,7 +30,7 @@ export default function RegisterForm() {
     setIsLoading(false);
   };
 
-  const handleOAuthSignUp = async (provider: 'google' | 'azure') => {
+  const handleOAuthSignUp = async (provider: 'google' | 'microsoft') => {
     setIsLoading(true);
     setError(null);
     
@@ -195,7 +195,7 @@ export default function RegisterForm() {
           Google
         </button>
         <button
-          onClick={() => handleOAuthSignUp('azure')}
+          onClick={() => handleOAuthSignUp('microsoft')}
           disabled={isLoading}
           style={{
             flex: 1,

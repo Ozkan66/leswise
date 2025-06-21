@@ -36,7 +36,7 @@ export default function LoginForm() {
     setIsLoading(false);
   };
 
-  const handleOAuthSignIn = async (provider: 'google' | 'azure') => {
+  const handleOAuthSignIn = async (provider: 'google' | 'microsoft') => {
     setIsLoading(true);
     setError(null);
     
@@ -146,7 +146,7 @@ export default function LoginForm() {
           Google
         </button>
         <button
-          onClick={() => handleOAuthSignIn('azure')}
+          onClick={() => handleOAuthSignIn('microsoft')}
           disabled={isLoading}
           style={{
             flex: 1,
