@@ -28,8 +28,8 @@ export default function UserRoleSelection() {
       } else {
         router.push('/');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     }
     
     setIsLoading(false);

@@ -4,9 +4,10 @@ import WorksheetCreateForm from "../../components/WorksheetCreateForm";
 import WorksheetElementList from "../../components/WorksheetElementList";
 import WorksheetElementCreateForm from "../../components/WorksheetElementCreateForm";
 import { useState } from "react";
+import { Worksheet } from "../../types/database";
 
 export default function WorksheetsPage() {
-  const [selectedWorksheet, setSelectedWorksheet] = useState<any>(null);
+  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   return (
