@@ -36,7 +36,10 @@ describe('RegisterForm', () => {
   });
 
   it('toont succesmelding na succesvolle registratie', async () => {
-    mockSignUp.mockResolvedValue({ error: null });
+    mockSignUp.mockResolvedValue({ 
+      data: { user: { id: '123', email_confirmed_at: null } }, 
+      error: null 
+    });
     
     render(<RegisterForm />);
     
@@ -61,7 +64,7 @@ describe('RegisterForm', () => {
   });
 
   it('toont foutmelding bij registratiefout', async () => {
-    mockSignUp.mockResolvedValue({ error: { message: 'Email already exists' } });
+    mockSignUp.mockResolvedValue({ data: null, error: { message: 'Email already exists' } });
     
     render(<RegisterForm />);
     
@@ -82,6 +85,64 @@ describe('RegisterForm', () => {
     
     await waitFor(() => {
       expect(screen.getByText('Email already exists')).toBeInTheDocument();
+    });
+  });
+
+  it('toont email bevestiging bericht wanneer email confirmatie nodig is', async () => {
+    mockSignUp.mockResolvedValue({ 
+      data: { user: { id: '123', email_confirmed_at: null } }, 
+      error: null 
+    });
+    
+    render(<RegisterForm />);
+    
+    fireEvent.change(screen.getByLabelText(/voornaam/i), {
+      target: { value: 'Jan' }
+    });
+    fireEvent.change(screen.getByLabelText(/achternaam/i), {
+      target: { value: 'Doe' }
+    });
+    fireEvent.change(screen.getByLabelText(/e-mailadres/i), {
+      target: { value: 'jan@example.com' }
+    });
+    fireEvent.change(screen.getByLabelText(/wachtwoord/i), {
+      target: { value: 'password123' }
+    });
+    
+    fireEvent.click(screen.getByRole('button', { name: /registreren/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Registratie voltooid!')).toBeInTheDocument();
+      expect(screen.getByText(/controleer je e-mail voor een bevestigingslink/i)).toBeInTheDocument();
+    });
+  });
+
+  it('toont directe login bericht wanneer email confirmatie niet nodig is', async () => {
+    mockSignUp.mockResolvedValue({ 
+      data: { user: { id: '123', email_confirmed_at: '2023-01-01T00:00:00Z' } }, 
+      error: null 
+    });
+    
+    render(<RegisterForm />);
+    
+    fireEvent.change(screen.getByLabelText(/voornaam/i), {
+      target: { value: 'Jan' }
+    });
+    fireEvent.change(screen.getByLabelText(/achternaam/i), {
+      target: { value: 'Doe' }
+    });
+    fireEvent.change(screen.getByLabelText(/e-mailadres/i), {
+      target: { value: 'jan@example.com' }
+    });
+    fireEvent.change(screen.getByLabelText(/wachtwoord/i), {
+      target: { value: 'password123' }
+    });
+    
+    fireEvent.click(screen.getByRole('button', { name: /registreren/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Registratie voltooid!')).toBeInTheDocument();
+      expect(screen.getByText(/je account is succesvol aangemaakt en je bent automatisch ingelogd/i)).toBeInTheDocument();
     });
   });
 });
