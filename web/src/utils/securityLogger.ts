@@ -28,26 +28,29 @@ export interface SecurityEvent {
 /**
  * Log a security event to the database
  */
-export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
-  try {
-    // Get user agent if not provided
-    const userAgent = event.user_agent || (typeof window !== 'undefined' ? window.navigator.userAgent : undefined);
-    
-    // For client-side logging, we'll use a simple insert since we can't easily get IP address
-    // In a production environment, this should be done server-side to get real IP addresses
-    const { error } = await supabase.rpc('log_security_event', {
+type SecurityEvent = {
+  user_id?: string;
+  event_type: string;
+  event_details?: string;
+};
+
+export async function logSecurityEvent(
+  event: SecurityEvent,
+  userAgent?: string
+): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('log_security_event', {
+    body: {
       p_user_id: event.user_id || null,
       p_event_type: event.event_type,
       p_event_details: event.event_details || null,
-      p_ip_address: null, // Client-side can't reliably get real IP
+      p_ip_address: null,
       p_user_agent: userAgent || null
-    });
-
-    if (error) {
-      console.error('Failed to log security event:', error);
     }
-  } catch (err) {
-    console.error('Error logging security event:', err);
+  });
+
+  if (error) {
+    // Optioneel: log error of throw
+    console.error('Failed to log security event:', error);
   }
 }
 
