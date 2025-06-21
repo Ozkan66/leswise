@@ -107,7 +107,7 @@ jobs:
           vercel-org-id:     ${{ env.VERCEL_ORG_ID }}
           vercel-project-id: ${{ env.VERCEL_PROJECT_ID }}
           scope:             ${{ env.VERCEL_SCOPE }}
-          vercel-args:       '--prod --confirm --yes'
+          vercel-args:       '--prod --confirm'
           working-directory: ./          # <- repo-root!
           github-token:      ${{ secrets.GITHUB_TOKEN }}
 
