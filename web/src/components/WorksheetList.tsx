@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
+import { Worksheet } from "../types/database";
 
-export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksheet: any) => void, refresh?: number }) {
-  const [worksheets, setWorksheets] = useState<any[]>([]);
+export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksheet: Worksheet) => void, refresh?: number }) {
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -32,12 +33,12 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
     fetchWorksheets();
   }, [refresh]);
 
-  const handleEdit = (ws: any) => {
+  const handleEdit = (ws: Worksheet) => {
     setEditingId(ws.id);
     setEditTitle(ws.title);
   };
 
-  const handleEditSave = async (ws: any) => {
+  const handleEditSave = async (ws: Worksheet) => {
     if (!editTitle.trim() || editTitle === ws.title) {
       setEditingId(null);
       return;
@@ -57,7 +58,7 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
     setWorksheets(data || []);
   };
 
-  const handleDelete = async (ws: any) => {
+  const handleDelete = async (ws: Worksheet) => {
     if (!window.confirm(`Delete worksheet '${ws.title}'? This cannot be undone.`)) return;
     await supabase.from("worksheets").delete().eq("id", ws.id);
     setWorksheets(worksheets.filter((w) => w.id !== ws.id));

@@ -6,10 +6,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import UserForm from "../components/UserForm";
 import UserList from "../components/UserList";
+import { User } from "../types/database";
 
 export default function Home() {
   const [supabaseStatus, setSupabaseStatus] = useState<string>("Bezig met testen...");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   async function fetchUsers() {
     try {
@@ -21,8 +22,9 @@ export default function Home() {
         setSupabaseStatus("Succesvolle verbinding! Voorbeelddata: " + JSON.stringify(data?.slice(0, 1)));
         setUsers(data || []);
       }
-    } catch (e: any) {
-      setSupabaseStatus("Fout: " + e.message);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      setSupabaseStatus("Fout: " + errorMessage);
       setUsers([]);
     }
   }
