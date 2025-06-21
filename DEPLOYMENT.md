@@ -21,6 +21,24 @@ The Leswise project uses GitHub Actions for continuous integration and deploymen
 - Set up your [Supabase](https://supabase.com) project
 - Get your project URL and anon key from the Supabase dashboard
 
+#### OAuth Providers Configuration
+To enable Google and Microsoft authentication:
+
+1. **Navigate to Authentication > Providers** in your Supabase dashboard
+2. **Enable Google Provider:**
+   - Toggle the Google provider to "Enabled"
+   - Add your Google OAuth 2.0 credentials (Client ID and Client Secret)
+   - Configure authorized redirect URIs to include your domain(s)
+3. **Enable Azure/Microsoft Provider:**
+   - Toggle the Azure provider to "Enabled" 
+   - Add your Microsoft OAuth 2.0 credentials
+   - Configure redirect URIs appropriately
+4. **Add redirect URLs** for both development and production:
+   - `http://localhost:3000` (for local development)
+   - `https://yourdomain.com` (for production)
+
+**Note:** If OAuth providers are not properly configured, users will see a "provider is not enabled" error when attempting to sign in with Google or Microsoft.
+
 ## Environment Variables
 
 ### Required GitHub Secrets
@@ -124,6 +142,16 @@ vercel --prod
    - Verify Vercel token permissions
    - Check Vercel project configuration
    - Review deployment logs in Vercel dashboard
+
+4. **OAuth Authentication Issues**
+   - **Error: "provider is not enabled"**
+     - Solution: Enable the OAuth provider in Supabase Dashboard > Authentication > Providers
+     - Ensure Google/Microsoft OAuth credentials are properly configured
+     - Verify redirect URLs include your application domains
+   - **OAuth redirect fails**
+     - Check that redirect URLs are correctly configured in both Supabase and the OAuth provider
+     - Ensure HTTPS is used for production URLs
+     - Verify domain matches exactly (no trailing slashes, correct subdomain)
 
 ### Getting Help
 
