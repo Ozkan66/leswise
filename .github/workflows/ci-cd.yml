@@ -1,5 +1,9 @@
 name: CI/CD
 
+permissions:
+  contents: write
+  pull-requests: write 
+
 ############################################
 # 1)  Globale omgevings­variabelen         #
 ############################################
