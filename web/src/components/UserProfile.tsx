@@ -43,6 +43,10 @@ interface PasswordChangeData {
   confirmPassword: string;
 }
 
+// Type definitions for notification settings to fix TypeScript 'never' issue
+type NotificationSettings = NonNullable<UserProfileData['notificationSettings']>;
+type NotificationKey = keyof NotificationSettings;
+
 export default function UserProfile() {
   const { user } = useAuth();
   const [profileData, setProfileData] = useState<UserProfileData>({
@@ -109,7 +113,7 @@ export default function UserProfile() {
     }));
   };
 
-  const handleNotificationChange = (field: keyof UserProfileData['notificationSettings'], value: boolean) => {
+  const handleNotificationChange = (field: NotificationKey, value: boolean) => {
     setProfileData(prev => ({
       ...prev,
       notificationSettings: {
