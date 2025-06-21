@@ -122,7 +122,7 @@ export default function UserProfile() {
     }));
   };
 
-  const handlePrivacyChange = (field: keyof UserProfileData['privacySettings'], value: string | boolean) => {
+  const handlePrivacyChange = (field: keyof NonNullable<UserProfileData['privacySettings']>, value: string | boolean) => {
     setProfileData(prev => ({
       ...prev,
       privacySettings: {
