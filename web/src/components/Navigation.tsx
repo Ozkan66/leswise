@@ -36,9 +36,15 @@ export default function Navigation() {
           <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
           
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ color: '#666' }}>
+            <Link 
+              href="/profile" 
+              style={{ 
+                color: '#666',
+                textDecoration: 'none' 
+              }}
+            >
               Welkom, {user.user_metadata?.first_name || user.email}
-            </span>
+            </Link>
             <button
               onClick={handleSignOut}
               style={{
