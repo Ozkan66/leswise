@@ -127,7 +127,7 @@ function WorksheetSubmissionContent() {
     const scored = mySubmissionElements
       .map(a => {
         const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score) : null);
-        const max = elMap[a.worksheet_element_id]?.max_score || 1;
+        const max = a.worksheet_element_id ? (elMap[a.worksheet_element_id]?.max_score || 1) : 1;
         return score !== null ? { score, max } : null;
       })
       .filter(Boolean) as { score: number; max: number }[];

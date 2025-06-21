@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ data: AuthResponse['data'], error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
-  signInWithProvider: (provider: 'google' | 'azure') => Promise<{ error: AuthError | null }>;
+  signInWithProvider: (provider: 'google' | 'azure') => Promise<{ error: AuthError | { message: string; originalMessage: string; code?: string | number; status?: number; name: string; } | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
 }
 

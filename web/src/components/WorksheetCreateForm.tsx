@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../utils/supabaseClient";
+import { Folder } from "../types/database";
 
 export default function WorksheetCreateForm({ onWorksheetCreated }: { onWorksheetCreated?: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [folderId, setFolderId] = useState("");
-  const [folders, setFolders] = useState<any[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
