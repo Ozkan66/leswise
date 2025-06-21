@@ -17,30 +17,37 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Mock Supabase client
-jest.mock('./src/utils/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      getSession: jest.fn(),
-      getUser: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } }
-      })),
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithOAuth: jest.fn(),
-      signOut: jest.fn(),
-      updateUser: jest.fn(),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        insert: jest.fn(() => ({
-          select: jest.fn()
-        }))
-      }))
-    })),
-    rpc: jest.fn(),
-    functions: {
-      invoke: jest.fn()
+jest.mock('./src/utils/supabaseClient', () => {
+  const createChainableMock = () => ({
+    select: jest.fn(() => createChainableMock()),
+    insert: jest.fn(() => createChainableMock()),
+    update: jest.fn(() => createChainableMock()),
+    delete: jest.fn(() => createChainableMock()),
+    eq: jest.fn(() => createChainableMock()),
+    order: jest.fn(() => createChainableMock()),
+    limit: jest.fn(() => createChainableMock()),
+    then: jest.fn(() => Promise.resolve({ data: null, error: null }))
+  });
+
+  return {
+    supabase: {
+      auth: {
+        getSession: jest.fn(),
+        getUser: jest.fn(),
+        onAuthStateChange: jest.fn(() => ({
+          data: { subscription: { unsubscribe: jest.fn() } }
+        })),
+        signUp: jest.fn(),
+        signInWithPassword: jest.fn(),
+        signInWithOAuth: jest.fn(),
+        signOut: jest.fn(),
+        updateUser: jest.fn(),
+      },
+      from: jest.fn(() => createChainableMock()),
+      rpc: jest.fn(),
+      functions: {
+        invoke: jest.fn()
+      }
     }
-  }
-}));
+  };
+});
