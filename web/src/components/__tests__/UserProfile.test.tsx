@@ -133,6 +133,17 @@ describe('UserProfile', () => {
           role: 'student',
           birth_year: '2000',
           education_type: 'havo',
+          // Personal preferences (Epic 1.4)
+          language: 'nl',
+          notification_email: true,
+          notification_worksheets: true,
+          notification_submissions: true,
+          notification_system: true,
+          // Privacy settings (Epic 1.4)
+          privacy_profile_visibility: 'institutional',
+          privacy_data_processing: true,
+          privacy_marketing: false,
+          privacy_analytics: true,
         },
       });
     });
@@ -388,5 +399,154 @@ describe('UserProfile', () => {
     
     expect(screen.getByText('Ingeschakeld')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '2FA uitschakelen' })).toBeInTheDocument();
+  });
+
+  // Epic 1.4 - Personal Preferences Tests
+  it('toont persoonlijke voorkeuren sectie', () => {
+    render(<UserProfile />);
+    
+    expect(screen.getByText('Persoonlijke Voorkeuren')).toBeInTheDocument();
+    expect(screen.getByLabelText('Taal:')).toBeInTheDocument();
+    expect(screen.getByText('Notificatie-instellingen')).toBeInTheDocument();
+  });
+
+  it('toont taal selectie met juiste opties', () => {
+    render(<UserProfile />);
+    
+    const languageSelect = screen.getByLabelText('Taal:');
+    expect(languageSelect).toBeInTheDocument();
+    
+    const options = screen.getAllByRole('option');
+    const languageOptions = options.filter(option => 
+      ['Nederlands', 'English', 'Polski', 'Português', 'Svenska'].includes((option as HTMLOptionElement).text)
+    );
+    expect(languageOptions).toHaveLength(5);
+  });
+
+  it('toont notificatie instellingen met alle opties', () => {
+    render(<UserProfile />);
+    
+    expect(screen.getByLabelText(/E-mail notificaties ontvangen/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Herinneringen voor werkbladen/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Inzending notificaties/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Systeem updates/)).toBeInTheDocument();
+  });
+
+  it('kan taal wijzigen', async () => {
+    render(<UserProfile />);
+    
+    const languageSelect = screen.getByLabelText('Taal:');
+    fireEvent.change(languageSelect, { target: { value: 'en' } });
+    
+    expect(languageSelect).toHaveValue('en');
+  });
+
+  it('kan notificatie instellingen wijzigen', async () => {
+    render(<UserProfile />);
+    
+    const emailNotificationCheckbox = screen.getByLabelText(/E-mail notificaties ontvangen/);
+    fireEvent.click(emailNotificationCheckbox);
+    
+    expect(emailNotificationCheckbox).not.toBeChecked();
+  });
+
+  // Epic 1.4 - Privacy Settings Tests
+  it('toont privacy-instellingen sectie', () => {
+    render(<UserProfile />);
+    
+    expect(screen.getByText('Privacy-instellingen')).toBeInTheDocument();
+    expect(screen.getByText('AVG/GDPR Compliance')).toBeInTheDocument();
+    expect(screen.getByText(/Privacy Bescherming/)).toBeInTheDocument();
+  });
+
+  it('toont profiel zichtbaarheid opties', () => {
+    render(<UserProfile />);
+    
+    const visibilitySelect = screen.getByLabelText('Profiel zichtbaarheid:');
+    expect(visibilitySelect).toBeInTheDocument();
+    
+    const options = screen.getAllByRole('option');
+    const visibilityOptions = options.filter(option => 
+      ['Privé (alleen jij)', 'Institutioneel (binnen je school/organisatie)', 'Openbaar (iedereen)'].includes((option as HTMLOptionElement).text)
+    );
+    expect(visibilityOptions).toHaveLength(3);
+  });
+
+  it('toont privacy toestemmingen', () => {
+    render(<UserProfile />);
+    
+    expect(screen.getByText('Toestemmingen voor gegevensverwerking')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Verwerking van persoonlijke gegevens/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Analytics en prestatie analyse/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Marketing communicatie/)).toBeInTheDocument();
+  });
+
+  it('kan privacy instellingen wijzigen', async () => {
+    render(<UserProfile />);
+    
+    const visibilitySelect = screen.getByLabelText('Profiel zichtbaarheid:');
+    fireEvent.change(visibilitySelect, { target: { value: 'private' } });
+    
+    expect(visibilitySelect).toHaveValue('private');
+  });
+
+  it('kan privacy toestemmingen wijzigen', async () => {
+    render(<UserProfile />);
+    
+    const marketingCheckbox = screen.getByLabelText(/Marketing communicatie/);
+    fireEvent.click(marketingCheckbox);
+    
+    expect(marketingCheckbox).toBeChecked();
+  });
+
+  it('toont privacybeleid link', () => {
+    render(<UserProfile />);
+    
+    const privacyLink = screen.getByRole('button', { name: /Lees ons privacybeleid/ });
+    expect(privacyLink).toBeInTheDocument();
+  });
+
+  it('slaat persoonlijke voorkeuren en privacy instellingen op bij formulier indiening', async () => {
+    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
+    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
+    
+    render(<UserProfile />);
+    
+    // Wait for the form to load
+    await waitFor(() => {
+      expect(screen.getByLabelText('Taal:')).toBeInTheDocument();
+    });
+    
+    // Wijzig taal
+    const languageSelect = screen.getByLabelText('Taal:');
+    fireEvent.change(languageSelect, { target: { value: 'en' } });
+    
+    // Wijzig notificatie instelling
+    const emailNotificationCheckbox = screen.getByLabelText(/E-mail notificaties ontvangen/);
+    fireEvent.click(emailNotificationCheckbox);
+    
+    // Wijzig privacy instelling
+    const visibilitySelect = screen.getByLabelText('Profiel zichtbaarheid:');
+    fireEvent.change(visibilitySelect, { target: { value: 'private' } });
+    
+    // Dien formulier in
+    const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
+    fireEvent.click(submitButton);
+    
+    // Wait for the form submission
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalled();
+    });
+    
+    // Check that the correct data was sent
+    expect(mockUpdateUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          language: 'en',
+          notification_email: false,
+          privacy_profile_visibility: 'private',
+        }),
+      })
+    );
   });
 });
