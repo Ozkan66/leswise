@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../utils/supabaseClient';
 import { logPasswordResetCompleted } from '../utils/securityLogger';
 import Link from 'next/link';
@@ -14,7 +14,6 @@ function ResetPasswordFormContent() {
   const [validSession, setValidSession] = useState<boolean | null>(null);
   
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     // Check if we have a valid session from the email link
