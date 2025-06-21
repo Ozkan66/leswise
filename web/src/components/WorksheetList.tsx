@@ -6,7 +6,12 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    description: string;
+    instructions: string;
+    status: 'draft' | 'published';
+  }>({ title: '', description: '', instructions: '', status: 'draft' });
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +25,7 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
       }
       const { data, error } = await supabase
         .from("worksheets")
-        .select("id, title, description, folder_id, owner_id")
+        .select("id, title, description, instructions, status, folder_id, owner_id")
         .eq("owner_id", user.id);
       if (error) {
         setWorksheets([]);
@@ -35,15 +40,29 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
 
   const handleEdit = (ws: Worksheet) => {
     setEditingId(ws.id);
-    setEditTitle(ws.title);
+    setEditForm({
+      title: ws.title,
+      description: ws.description || '',
+      instructions: ws.instructions || '',
+      status: ws.status || 'draft'
+    });
   };
 
   const handleEditSave = async (ws: Worksheet) => {
-    if (!editTitle.trim() || editTitle === ws.title) {
-      setEditingId(null);
+    if (!editForm.title.trim()) {
+      alert("Title cannot be empty");
       return;
     }
-    await supabase.from("worksheets").update({ title: editTitle }).eq("id", ws.id);
+    
+    await supabase
+      .from("worksheets")
+      .update({ 
+        title: editForm.title,
+        description: editForm.description || null,
+        instructions: editForm.instructions || null,
+        status: editForm.status
+      })
+      .eq("id", ws.id);
     setEditingId(null);
     // Refresh
     const user = (await supabase.auth.getUser()).data.user;
@@ -53,7 +72,7 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
     }
     const { data } = await supabase
       .from("worksheets")
-      .select("id, title, description, folder_id, owner_id")
+      .select("id, title, description, instructions, status, folder_id, owner_id")
       .eq("owner_id", user.id);
     setWorksheets(data || []);
   };
@@ -70,32 +89,131 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
   return (
     <div>
       <h2>Your Worksheets</h2>
-      <ul>
+      <ul style={{ listStyle: 'none', padding: 0 }}>
         {worksheets.map((ws) => (
-          <li key={ws.id}>
-            <>
-              {editingId === ws.id ? (
-                <>
+          <li key={ws.id} style={{ 
+            marginBottom: 16, 
+            padding: 16, 
+            border: '1px solid #ddd', 
+            borderRadius: 4,
+            backgroundColor: '#f9f9f9'
+          }}>
+            {editingId === ws.id ? (
+              <div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: 'block', marginBottom: 4 }}>Title:</label>
                   <input
-                    value={editTitle}
-                    onChange={e => setEditTitle(e.target.value)}
-                    onBlur={() => handleEditSave(ws)}
-                    onKeyDown={e => e.key === 'Enter' && handleEditSave(ws)}
+                    value={editForm.title}
+                    onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                    style={{ width: '100%', padding: 4 }}
                     autoFocus
                   />
-                  <button onClick={() => setEditingId(null)}>Cancel</button>
-                </>
-              ) : (
-                <button onClick={() => onSelect(ws)}>{ws.title}</button>
-              )}
-              <a href={`/worksheet-submission?worksheetId=${ws.id}`} style={{ marginLeft: 8 }}>Submit Answers</a>
-              {ws.owner_id === userId && (
-                <>
-                  <button style={{ marginLeft: 8 }} onClick={() => handleEdit(ws)}>Edit</button>
-                  <button style={{ marginLeft: 8, color: 'red' }} onClick={() => handleDelete(ws)}>Delete</button>
-                </>
-              )}
-            </>
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: 'block', marginBottom: 4 }}>Description:</label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                    style={{ width: '100%', minHeight: 60, padding: 4 }}
+                  />
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: 'block', marginBottom: 4 }}>Instructions:</label>
+                  <textarea
+                    value={editForm.instructions}
+                    onChange={e => setEditForm({ ...editForm, instructions: e.target.value })}
+                    style={{ width: '100%', minHeight: 60, padding: 4 }}
+                  />
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: 'block', marginBottom: 4 }}>Status:</label>
+                  <select
+                    value={editForm.status}
+                    onChange={e => setEditForm({ ...editForm, status: e.target.value as 'draft' | 'published' })}
+                    style={{ padding: 4 }}
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </select>
+                </div>
+                <div>
+                  <button 
+                    onClick={() => handleEditSave(ws)}
+                    style={{ marginRight: 8, padding: '4px 8px' }}
+                  >
+                    Save
+                  </button>
+                  <button 
+                    onClick={() => setEditingId(null)}
+                    style={{ padding: '4px 8px' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>
+                      {ws.title}
+                      <span style={{ 
+                        marginLeft: 8, 
+                        fontSize: '0.7em', 
+                        padding: '2px 6px', 
+                        borderRadius: 3,
+                        backgroundColor: ws.status === 'published' ? '#d4edda' : '#fff3cd',
+                        color: ws.status === 'published' ? '#155724' : '#856404',
+                        textTransform: 'uppercase'
+                      }}>
+                        {ws.status || 'draft'}
+                      </span>
+                    </h3>
+                    {ws.description && (
+                      <p style={{ margin: '0 0 8px 0', color: '#666', fontSize: '0.9em' }}>
+                        {ws.description}
+                      </p>
+                    )}
+                    {ws.instructions && (
+                      <div style={{ margin: '0 0 8px 0', fontSize: '0.8em', color: '#888' }}>
+                        <strong>Instructions:</strong> {ws.instructions.substring(0, 100)}
+                        {ws.instructions.length > 100 && '...'}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ marginLeft: 16 }}>
+                    <button 
+                      onClick={() => onSelect(ws)}
+                      style={{ marginRight: 8, padding: '4px 8px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: 3 }}
+                    >
+                      Open
+                    </button>
+                    <a 
+                      href={`/worksheet-submission?worksheetId=${ws.id}`} 
+                      style={{ marginRight: 8, textDecoration: 'none' }}
+                    >
+                      <button style={{ padding: '4px 8px' }}>Submit Answers</button>
+                    </a>
+                    {ws.owner_id === userId && (
+                      <>
+                        <button 
+                          onClick={() => handleEdit(ws)}
+                          style={{ marginRight: 8, padding: '4px 8px' }}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(ws)}
+                          style={{ color: 'red', padding: '4px 8px' }}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </li>
         ))}
       </ul>
