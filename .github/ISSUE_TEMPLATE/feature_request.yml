@@ -1,0 +1,91 @@
+name: Feature Request
+description: Stel een nieuwe functie of verbetering voor
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bedankt voor je suggestie! Vul de onderstaande velden in om ons te helpen je idee te begrijpen.
+
+  - type: textarea
+    id: probleem
+    attributes:
+      label: Probleem of behoefte
+      description: Beschrijf het probleem dat deze functie zou oplossen
+      placeholder: Ik heb een probleem met... / Ik zou graag kunnen...
+    validations:
+      required: true
+
+  - type: textarea
+    id: oplossing
+    attributes:
+      label: Voorgestelde oplossing
+      description: Beschrijf de functie die je zou willen zien
+      placeholder: Ik zou graag willen dat...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatieven
+    attributes:
+      label: Alternatieven
+      description: Beschrijf alternatieve oplossingen of functies die je hebt overwogen
+      placeholder: Een andere manier zou zijn...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: gebruikerstype
+    attributes:
+      label: Gebruikerstype
+      description: Voor welk type gebruiker is deze functie bedoeld?
+      options:
+        - Docent
+        - Leerling
+        - Beide
+        - Beheerder
+        - Niet van toepassing
+    validations:
+      required: false
+
+  - type: dropdown
+    id: prioriteit
+    attributes:
+      label: Prioriteit
+      description: Hoe belangrijk is deze functie voor je?
+      options:
+        - Hoog - Ik kan niet zonder
+        - Gemiddeld - Zou erg handig zijn
+        - Laag - Zou leuk zijn om te hebben
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Gebruiksscenario's
+      description: Beschrijf specifieke scenario's waarin deze functie gebruikt zou worden
+      placeholder: |
+        Scenario 1: Als docent wil ik...
+        Scenario 2: Wanneer een leerling...
+    validations:
+      required: false
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups of voorbeelden
+      description: Voeg mockups, screenshots, of voorbeelden toe als je die hebt
+      placeholder: Sleep hier je afbeeldingen naartoe...
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra-context
+    attributes:
+      label: Extra context
+      description: Voeg hier eventuele andere context of informatie toe
+      placeholder: Andere relevante informatie...
+    validations:
+      required: false
