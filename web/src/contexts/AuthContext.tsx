@@ -14,6 +14,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to check if OAuth providers are properly configured
+const logOAuthConfigurationHint = (provider: string, error: any) => {
+  if (process.env.NODE_ENV === 'development' && error?.message?.includes('provider is not enabled')) {
+    console.warn(
+      `🔧 OAuth Configuration Hint: ${provider} provider appears to be disabled.\n` +
+      `To enable ${provider} authentication:\n` +
+      `1. Go to your Supabase Dashboard (https://supabase.com/dashboard)\n` +
+      `2. Navigate to Authentication > Providers\n` +
+      `3. Enable the ${provider} provider\n` +
+      `4. Configure the OAuth settings with your ${provider} app credentials\n` +
+      `5. Add your domain to the redirect URLs\n\n` +
+      `Error details:`, error
+    );
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +81,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: `${window.location.origin}/`,
       },
     });
+    
+    // Provide more user-friendly error messages for common OAuth issues
+    if (error) {
+      // Log configuration hints for developers
+      logOAuthConfigurationHint(provider === 'google' ? 'Google' : 'Microsoft', error);
+      
+      if (error.message?.includes('provider is not enabled')) {
+        return {
+          error: {
+            ...error,
+            message: `${provider === 'google' ? 'Google' : 'Microsoft'} inloggen is momenteel niet beschikbaar. Probeer het later opnieuw of gebruik je e-mailadres om in te loggen.`,
+            originalMessage: error.message
+          }
+        };
+      }
+    }
+    
     return { error };
   };
 
