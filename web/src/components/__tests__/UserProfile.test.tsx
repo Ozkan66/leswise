@@ -3,6 +3,12 @@ import '@testing-library/jest-dom';
 import UserProfile from '../UserProfile';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
+import { 
+  fetchUserProfile, 
+  upsertUserProfile, 
+  convertFormDataToDbFormat, 
+  convertDbFormatToFormData 
+} from '../../utils/userProfileDb';
 
 // Mock the useAuth hook
 jest.mock('../../contexts/AuthContext');
@@ -14,6 +20,7 @@ jest.mock('../../utils/supabaseClient', () => ({
     auth: {
       updateUser: jest.fn(),
       signInWithPassword: jest.fn(),
+      getUser: jest.fn(),
     },
     storage: {
       from: jest.fn(() => ({
@@ -21,7 +28,27 @@ jest.mock('../../utils/supabaseClient', () => ({
         getPublicUrl: jest.fn(),
       })),
     },
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        eq: jest.fn(() => ({
+          single: jest.fn(),
+        })),
+      })),
+      upsert: jest.fn(() => ({
+        select: jest.fn(() => ({
+          single: jest.fn(),
+        })),
+      })),
+    })),
   },
+}));
+
+// Mock the userProfileDb functions
+jest.mock('../../utils/userProfileDb', () => ({
+  fetchUserProfile: jest.fn(),
+  upsertUserProfile: jest.fn(),
+  convertFormDataToDbFormat: jest.fn(),
+  convertDbFormatToFormData: jest.fn(),
 }));
 
 describe('UserProfile', () => {
@@ -37,6 +64,57 @@ describe('UserProfile', () => {
     },
   };
 
+  const mockDbProfile = {
+    user_id: '123',
+    email: 'test@example.com',
+    first_name: 'Jan',
+    last_name: 'Doe',
+    role: 'student' as const,
+    birth_year: 2000,
+    education_type: 'havo',
+    institution: null,
+    subjects: null,
+    profile_photo_url: null,
+    two_factor_enabled: false,
+    language: 'nl',
+    notification_email: true,
+    notification_worksheets: true,
+    notification_submissions: true,
+    notification_system: true,
+    privacy_profile_visibility: 'institutional' as const,
+    privacy_data_processing: true,
+    privacy_marketing: false,
+    privacy_analytics: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  };
+
+  const mockFormData = {
+    firstName: 'Jan',
+    lastName: 'Doe',
+    email: 'test@example.com',
+    role: 'student' as const,
+    birthYear: '2000',
+    educationType: 'havo',
+    institution: '',
+    subjects: '',
+    profilePhotoUrl: '',
+    twoFactorEnabled: false,
+    language: 'nl',
+    notificationSettings: {
+      emailNotifications: true,
+      worksheetReminders: true,
+      submissionNotifications: true,
+      systemUpdates: true,
+    },
+    privacySettings: {
+      profileVisibility: 'institutional' as const,
+      dataProcessingConsent: true,
+      marketingConsent: false,
+      analyticsConsent: true,
+    },
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({
@@ -47,19 +125,34 @@ describe('UserProfile', () => {
       signInWithProvider: jest.fn(),
       signOut: jest.fn(),
     });
+
+    // Setup database function mocks - simulate no existing profile to trigger fallback
+    (fetchUserProfile as jest.Mock).mockResolvedValue(null);
+    (upsertUserProfile as jest.Mock).mockResolvedValue(mockDbProfile);
+    (convertDbFormatToFormData as jest.Mock).mockReturnValue(mockFormData);
+    (convertFormDataToDbFormat as jest.Mock).mockReturnValue(mockDbProfile);
   });
 
-  it('toont profielpagina voor ingelogde gebruiker', () => {
+  it('toont profielpagina voor ingelogde gebruiker', async () => {
     render(<UserProfile />);
     
+    // Wait for async data loading to complete
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
+    
     expect(screen.getByRole('heading', { name: 'Mijn Profiel' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Doe')).toBeInTheDocument();
     expect(screen.getByDisplayValue('test@example.com')).toBeInTheDocument();
   });
 
-  it('toont rol selectie met huidige rol geselecteerd', () => {
+  it('toont rol selectie met huidige rol geselecteerd', async () => {
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     const studentRadio = screen.getByLabelText('Leerling');
     const teacherRadio = screen.getByLabelText('Docent');
@@ -68,8 +161,13 @@ describe('UserProfile', () => {
     expect(teacherRadio).not.toBeChecked();
   });
 
-  it('toont student-specifieke velden wanneer rol student is', () => {
+  it('toont student-specifieke velden wanneer rol student is', async () => {
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('Leerling Informatie')).toBeInTheDocument();
     expect(screen.getByLabelText('Geboortejaar:')).toBeInTheDocument();
@@ -81,7 +179,7 @@ describe('UserProfile', () => {
     expect(educationSelect.value).toBe('havo');
   });
 
-  it('toont docent-specifieke velden wanneer rol docent is', () => {
+  it('toont docent-specifieke velden wanneer rol docent is', async () => {
     const teacherUser = {
       ...mockUser,
       user_metadata: {
@@ -90,6 +188,20 @@ describe('UserProfile', () => {
         institution: 'Test School',
         subjects: 'Wiskunde, Natuurkunde',
       },
+    };
+
+    const teacherDbProfile = {
+      ...mockDbProfile,
+      role: 'teacher' as const,
+      institution: 'Test School',
+      subjects: 'Wiskunde, Natuurkunde',
+    };
+
+    const teacherFormData = {
+      ...mockFormData,
+      role: 'teacher' as const,
+      institution: 'Test School',
+      subjects: 'Wiskunde, Natuurkunde',
     };
 
     mockUseAuth.mockReturnValue({
@@ -101,7 +213,16 @@ describe('UserProfile', () => {
       signOut: jest.fn(),
     });
 
+    // Override the mocks for this specific test
+    (fetchUserProfile as jest.Mock).mockResolvedValue(teacherDbProfile);
+    (convertDbFormatToFormData as jest.Mock).mockReturnValue(teacherFormData);
+
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('Docent Informatie')).toBeInTheDocument();
     expect(screen.getByLabelText('Instelling:')).toBeInTheDocument();
@@ -111,10 +232,12 @@ describe('UserProfile', () => {
   });
 
   it('werkt profiel bij wanneer formulier wordt ingediend', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     // Wijzig voornaam
     const firstNameInput = screen.getByLabelText('Voornaam:');
@@ -125,35 +248,28 @@ describe('UserProfile', () => {
     fireEvent.click(submitButton);
     
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        data: {
-          first_name: 'Johan',
-          last_name: 'Doe',
-          role: 'student',
-          birth_year: '2000',
-          education_type: 'havo',
-          // Personal preferences (Epic 1.4)
-          language: 'nl',
-          notification_email: true,
-          notification_worksheets: true,
-          notification_submissions: true,
-          notification_system: true,
-          // Privacy settings (Epic 1.4)
-          privacy_profile_visibility: 'institutional',
-          privacy_data_processing: true,
-          privacy_marketing: false,
-          privacy_analytics: true,
-        },
-      });
+      expect(upsertUserProfile).toHaveBeenCalled();
     });
+    
+    // Check that convertFormDataToDbFormat was called with the updated data
+    expect(convertFormDataToDbFormat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstName: 'Johan',
+        lastName: 'Doe',
+        email: 'test@example.com',
+        role: 'student',
+      }),
+      '123'
+    );
   });
 
   it('toont succesbericht na succesvolle update', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-
     render(<UserProfile />);
+
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
@@ -164,12 +280,15 @@ describe('UserProfile', () => {
   });
 
   it('toont foutbericht bij mislukte update', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ 
-      error: { message: 'Update failed' } 
-    });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
+    
+    // Override the mock for this test to simulate error
+    (upsertUserProfile as jest.Mock).mockRejectedValue(new Error('Update failed'));
     
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
@@ -212,8 +331,13 @@ describe('UserProfile', () => {
     expect(screen.getByText(/je gegevens worden veilig opgeslagen/i)).toBeInTheDocument();
   });
 
-  it('schakelt tussen student en docent velden', () => {
+  it('schakelt tussen student en docent velden', async () => {
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     // Start als student
     expect(screen.getByText('Leerling Informatie')).toBeInTheDocument();
@@ -377,13 +501,23 @@ describe('UserProfile', () => {
     expect(screen.getByRole('button', { name: 'Sluiten' })).toBeInTheDocument();
   });
 
-  it('toont 2FA als ingeschakeld voor gebruiker met 2FA', () => {
+  it('toont 2FA als ingeschakeld voor gebruiker met 2FA', async () => {
     const userWith2FA = {
       ...mockUser,
       user_metadata: {
         ...mockUser.user_metadata,
         two_factor_enabled: true,
       },
+    };
+
+    const dbProfileWith2FA = {
+      ...mockDbProfile,
+      two_factor_enabled: true,
+    };
+
+    const formDataWith2FA = {
+      ...mockFormData,
+      twoFactorEnabled: true,
     };
 
     mockUseAuth.mockReturnValue({
@@ -395,7 +529,16 @@ describe('UserProfile', () => {
       signOut: jest.fn(),
     });
 
+    // Use database response for this test
+    (fetchUserProfile as jest.Mock).mockResolvedValue(dbProfileWith2FA);
+    (convertDbFormatToFormData as jest.Mock).mockReturnValue(formDataWith2FA);
+
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('Ingeschakeld')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '2FA uitschakelen' })).toBeInTheDocument();
@@ -507,9 +650,6 @@ describe('UserProfile', () => {
   });
 
   it('slaat persoonlijke voorkeuren en privacy instellingen op bij formulier indiening', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-    
     render(<UserProfile />);
     
     // Wait for the form to load
@@ -535,18 +675,21 @@ describe('UserProfile', () => {
     
     // Wait for the form submission
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalled();
+      expect(upsertUserProfile).toHaveBeenCalled();
     });
     
-    // Check that the correct data was sent
-    expect(mockUpdateUser).toHaveBeenCalledWith(
+    // Check that convertFormDataToDbFormat was called with the updated preferences
+    expect(convertFormDataToDbFormat).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          language: 'en',
-          notification_email: false,
-          privacy_profile_visibility: 'private',
+        language: 'en',
+        notificationSettings: expect.objectContaining({
+          emailNotifications: false,
         }),
-      })
+        privacySettings: expect.objectContaining({
+          profileVisibility: 'private',
+        }),
+      }),
+      '123'
     );
   });
 });

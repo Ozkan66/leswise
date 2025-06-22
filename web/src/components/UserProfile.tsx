@@ -4,38 +4,13 @@ import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { logPasswordChanged } from '../utils/securityLogger';
-
-interface UserProfileData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: 'teacher' | 'student' | null;
-  // Student-specific fields
-  birthYear?: string;
-  educationType?: string;
-  // Teacher-specific fields
-  institution?: string;
-  subjects?: string;
-  // Profile photo
-  profilePhotoUrl?: string;
-  // 2FA settings
-  twoFactorEnabled?: boolean;
-  // Personal preferences (Epic 1.4)
-  language?: string;
-  notificationSettings?: {
-    emailNotifications: boolean;
-    worksheetReminders: boolean;
-    submissionNotifications: boolean;
-    systemUpdates: boolean;
-  };
-  // Privacy settings (Epic 1.4)
-  privacySettings?: {
-    profileVisibility: 'public' | 'private' | 'institutional';
-    dataProcessingConsent: boolean;
-    marketingConsent: boolean;
-    analyticsConsent: boolean;
-  };
-}
+import { 
+  fetchUserProfile, 
+  upsertUserProfile, 
+  convertFormDataToDbFormat, 
+  convertDbFormatToFormData,
+  UserProfileFormData
+} from '../utils/userProfileDb';
 
 interface PasswordChangeData {
   currentPassword: string;
@@ -43,11 +18,11 @@ interface PasswordChangeData {
   confirmPassword: string;
 }
 // Type definitions for notification settings to fix TypeScript 'never' issue
-type NotificationSettings = NonNullable<UserProfileData['notificationSettings']>;
+type NotificationSettings = NonNullable<UserProfileFormData['notificationSettings']>;
 
 export default function UserProfile() {
   const { user } = useAuth();
-  const [profileData, setProfileData] = useState<UserProfileData>({
+  const [profileData, setProfileData] = useState<UserProfileFormData>({
     firstName: '',
     lastName: '',
     email: '',
@@ -69,42 +44,70 @@ export default function UserProfile() {
   const [show2FASection, setShow2FASection] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setProfileData({
-        firstName: user.user_metadata?.first_name || '',
-        lastName: user.user_metadata?.last_name || '',
-        email: user.email || '',
-        role: user.user_metadata?.role || null,
-        birthYear: user.user_metadata?.birth_year || '',
-        educationType: user.user_metadata?.education_type || '',
-        institution: user.user_metadata?.institution || '',
-        subjects: user.user_metadata?.subjects || '',
-        profilePhotoUrl: user.user_metadata?.profile_photo_url || '',
-        twoFactorEnabled: user.user_metadata?.two_factor_enabled || false,
-        // Personal preferences (Epic 1.4)
-        language: user.user_metadata?.language || 'nl',
-        notificationSettings: {
-          emailNotifications: user.user_metadata?.notification_email ?? true,
-          worksheetReminders: user.user_metadata?.notification_worksheets ?? true,
-          submissionNotifications: user.user_metadata?.notification_submissions ?? true,
-          systemUpdates: user.user_metadata?.notification_system ?? true,
-        },
-        // Privacy settings (Epic 1.4)
-        privacySettings: {
-          profileVisibility: user.user_metadata?.privacy_profile_visibility || 'institutional',
-          dataProcessingConsent: user.user_metadata?.privacy_data_processing ?? true,
-          marketingConsent: user.user_metadata?.privacy_marketing ?? false,
-          analyticsConsent: user.user_metadata?.privacy_analytics ?? true,
-        },
-      });
-      
-      if (user.user_metadata?.profile_photo_url) {
-        setPhotoPreview(user.user_metadata.profile_photo_url);
+    const loadUserProfile = async () => {
+      if (user) {
+        try {
+          // Try to load from database first
+          const dbProfile = await fetchUserProfile(user.id);
+          
+          if (dbProfile) {
+            // Convert database format to form format
+            const formData = convertDbFormatToFormData(dbProfile);
+            setProfileData(formData);
+            
+            if (formData.profilePhotoUrl) {
+              setPhotoPreview(formData.profilePhotoUrl);
+            }
+          } else {
+            // Fallback to user_metadata for existing users who haven't migrated yet
+            const fallbackData: UserProfileFormData = {
+              firstName: user.user_metadata?.first_name || '',
+              lastName: user.user_metadata?.last_name || '',
+              email: user.email || '',
+              role: user.user_metadata?.role || null,
+              birthYear: user.user_metadata?.birth_year || '',
+              educationType: user.user_metadata?.education_type || '',
+              institution: user.user_metadata?.institution || '',
+              subjects: user.user_metadata?.subjects || '',
+              profilePhotoUrl: user.user_metadata?.profile_photo_url || '',
+              twoFactorEnabled: user.user_metadata?.two_factor_enabled || false,
+              // Personal preferences (Epic 1.4)
+              language: user.user_metadata?.language || 'nl',
+              notificationSettings: {
+                emailNotifications: user.user_metadata?.notification_email ?? true,
+                worksheetReminders: user.user_metadata?.notification_worksheets ?? true,
+                submissionNotifications: user.user_metadata?.notification_submissions ?? true,
+                systemUpdates: user.user_metadata?.notification_system ?? true,
+              },
+              // Privacy settings (Epic 1.4)
+              privacySettings: {
+                profileVisibility: user.user_metadata?.privacy_profile_visibility || 'institutional',
+                dataProcessingConsent: user.user_metadata?.privacy_data_processing ?? true,
+                marketingConsent: user.user_metadata?.privacy_marketing ?? false,
+                analyticsConsent: user.user_metadata?.privacy_analytics ?? true,
+              },
+            };
+            
+            setProfileData(fallbackData);
+            
+            if (fallbackData.profilePhotoUrl) {
+              setPhotoPreview(fallbackData.profilePhotoUrl);
+            }
+            
+            // Migrate data to database for future use
+            await upsertUserProfile(convertFormDataToDbFormat(fallbackData, user.id));
+          }
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+          setError('Fout bij het laden van profielgegevens');
+        }
       }
-    }
+    };
+
+    loadUserProfile();
   }, [user]);
 
-  const handleInputChange = (field: keyof UserProfileData, value: string) => {
+  const handleInputChange = (field: keyof UserProfileFormData, value: string) => {
     setProfileData(prev => ({
       ...prev,
       [field]: value
@@ -124,7 +127,7 @@ export default function UserProfile() {
     }));
   };
 
-  const handlePrivacyChange = (field: keyof NonNullable<UserProfileData['privacySettings']>, value: string | boolean) => {
+  const handlePrivacyChange = (field: keyof NonNullable<UserProfileFormData['privacySettings']>, value: string | boolean) => {
     setProfileData(prev => ({
       ...prev,
       privacySettings: {
@@ -295,48 +298,33 @@ export default function UserProfile() {
         }
       }
       
-      // Update user metadata
-      const updateData = {
-        first_name: profileData.firstName,
-        last_name: profileData.lastName,
-        role: profileData.role,
-        ...(profileData.role === 'student' && {
-          birth_year: profileData.birthYear,
-          education_type: profileData.educationType,
-        }),
-        ...(profileData.role === 'teacher' && {
-          institution: profileData.institution,
-          subjects: profileData.subjects,
-        }),
-        ...(photoUrl && { profile_photo_url: photoUrl }),
-        // Personal preferences (Epic 1.4)
-        language: profileData.language,
-        notification_email: profileData.notificationSettings?.emailNotifications ?? true,
-        notification_worksheets: profileData.notificationSettings?.worksheetReminders ?? true,
-        notification_submissions: profileData.notificationSettings?.submissionNotifications ?? true,
-        notification_system: profileData.notificationSettings?.systemUpdates ?? true,
-        // Privacy settings (Epic 1.4)
-        privacy_profile_visibility: profileData.privacySettings?.profileVisibility || 'institutional',
-        privacy_data_processing: profileData.privacySettings?.dataProcessingConsent ?? true,
-        privacy_marketing: profileData.privacySettings?.marketingConsent ?? false,
-        privacy_analytics: profileData.privacySettings?.analyticsConsent ?? true,
+      // Update profile data with new photo URL if uploaded
+      const updatedProfileData = {
+        ...profileData,
+        profilePhotoUrl: photoUrl
       };
-
-      const { error } = await supabase.auth.updateUser({
-        email: profileData.email,
-        data: updateData
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        setSuccess('Profiel succesvol bijgewerkt!');
-        setPhotoFile(null);
+      
+      // Convert form data to database format and save to database
+      const dbData = convertFormDataToDbFormat(updatedProfileData, user.id);
+      await upsertUserProfile(dbData);
+      
+      // Also update the email in auth if it changed
+      if (profileData.email !== user.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: profileData.email
+        });
         
-        // Update preview URL if new photo was uploaded
-        if (photoUrl && photoUrl !== profileData.profilePhotoUrl) {
-          setProfileData(prev => ({ ...prev, profilePhotoUrl: photoUrl }));
+        if (emailError) {
+          throw new Error(`Email update failed: ${emailError.message}`);
         }
+      }
+      
+      setSuccess('Profiel succesvol bijgewerkt!');
+      setPhotoFile(null);
+      
+      // Update preview URL if new photo was uploaded
+      if (photoUrl && photoUrl !== profileData.profilePhotoUrl) {
+        setProfileData(prev => ({ ...prev, profilePhotoUrl: photoUrl }));
       }
     } catch (err: unknown) {
       setError((err as Error).message);
