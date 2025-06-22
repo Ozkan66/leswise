@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
-import { PlantynSidebar } from "@/components/plantyn-sidebar"
+import { PlantynSidebar } from "@/components/ui/design/plantyn-sidebar"
 import {
   Clock,
   FileText,
