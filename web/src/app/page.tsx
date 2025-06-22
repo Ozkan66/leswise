@@ -14,7 +14,7 @@ export default function Home() {
 
   async function fetchUsers() {
     try {
-      const { data, error } = await supabase.from('users').select('*');
+      const { data, error } = await supabase.from('user_profiles').select('*');
       if (error) {
         setSupabaseStatus("Fout: " + error.message);
         setUsers([]);

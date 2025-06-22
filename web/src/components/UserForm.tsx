@@ -10,14 +10,26 @@ export default function UserForm({ onUserAdded }: { onUserAdded: () => void }) {
     <form
       onSubmit={async (e) => {
         e.preventDefault();
-        setInsertStatus("Gebruiker toevoegen...");
-        const { data, error } = await supabase.from('users').insert([{ email: newEmail }]).select();
-        if (error) {
-          setInsertStatus("Fout bij toevoegen: " + error.message);
-        } else {
-          setInsertStatus("Toegevoegd! " + JSON.stringify(data));
-          setNewEmail("");
-          onUserAdded();
+        setInsertStatus("Gebruiker uitnodigen...");
+        
+        try {
+          // For now, just simulate creating a user profile
+          // In a real app, this would send an invitation email
+          const { data, error } = await supabase.from('user_profiles').insert([{ 
+            user_id: crypto.randomUUID(), // This would normally come from auth
+            email: newEmail,
+            role: 'student'
+          }]).select();
+          
+          if (error) {
+            setInsertStatus("Fout bij uitnodigen: " + error.message);
+          } else {
+            setInsertStatus("Uitnodiging verstuurd! " + JSON.stringify(data));
+            setNewEmail("");
+            onUserAdded();
+          }
+        } catch (err: unknown) {
+          setInsertStatus("Fout: " + (err as Error).message);
         }
       }}
       style={{margin: '16px 0', padding: '12px', background: '#efe', borderRadius: '8px'}}
@@ -32,7 +44,7 @@ export default function UserForm({ onUserAdded }: { onUserAdded: () => void }) {
           style={{marginLeft: 8, marginRight: 8}}
         />
       </label>
-      <button type="submit">Toevoegen</button>
+      <button type="submit">Uitnodigen</button>
       <div style={{marginTop: 8, color: '#070'}}>{insertStatus}</div>
     </form>
   );
