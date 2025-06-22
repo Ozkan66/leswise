@@ -107,6 +107,7 @@ describe('SharedWorksheetsManager', () => {
   });
 
   it('handles authentication errors', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { supabase } = require('../../utils/supabaseClient');
     
     supabase.auth.getUser.mockResolvedValueOnce({ 
@@ -124,6 +125,7 @@ describe('SharedWorksheetsManager', () => {
   });
 
   it('displays shares when data is available', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { supabase } = require('../../utils/supabaseClient');
     
     const mockShares = [
@@ -194,6 +196,7 @@ describe('SharedWorksheetsManager', () => {
   });
 
   it('displays anonymous links when data is available', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { supabase } = require('../../utils/supabaseClient');
     
     const mockLinks = [

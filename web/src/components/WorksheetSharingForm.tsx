@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { User, Group, WorksheetShare, AnonymousLink } from "../types/database";
 
@@ -36,11 +36,7 @@ export default function WorksheetSharingForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, [worksheetId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch users (teachers and students for sharing)
@@ -49,11 +45,21 @@ export default function WorksheetSharingForm({
         .select('user_id, role, users!inner(id, email, first_name, last_name)')
         .in('role', ['teacher', 'student']);
       
-      const usersList = usersData?.map(ur => ({
-        id: (ur as any).users?.id || '',
-        email: (ur as any).users?.email || '',
-        firstName: (ur as any).users?.first_name,
-        lastName: (ur as any).users?.last_name,
+      type UserRoleData = {
+        users?: {
+          id?: string;
+          email?: string;
+          first_name?: string;
+          last_name?: string;
+        };
+        role: string;
+      };
+      
+      const usersList = usersData?.map((ur: UserRoleData) => ({
+        id: ur.users?.id || '',
+        email: ur.users?.email || '',
+        firstName: ur.users?.first_name,
+        lastName: ur.users?.last_name,
         role: ur.role
       })).filter(u => u.id) || [];
       setUsers(usersList as User[]);
@@ -78,8 +84,7 @@ export default function WorksheetSharingForm({
       setExistingShares(sharesData || []);
    
       // Fetch anonymous links  
-      await supabase
-      const { data: linksData, error } = await supabase
+      const { data: linksData } = await supabase
         .from('anonymous_links')
         .select('*')
         .match({ worksheet_id: worksheetId, is_active: true });
@@ -92,7 +97,11 @@ export default function WorksheetSharingForm({
     } finally {
       setLoading(false);
     }
-  };
+  }, [worksheetId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleShareSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +117,17 @@ export default function WorksheetSharingForm({
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Not authenticated');
 
-      const shareData: any = {
+      interface ShareData {
+        worksheet_id: string;
+        shared_by_user_id: string;
+        permission_level: string;
+        max_attempts: number | null;
+        expires_at: string | null;
+        shared_with_user_id?: string;
+        shared_with_group_id?: string;
+      }
+
+      const shareData: ShareData = {
         worksheet_id: worksheetId,
         shared_by_user_id: user.id,
         permission_level: permissionLevel,
@@ -138,8 +157,9 @@ export default function WorksheetSharingForm({
       await fetchData(); // Refresh the shares list
       if (onShared) onShared();
 
-    } catch (err: any) {
-      setError(err.message || 'Failed to share worksheet');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to share worksheet';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -178,8 +198,9 @@ export default function WorksheetSharingForm({
       await fetchData();
       if (onShared) onShared();
 
-    } catch (err: any) {
-      setError(err.message || 'Failed to create anonymous link');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create anonymous link';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -196,8 +217,9 @@ export default function WorksheetSharingForm({
       
       if (error) throw error;
       await fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete share');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete share';
+      setError(errorMessage);
     }
   };
 
@@ -212,8 +234,9 @@ export default function WorksheetSharingForm({
       
       if (error) throw error;
       await fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to deactivate link');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate link';
+      setError(errorMessage);
     }
   };
 

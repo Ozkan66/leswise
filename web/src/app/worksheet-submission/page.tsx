@@ -24,7 +24,16 @@ function WorksheetSubmissionContent() {
   // Anonymous submission state
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [anonymousName, setAnonymousName] = useState("");
-  const [anonymousLink, setAnonymousLink] = useState<any>(null);
+  const [anonymousLink, setAnonymousLink] = useState<{
+    id: string;
+    worksheet_id: string;
+    link_code: string;
+    max_attempts?: number;
+    attempts_used?: number;
+    expires_at?: string;
+    is_active: boolean;
+    worksheets?: { title?: string };
+  } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [attemptLimitReached, setAttemptLimitReached] = useState(false);
 
@@ -110,8 +119,9 @@ function WorksheetSubmissionContent() {
           setElements(data || []);
         }
         
-      } catch (err: any) {
-        setError(err.message || "Failed to load worksheet");
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load worksheet";
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -188,7 +198,7 @@ function WorksheetSubmissionContent() {
           .rpc('check_and_increment_attempts', {
             p_user_id: null,
             p_worksheet_id: currentWorksheetId,
-            p_anonymous_link_id: anonymousLink.id
+            p_anonymous_link_id: anonymousLink?.id
           });
           
         if (!canSubmit) {
@@ -198,10 +208,10 @@ function WorksheetSubmissionContent() {
         
         // Create anonymous submission record
         const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const { data: anonSubmission, error: anonSubError } = await supabase
+        const { error: anonSubError } = await supabase
           .from("anonymous_submissions")
           .insert({
-            anonymous_link_id: anonymousLink.id,
+            anonymous_link_id: anonymousLink?.id,
             worksheet_id: currentWorksheetId,
             participant_name: anonymousName,
             session_id: sessionId
