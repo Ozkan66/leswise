@@ -126,24 +126,33 @@ describe('UserProfile', () => {
       signOut: jest.fn(),
     });
 
-    // Setup database function mocks
-    (fetchUserProfile as jest.Mock).mockResolvedValue(mockDbProfile);
+    // Setup database function mocks - simulate no existing profile to trigger fallback
+    (fetchUserProfile as jest.Mock).mockResolvedValue(null);
     (upsertUserProfile as jest.Mock).mockResolvedValue(mockDbProfile);
     (convertDbFormatToFormData as jest.Mock).mockReturnValue(mockFormData);
     (convertFormDataToDbFormat as jest.Mock).mockReturnValue(mockDbProfile);
   });
 
-  it('toont profielpagina voor ingelogde gebruiker', () => {
+  it('toont profielpagina voor ingelogde gebruiker', async () => {
     render(<UserProfile />);
     
+    // Wait for async data loading to complete
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
+    
     expect(screen.getByRole('heading', { name: 'Mijn Profiel' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Doe')).toBeInTheDocument();
     expect(screen.getByDisplayValue('test@example.com')).toBeInTheDocument();
   });
 
-  it('toont rol selectie met huidige rol geselecteerd', () => {
+  it('toont rol selectie met huidige rol geselecteerd', async () => {
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     const studentRadio = screen.getByLabelText('Leerling');
     const teacherRadio = screen.getByLabelText('Docent');
@@ -152,8 +161,13 @@ describe('UserProfile', () => {
     expect(teacherRadio).not.toBeChecked();
   });
 
-  it('toont student-specifieke velden wanneer rol student is', () => {
+  it('toont student-specifieke velden wanneer rol student is', async () => {
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('Leerling Informatie')).toBeInTheDocument();
     expect(screen.getByLabelText('Geboortejaar:')).toBeInTheDocument();
@@ -165,7 +179,7 @@ describe('UserProfile', () => {
     expect(educationSelect.value).toBe('havo');
   });
 
-  it('toont docent-specifieke velden wanneer rol docent is', () => {
+  it('toont docent-specifieke velden wanneer rol docent is', async () => {
     const teacherUser = {
       ...mockUser,
       user_metadata: {
@@ -199,10 +213,16 @@ describe('UserProfile', () => {
       signOut: jest.fn(),
     });
 
+    // Override the mocks for this specific test
     (fetchUserProfile as jest.Mock).mockResolvedValue(teacherDbProfile);
     (convertDbFormatToFormData as jest.Mock).mockReturnValue(teacherFormData);
 
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('Docent Informatie')).toBeInTheDocument();
     expect(screen.getByLabelText('Instelling:')).toBeInTheDocument();
@@ -213,6 +233,11 @@ describe('UserProfile', () => {
 
   it('werkt profiel bij wanneer formulier wordt ingediend', async () => {
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     // Wijzig voornaam
     const firstNameInput = screen.getByLabelText('Voornaam:');
@@ -240,6 +265,11 @@ describe('UserProfile', () => {
 
   it('toont succesbericht na succesvolle update', async () => {
     render(<UserProfile />);
+
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
@@ -250,9 +280,15 @@ describe('UserProfile', () => {
   });
 
   it('toont foutbericht bij mislukte update', async () => {
-    (upsertUserProfile as jest.Mock).mockRejectedValue(new Error('Update failed'));
-
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
+    
+    // Override the mock for this test to simulate error
+    (upsertUserProfile as jest.Mock).mockRejectedValue(new Error('Update failed'));
     
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
@@ -295,8 +331,13 @@ describe('UserProfile', () => {
     expect(screen.getByText(/je gegevens worden veilig opgeslagen/i)).toBeInTheDocument();
   });
 
-  it('schakelt tussen student en docent velden', () => {
+  it('schakelt tussen student en docent velden', async () => {
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     // Start als student
     expect(screen.getByText('Leerling Informatie')).toBeInTheDocument();
@@ -460,13 +501,23 @@ describe('UserProfile', () => {
     expect(screen.getByRole('button', { name: 'Sluiten' })).toBeInTheDocument();
   });
 
-  it('toont 2FA als ingeschakeld voor gebruiker met 2FA', () => {
+  it('toont 2FA als ingeschakeld voor gebruiker met 2FA', async () => {
     const userWith2FA = {
       ...mockUser,
       user_metadata: {
         ...mockUser.user_metadata,
         two_factor_enabled: true,
       },
+    };
+
+    const dbProfileWith2FA = {
+      ...mockDbProfile,
+      two_factor_enabled: true,
+    };
+
+    const formDataWith2FA = {
+      ...mockFormData,
+      twoFactorEnabled: true,
     };
 
     mockUseAuth.mockReturnValue({
@@ -478,7 +529,16 @@ describe('UserProfile', () => {
       signOut: jest.fn(),
     });
 
+    // Use database response for this test
+    (fetchUserProfile as jest.Mock).mockResolvedValue(dbProfileWith2FA);
+    (convertDbFormatToFormData as jest.Mock).mockReturnValue(formDataWith2FA);
+
     render(<UserProfile />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('Ingeschakeld')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '2FA uitschakelen' })).toBeInTheDocument();
