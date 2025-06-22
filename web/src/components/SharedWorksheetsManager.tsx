@@ -22,6 +22,7 @@ export default function SharedWorksheetsManager() {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) {
         setError('Please log in to view shared worksheets');
+        setLoading(false);
         return;
       }
 
@@ -36,7 +37,6 @@ export default function SharedWorksheetsManager() {
         .order('created_at', { ascending: false });
 
       if (sharesError) throw sharesError;
-      setShares(sharesData || []);
 
       // Fetch anonymous links created by the user
       const { data: linksData, error: linksError } = await supabase
@@ -49,7 +49,6 @@ export default function SharedWorksheetsManager() {
         .order('created_at', { ascending: false });
 
       if (linksError) throw linksError;
-      setAnonymousLinks(linksData || []);
 
       // Fetch anonymous submissions for user's worksheets
       const { data: submissionsData, error: submissionsError } = await supabase
@@ -62,6 +61,10 @@ export default function SharedWorksheetsManager() {
         .order('created_at', { ascending: false });
 
       if (submissionsError) throw submissionsError;
+
+      // Update all state at once
+      setShares(sharesData || []);
+      setAnonymousLinks(linksData || []);
       setAnonymousSubmissions(submissionsData || []);
 
     } catch (err: any) {

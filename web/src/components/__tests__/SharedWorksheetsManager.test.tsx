@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import SharedWorksheetsManager from '../SharedWorksheetsManager';
 
@@ -40,7 +40,9 @@ describe('SharedWorksheetsManager', () => {
   });
 
   it('renders the component with correct title', async () => {
-    render(<SharedWorksheetsManager />);
+    await act(async () => {
+      render(<SharedWorksheetsManager />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Shared Worksheets Management')).toBeInTheDocument();
@@ -48,13 +50,17 @@ describe('SharedWorksheetsManager', () => {
   });
 
   it('displays loading state initially', () => {
-    render(<SharedWorksheetsManager />);
+    act(() => {
+      render(<SharedWorksheetsManager />);
+    });
     
     expect(screen.getByText('Loading shared worksheets...')).toBeInTheDocument();
   });
 
   it('shows tab navigation with correct counts', async () => {
-    render(<SharedWorksheetsManager />);
+    await act(async () => {
+      render(<SharedWorksheetsManager />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Direct Shares (0)')).toBeInTheDocument();
@@ -63,14 +69,18 @@ describe('SharedWorksheetsManager', () => {
   });
 
   it('switches between tabs correctly', async () => {
-    render(<SharedWorksheetsManager />);
+    await act(async () => {
+      render(<SharedWorksheetsManager />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Direct Worksheet Shares')).toBeInTheDocument();
     });
 
-    const anonymousTab = screen.getByText('Anonymous Links (0)');
-    fireEvent.click(anonymousTab);
+    await act(async () => {
+      const anonymousTab = screen.getByText('Anonymous Links (0)');
+      fireEvent.click(anonymousTab);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Anonymous Links')).toBeInTheDocument();
@@ -78,14 +88,18 @@ describe('SharedWorksheetsManager', () => {
   });
 
   it('displays empty state messages', async () => {
-    render(<SharedWorksheetsManager />);
+    await act(async () => {
+      render(<SharedWorksheetsManager />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('No direct shares found. Share worksheets with specific users or groups to see them here.')).toBeInTheDocument();
     });
 
-    const anonymousTab = screen.getByText('Anonymous Links (0)');
-    fireEvent.click(anonymousTab);
+    await act(async () => {
+      const anonymousTab = screen.getByText('Anonymous Links (0)');
+      fireEvent.click(anonymousTab);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('No anonymous links found. Create anonymous sharing links to see them here.')).toBeInTheDocument();
@@ -100,7 +114,9 @@ describe('SharedWorksheetsManager', () => {
       error: null 
     });
 
-    render(<SharedWorksheetsManager />);
+    await act(async () => {
+      render(<SharedWorksheetsManager />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Please log in to view shared worksheets')).toBeInTheDocument();
@@ -132,6 +148,24 @@ describe('SharedWorksheetsManager', () => {
           })),
         };
       }
+      if (table === 'anonymous_links') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn(() => ({
+              order: jest.fn(() => Promise.resolve({ data: [], error: null })),
+            })),
+          })),
+        };
+      }
+      if (table === 'anonymous_submissions') {
+        return {
+          select: jest.fn(() => ({
+            in: jest.fn(() => ({
+              order: jest.fn(() => Promise.resolve({ data: [], error: null })),
+            })),
+          })),
+        };
+      }
       return {
         select: jest.fn(() => ({
           eq: jest.fn(() => ({
@@ -144,7 +178,14 @@ describe('SharedWorksheetsManager', () => {
       };
     });
 
-    render(<SharedWorksheetsManager />);
+    await act(async () => {
+      render(<SharedWorksheetsManager />);
+    });
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      expect(screen.queryByText('Loading shared worksheets...')).not.toBeInTheDocument();
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Test Worksheet 1')).toBeInTheDocument();
@@ -168,11 +209,29 @@ describe('SharedWorksheetsManager', () => {
     ];
 
     supabase.from.mockImplementation((table: string) => {
+      if (table === 'worksheet_shares') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn(() => ({
+              order: jest.fn(() => Promise.resolve({ data: [], error: null })),
+            })),
+          })),
+        };
+      }
       if (table === 'anonymous_links') {
         return {
           select: jest.fn(() => ({
             eq: jest.fn(() => ({
               order: jest.fn(() => Promise.resolve({ data: mockLinks, error: null })),
+            })),
+          })),
+        };
+      }
+      if (table === 'anonymous_submissions') {
+        return {
+          select: jest.fn(() => ({
+            in: jest.fn(() => ({
+              order: jest.fn(() => Promise.resolve({ data: [], error: null })),
             })),
           })),
         };
@@ -189,11 +248,25 @@ describe('SharedWorksheetsManager', () => {
       };
     });
 
-    render(<SharedWorksheetsManager />);
+    await act(async () => {
+      render(<SharedWorksheetsManager />);
+    });
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      expect(screen.queryByText('Loading shared worksheets...')).not.toBeInTheDocument();
+    });
+    
+    // Wait for the tab to appear with correct count
+    await waitFor(() => {
+      expect(screen.getByText('Anonymous Links (1)')).toBeInTheDocument();
+    });
     
     // Switch to anonymous tab
-    const anonymousTab = screen.getByText('Anonymous Links (0)');
-    fireEvent.click(anonymousTab);
+    await act(async () => {
+      const anonymousTab = screen.getByText('Anonymous Links (1)');
+      fireEvent.click(anonymousTab);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Test Worksheet 1')).toBeInTheDocument();

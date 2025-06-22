@@ -88,6 +88,7 @@ export default function WorksheetSharingForm({
     } catch (err) {
       setError('Failed to load sharing data');
       console.error(err);
+      return; // Prevent further execution so error is not overwritten
     } finally {
       setLoading(false);
     }
