@@ -54,14 +54,20 @@ export default function WorksheetSharingForm({
       })).filter(u => u.id) || [];
       setUsers(usersList as User[]);
 
-      // Fetch user's groups
+      // Fetch user's groups (where user is a member or leader)
       const user = (await supabase.auth.getUser()).data.user;
       if (user) {
         const { data: groupsData } = await supabase
-          .from('groups')
-          .select('id, name, description')
-          .eq('owner_id', user.id);
-        setGroups(groupsData || []);
+          .from('group_members')
+          .select('group_id, groups(id, name, description, type), role')
+          .eq('user_id', user.id)
+          .eq('status', 'active');
+        
+        const groupsList = groupsData?.map((gm: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          ...gm.groups,
+          role: gm.role
+        })).filter(g => g.id) || [];
+        setGroups(groupsList);
       }
 
       // Fetch existing shares

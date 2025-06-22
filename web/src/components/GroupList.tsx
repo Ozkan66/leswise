@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { Group } from "../types/database";
+import GroupSettings from "./GroupSettings";
+import GroupResults from "./GroupResults";
 
 interface GroupMember {
   user_id: string;
@@ -20,6 +22,8 @@ export default function GroupList() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [showMembers, setShowMembers] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState<{ groupId: string; groupName: string } | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
@@ -80,6 +84,26 @@ export default function GroupList() {
       setShowMembers(groupId);
       await fetchMembers(groupId);
     }
+  };
+
+  const handleShowSettings = (groupId: string) => {
+    setShowSettings(groupId);
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(null);
+  };
+
+  const handleShowResults = (groupId: string, groupName: string) => {
+    setShowResults({ groupId, groupName });
+  };
+
+  const handleCloseResults = () => {
+    setShowResults(null);
+  };
+
+  const handleSettingsSaved = async () => {
+    await fetchGroups();
   };
 
   const handleApproveMember = async (groupId: string, userId: string) => {
@@ -205,13 +229,25 @@ export default function GroupList() {
                     >
                       {showMembers === group.id ? 'Hide Members' : 'Show Members'}
                     </button>
+                    <button 
+                      style={{ backgroundColor: '#17a2b8', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
+                      onClick={() => handleShowResults(group.id, group.name)}
+                    >
+                      View Results
+                    </button>
                     {group.role === 'leader' && (
                       <>
+                        <button 
+                          style={{ backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
+                          onClick={() => handleShowSettings(group.id)}
+                        >
+                          Settings
+                        </button>
                         <button 
                           style={{ backgroundColor: '#ffc107', color: 'black', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
                           onClick={() => handleEdit(group)}
                         >
-                          Edit
+                          Quick Edit
                         </button>
                         <button 
                           style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
@@ -298,6 +334,24 @@ export default function GroupList() {
           </div>
         ))}
       </div>
+
+      {/* Group Settings Modal */}
+      {showSettings && (
+        <GroupSettings
+          groupId={showSettings}
+          onClose={handleCloseSettings}
+          onSave={handleSettingsSaved}
+        />
+      )}
+
+      {/* Group Results Modal */}
+      {showResults && (
+        <GroupResults
+          groupId={showResults.groupId}
+          groupName={showResults.groupName}
+          onClose={handleCloseResults}
+        />
+      )}
     </div>
   );
 }
