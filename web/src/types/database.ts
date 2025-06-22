@@ -88,6 +88,7 @@ export interface Group {
   description?: string;
   owner_id?: string;
   jumper_code?: string;
+  type?: 'klas' | 'community';
   role?: string; // For joined data
   created_at?: string;
   updated_at?: string;
