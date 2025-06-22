@@ -13,18 +13,18 @@ jest.mock('../../utils/supabaseClient', () => ({
 }));
 
 describe('UserForm integration', () => {
-  it('voegt een gebruiker toe en toont succesmelding', async () => {
+  it('nodigt een gebruiker uit en toont succesmelding', async () => {
     const onUserAdded = jest.fn();
     render(<UserForm onUserAdded={onUserAdded} />);
 
     // Vul het emailveld in
     const input = screen.getByLabelText(/nieuwe gebruiker/i);
     fireEvent.change(input, { target: { value: 'integration@example.com' } });
-    fireEvent.click(screen.getByText(/toevoegen/i));
+    fireEvent.click(screen.getByText(/uitnodigen/i));
 
     // Wacht op de succesmelding
     await waitFor(() => {
-      expect(screen.getByText(/toegevoegd/i)).toBeInTheDocument();
+      expect(screen.getByText(/uitnodiging verstuurd/i)).toBeInTheDocument();
     });
 
     // onUserAdded callback moet zijn aangeroepen

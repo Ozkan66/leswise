@@ -1,7 +1,7 @@
 -- Create security_logs table for tracking security events
-CREATE TABLE security_logs (
+CREATE TABLE IF NOT EXISTS security_logs (
   id BIGSERIAL PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES public.user_profiles(user_id) ON DELETE SET NULL,
   event_type VARCHAR(50) NOT NULL,
   event_details JSONB,
   ip_address INET,
