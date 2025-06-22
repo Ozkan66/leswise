@@ -45,21 +45,23 @@ export default function WorksheetSharingForm({
         .select('user_id, role, users!inner(id, email, first_name, last_name)')
         .in('role', ['teacher', 'student']);
       
+      // Define type matching actual Supabase response structure
       type UserRoleData = {
-        users?: {
-          id?: string;
-          email?: string;
-          first_name?: string;
-          last_name?: string;
-        };
+        user_id: string;
         role: string;
+        users: {
+          id: string;
+          email: string;
+          first_name: string | null;
+          last_name: string | null;
+        }[];
       };
       
       const usersList = usersData?.map((ur: UserRoleData) => ({
-        id: ur.users?.id || '',
-        email: ur.users?.email || '',
-        firstName: ur.users?.first_name,
-        lastName: ur.users?.last_name,
+        id: ur.users[0]?.id || '',
+        email: ur.users[0]?.email || '',
+        firstName: ur.users[0]?.first_name || undefined,
+        lastName: ur.users[0]?.last_name || undefined,
         role: ur.role
       })).filter(u => u.id) || [];
       setUsers(usersList as User[]);
