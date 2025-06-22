@@ -71,7 +71,7 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
