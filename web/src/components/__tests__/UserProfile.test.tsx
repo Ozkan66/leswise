@@ -3,6 +3,12 @@ import '@testing-library/jest-dom';
 import UserProfile from '../UserProfile';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
+import { 
+  fetchUserProfile, 
+  upsertUserProfile, 
+  convertFormDataToDbFormat, 
+  convertDbFormatToFormData 
+} from '../../utils/userProfileDb';
 
 // Mock the useAuth hook
 jest.mock('../../contexts/AuthContext');
@@ -14,6 +20,7 @@ jest.mock('../../utils/supabaseClient', () => ({
     auth: {
       updateUser: jest.fn(),
       signInWithPassword: jest.fn(),
+      getUser: jest.fn(),
     },
     storage: {
       from: jest.fn(() => ({
@@ -21,7 +28,27 @@ jest.mock('../../utils/supabaseClient', () => ({
         getPublicUrl: jest.fn(),
       })),
     },
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        eq: jest.fn(() => ({
+          single: jest.fn(),
+        })),
+      })),
+      upsert: jest.fn(() => ({
+        select: jest.fn(() => ({
+          single: jest.fn(),
+        })),
+      })),
+    })),
   },
+}));
+
+// Mock the userProfileDb functions
+jest.mock('../../utils/userProfileDb', () => ({
+  fetchUserProfile: jest.fn(),
+  upsertUserProfile: jest.fn(),
+  convertFormDataToDbFormat: jest.fn(),
+  convertDbFormatToFormData: jest.fn(),
 }));
 
 describe('UserProfile', () => {
@@ -37,6 +64,57 @@ describe('UserProfile', () => {
     },
   };
 
+  const mockDbProfile = {
+    user_id: '123',
+    email: 'test@example.com',
+    first_name: 'Jan',
+    last_name: 'Doe',
+    role: 'student' as const,
+    birth_year: 2000,
+    education_type: 'havo',
+    institution: null,
+    subjects: null,
+    profile_photo_url: null,
+    two_factor_enabled: false,
+    language: 'nl',
+    notification_email: true,
+    notification_worksheets: true,
+    notification_submissions: true,
+    notification_system: true,
+    privacy_profile_visibility: 'institutional' as const,
+    privacy_data_processing: true,
+    privacy_marketing: false,
+    privacy_analytics: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  };
+
+  const mockFormData = {
+    firstName: 'Jan',
+    lastName: 'Doe',
+    email: 'test@example.com',
+    role: 'student' as const,
+    birthYear: '2000',
+    educationType: 'havo',
+    institution: '',
+    subjects: '',
+    profilePhotoUrl: '',
+    twoFactorEnabled: false,
+    language: 'nl',
+    notificationSettings: {
+      emailNotifications: true,
+      worksheetReminders: true,
+      submissionNotifications: true,
+      systemUpdates: true,
+    },
+    privacySettings: {
+      profileVisibility: 'institutional' as const,
+      dataProcessingConsent: true,
+      marketingConsent: false,
+      analyticsConsent: true,
+    },
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({
@@ -47,6 +125,12 @@ describe('UserProfile', () => {
       signInWithProvider: jest.fn(),
       signOut: jest.fn(),
     });
+
+    // Setup database function mocks
+    (fetchUserProfile as jest.Mock).mockResolvedValue(mockDbProfile);
+    (upsertUserProfile as jest.Mock).mockResolvedValue(mockDbProfile);
+    (convertDbFormatToFormData as jest.Mock).mockReturnValue(mockFormData);
+    (convertFormDataToDbFormat as jest.Mock).mockReturnValue(mockDbProfile);
   });
 
   it('toont profielpagina voor ingelogde gebruiker', () => {
@@ -92,6 +176,20 @@ describe('UserProfile', () => {
       },
     };
 
+    const teacherDbProfile = {
+      ...mockDbProfile,
+      role: 'teacher' as const,
+      institution: 'Test School',
+      subjects: 'Wiskunde, Natuurkunde',
+    };
+
+    const teacherFormData = {
+      ...mockFormData,
+      role: 'teacher' as const,
+      institution: 'Test School',
+      subjects: 'Wiskunde, Natuurkunde',
+    };
+
     mockUseAuth.mockReturnValue({
       user: teacherUser,
       loading: false,
@@ -100,6 +198,9 @@ describe('UserProfile', () => {
       signInWithProvider: jest.fn(),
       signOut: jest.fn(),
     });
+
+    (fetchUserProfile as jest.Mock).mockResolvedValue(teacherDbProfile);
+    (convertDbFormatToFormData as jest.Mock).mockReturnValue(teacherFormData);
 
     render(<UserProfile />);
     
@@ -111,9 +212,6 @@ describe('UserProfile', () => {
   });
 
   it('werkt profiel bij wanneer formulier wordt ingediend', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-
     render(<UserProfile />);
     
     // Wijzig voornaam
@@ -125,34 +223,22 @@ describe('UserProfile', () => {
     fireEvent.click(submitButton);
     
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        data: {
-          first_name: 'Johan',
-          last_name: 'Doe',
-          role: 'student',
-          birth_year: '2000',
-          education_type: 'havo',
-          // Personal preferences (Epic 1.4)
-          language: 'nl',
-          notification_email: true,
-          notification_worksheets: true,
-          notification_submissions: true,
-          notification_system: true,
-          // Privacy settings (Epic 1.4)
-          privacy_profile_visibility: 'institutional',
-          privacy_data_processing: true,
-          privacy_marketing: false,
-          privacy_analytics: true,
-        },
-      });
+      expect(upsertUserProfile).toHaveBeenCalled();
     });
+    
+    // Check that convertFormDataToDbFormat was called with the updated data
+    expect(convertFormDataToDbFormat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstName: 'Johan',
+        lastName: 'Doe',
+        email: 'test@example.com',
+        role: 'student',
+      }),
+      '123'
+    );
   });
 
   it('toont succesbericht na succesvolle update', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-
     render(<UserProfile />);
     
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
@@ -164,10 +250,7 @@ describe('UserProfile', () => {
   });
 
   it('toont foutbericht bij mislukte update', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ 
-      error: { message: 'Update failed' } 
-    });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
+    (upsertUserProfile as jest.Mock).mockRejectedValue(new Error('Update failed'));
 
     render(<UserProfile />);
     
@@ -507,9 +590,6 @@ describe('UserProfile', () => {
   });
 
   it('slaat persoonlijke voorkeuren en privacy instellingen op bij formulier indiening', async () => {
-    const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-    
     render(<UserProfile />);
     
     // Wait for the form to load
@@ -535,18 +615,21 @@ describe('UserProfile', () => {
     
     // Wait for the form submission
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalled();
+      expect(upsertUserProfile).toHaveBeenCalled();
     });
     
-    // Check that the correct data was sent
-    expect(mockUpdateUser).toHaveBeenCalledWith(
+    // Check that convertFormDataToDbFormat was called with the updated preferences
+    expect(convertFormDataToDbFormat).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          language: 'en',
-          notification_email: false,
-          privacy_profile_visibility: 'private',
+        language: 'en',
+        notificationSettings: expect.objectContaining({
+          emailNotifications: false,
         }),
-      })
+        privacySettings: expect.objectContaining({
+          profileVisibility: 'private',
+        }),
+      }),
+      '123'
     );
   });
 });
