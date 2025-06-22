@@ -20,7 +20,7 @@ export default function GroupCreateForm({ onGroupCreated }: { onGroupCreated?: (
     const jumper_code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const { data: group, error: groupError } = await supabase
       .from("groups")
-      .insert([{ name, created_by: user.id, jumper_code }])
+      .insert([{ name, owner_id: user.id, jumper_code }])
       .select()
       .single();
 
