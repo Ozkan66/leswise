@@ -54,8 +54,8 @@ describe('GroupCreateForm', () => {
     const onGroupCreated = jest.fn();
     render(<GroupCreateForm onGroupCreated={onGroupCreated} />);
 
-    // Fill in the form
-    const nameInput = screen.getByPlaceholderText('Group name');
+    // Fill in the form - use new placeholder text
+    const nameInput = screen.getByPlaceholderText('Enter group name');
     fireEvent.change(nameInput, { target: { value: 'Test Group' } });
 
     // Submit the form
@@ -67,6 +67,8 @@ describe('GroupCreateForm', () => {
         expect.arrayContaining([
           expect.objectContaining({
             name: 'Test Group',
+            type: 'community', // Default type
+            description: null, // Empty description
             owner_id: 'test-user-id', // Should use owner_id, not created_by
             jumper_code: expect.any(String)
           })
@@ -86,7 +88,7 @@ describe('GroupCreateForm', () => {
 
     render(<GroupCreateForm />);
 
-    const nameInput = screen.getByPlaceholderText('Group name');
+    const nameInput = screen.getByPlaceholderText('Enter group name');
     fireEvent.change(nameInput, { target: { value: 'Test Group' } });
 
     const submitButton = screen.getByText('Create Group');
