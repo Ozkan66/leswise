@@ -67,8 +67,9 @@ export default function SharedWorksheetsManager() {
       setAnonymousLinks(linksData || []);
       setAnonymousSubmissions(submissionsData || []);
 
-    } catch (err: any) {
-      setError(err.message || 'Failed to load sharing data');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load sharing data';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -85,8 +86,9 @@ export default function SharedWorksheetsManager() {
       
       if (error) throw error;
       await fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete share');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete share';
+      setError(errorMessage);
     }
   };
 
@@ -101,8 +103,9 @@ export default function SharedWorksheetsManager() {
       
       if (error) throw error;
       await fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to deactivate link');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate link';
+      setError(errorMessage);
     }
   };
 
@@ -118,8 +121,9 @@ export default function SharedWorksheetsManager() {
       
       if (error) throw error;
       await fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to reset attempts');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reset attempts';
+      setError(errorMessage);
     }
   };
 
@@ -194,7 +198,7 @@ export default function SharedWorksheetsManager() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <h3 style={{ margin: '0 0 8px 0' }}>
-                        {(share as any).worksheets?.title || 'Unknown Worksheet'}
+                        {(share as { worksheets?: { title?: string } }).worksheets?.title || 'Unknown Worksheet'}
                       </h3>
                       <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '8px' }}>
                         <strong>Shared with:</strong> {
@@ -280,7 +284,7 @@ export default function SharedWorksheetsManager() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
                         <h3 style={{ margin: '0 0 8px 0' }}>
-                          {(link as any).worksheets?.title || 'Unknown Worksheet'}
+                          {(link as { worksheets?: { title?: string } }).worksheets?.title || 'Unknown Worksheet'}
                         </h3>
                         <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '8px' }}>
                           <strong>Status:</strong> {link.is_active ? 'Active' : 'Inactive'}

@@ -5,17 +5,17 @@ import WorksheetSharingForm from '../WorksheetSharingForm';
 // Mock the Supabase client module
 jest.mock('../../utils/supabaseClient', () => {
   type ChainableMock = {
-    select: jest.Mock<ChainableMock, any>;
-    insert: jest.Mock<ChainableMock, any>;
-    update: jest.Mock<ChainableMock, any>;
-    delete: jest.Mock<ChainableMock, any>;
-    eq: jest.Mock<ChainableMock, any>;
-    order: jest.Mock<ChainableMock, any>;
-    limit: jest.Mock<ChainableMock, any>;
-    match: jest.Mock<ChainableMock, any>;
-    in: jest.Mock<ChainableMock, any>;
-    single: jest.Mock<ChainableMock, any>;
-    then: jest.Mock<Promise<{ data: any, error: any }>, any>;
+    select: jest.Mock<ChainableMock, unknown[]>;
+    insert: jest.Mock<ChainableMock, unknown[]>;
+    update: jest.Mock<ChainableMock, unknown[]>;
+    delete: jest.Mock<ChainableMock, unknown[]>;
+    eq: jest.Mock<ChainableMock, unknown[]>;
+    order: jest.Mock<ChainableMock, unknown[]>;
+    limit: jest.Mock<ChainableMock, unknown[]>;
+    match: jest.Mock<ChainableMock, unknown[]>;
+    in: jest.Mock<ChainableMock, unknown[]>;
+    single: jest.Mock<ChainableMock, unknown[]>;
+    then: jest.Mock<Promise<{ data: unknown, error: unknown }>, unknown[]>;
   };
   const createChainableMock = (): ChainableMock => ({
     select: jest.fn(() => createChainableMock()),
@@ -58,6 +58,7 @@ describe('WorksheetSharingForm', () => {
   });
 
   it('renders the sharing form with correct title', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { supabase } = require('../../utils/supabaseClient');
     // Provide mock data for all tables queried in fetchData
     supabase.from.mockImplementation((table: string) => {
@@ -115,6 +116,7 @@ describe('WorksheetSharingForm', () => {
   });
 
   it('handles form submission for user sharing', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { supabase } = require('../../utils/supabaseClient');
     const mockUsers = [
       { id: 'user1', email: 'user1@test.com', first_name: 'John', last_name: 'Doe' }
@@ -170,6 +172,7 @@ describe('WorksheetSharingForm', () => {
   });
 
   it('handles errors gracefully', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { supabase } = require('../../utils/supabaseClient');
     // Mock the first query to return an error, which should trigger the catch block
     supabase.from.mockImplementation((table: string) => {
