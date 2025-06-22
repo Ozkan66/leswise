@@ -85,3 +85,50 @@ export interface UserRole {
   created_at?: string;
   updated_at?: string;
 }
+
+// Worksheet sharing types for Epic 2.2
+export interface WorksheetShare {
+  id: string;
+  worksheet_id: string;
+  shared_by_user_id: string;
+  shared_with_user_id?: string;
+  shared_with_group_id?: string;
+  permission_level: 'read' | 'submit' | 'edit';
+  max_attempts?: number;
+  attempts_used: number;
+  expires_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Join fields
+  worksheets?: Worksheet;
+  shared_with_user?: User;
+  shared_with_group?: Group;
+}
+
+export interface AnonymousLink {
+  id: string;
+  worksheet_id: string;
+  created_by_user_id: string;
+  link_code: string;
+  max_attempts?: number;
+  attempts_used: number;
+  expires_at?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // Join fields
+  worksheets?: Worksheet;
+}
+
+export interface AnonymousSubmission {
+  id: string;
+  anonymous_link_id: string;
+  worksheet_id: string;
+  participant_name?: string;
+  session_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Join fields
+  anonymous_links?: AnonymousLink;
+  worksheets?: Worksheet;
+}
