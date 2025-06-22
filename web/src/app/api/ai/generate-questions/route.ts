@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../utils/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 
 // Type definitions for AI generation
 interface QuestionTypeRequest {
@@ -46,22 +46,37 @@ Vak: ${subject}
 Onderwerp: ${topic}
 Gevraagde vragen: ${requestedQuestions}
 
-Genereer de vragen in JSON formaat. Voor elk vraagtype:
+Genereer de vragen in JSON formaat. Elke vraag moet direct de vraag data bevatten zonder extra wrapper keys:
 
-multiple_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswers": [0] }
-single_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswers": [0] }
-short_answer: { "question": "vraag tekst", "correctAnswer": "antwoord" }
-essay: { "question": "vraag of opdracht tekst" }
-matching: { "question": "instructie tekst", "pairs": [{"left": "item1", "right": "match1"}, {"left": "item2", "right": "match2"}] }
-fill_gaps: { "question": "context vraag", "textWithGaps": "tekst met [gap] markers" }
+Voor multiple_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswers": [0] }
+Voor single_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswers": [0] }
+Voor short_answer: { "question": "vraag tekst", "correctAnswer": "antwoord" }
+Voor essay: { "question": "vraag of opdracht tekst" }
+Voor matching: { "question": "instructie tekst", "pairs": [{"left": "item1", "right": "match1"}, {"left": "item2", "right": "match2"}] }
+Voor fill_gaps: { "question": "context vraag", "textWithGaps": "tekst met [gap] markers" }
+
+BELANGRIJK: Return alleen een JSON array met de vraag objecten, ZONDER type wrappers zoals "multiple_choice": {...}
+
+Voorbeeld voor 1 meerkeuzevraag:
+[
+  {
+    "question": "Wat is 2 + 2?",
+    "options": ["3", "4", "5", "6"],
+    "correctAnswers": [1]
+  }
+]
 
 Zorg ervoor dat:
 - Vragen geschikt zijn voor het opgegeven leerjaar
 - Content relevant is voor het vak en onderwerp
 - Antwoorden correct en logisch zijn
 - Gebruik Nederlandse taal (behalve als het vak een vreemde taal is)
+- Return alleen de JSON array, geen extra tekst of code blocks`;
 
-Return alleen een JSON array met de vragen, geen extra tekst.`;
+  console.log('🤖 AI PROMPT VERZONDEN:');
+  console.log('='.repeat(80));
+  console.log(prompt);
+  console.log('='.repeat(80));
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -75,7 +90,7 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
         messages: [
           {
             role: 'system',
-            content: 'Je bent een educatieve AI-assistent die hoogkwalitatieve werkbladcontent genereert. Antwoord altijd in correct JSON formaat.'
+            content: 'Je bent een educatieve AI-assistent die hoogkwalitatieve werkbladcontent genereert. Antwoord ALLEEN met valid JSON arrays, geen code blocks, geen extra tekst, geen wrapper keys.'
           },
           {
             role: 'user',
@@ -105,6 +120,12 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
     const data = await response.json();
     const aiResponse = data.choices[0]?.message?.content;
 
+    console.log('🤖 AI RESPONSE ONTVANGEN:');
+    console.log('='.repeat(80));
+    console.log('Raw OpenAI response data:', JSON.stringify(data, null, 2));
+    console.log('Extracted AI content:', aiResponse);
+    console.log('='.repeat(80));
+
     if (!aiResponse) {
       throw new Error('Geen antwoord ontvangen van OpenAI API');
     }
@@ -113,38 +134,56 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
     let parsedQuestions;
     try {
       parsedQuestions = JSON.parse(aiResponse);
-    } catch {
+      console.log('✅ JSON PARSING SUCCESVOL:', JSON.stringify(parsedQuestions, null, 2));
+    } catch (parseError) {
+      console.log('❌ JSON PARSING GEFAALD, probeer JSON extractie...');
+      console.log('Parse error:', parseError);
       // Try to extract JSON from response if it contains extra text
       const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
+        console.log('🔍 JSON GEVONDEN via regex:', jsonMatch[0]);
         parsedQuestions = JSON.parse(jsonMatch[0]);
+        console.log('✅ JSON EXTRACTIE SUCCESVOL:', JSON.stringify(parsedQuestions, null, 2));
       } else {
-        console.error('Invalid AI response:', aiResponse);
+        console.error('❌ GEEN JSON GEVONDEN in response:', aiResponse);
         throw new Error('Ongeldig JSON antwoord van AI. Probeer het opnieuw.');
       }
     }
 
     if (!Array.isArray(parsedQuestions)) {
+      console.error('❌ RESPONSE IS GEEN ARRAY:', typeof parsedQuestions, parsedQuestions);
       throw new Error('AI antwoord is geen geldige array van vragen');
     }
+
+    console.log('📝 TRANSFORMATIE NAAR WORKSHEET ELEMENTS:');
+    console.log('Input parsed questions:', JSON.stringify(parsedQuestions, null, 2));
+    console.log('Input question types:', JSON.stringify(questionTypes, null, 2));
 
     // Convert to our format and assign types
     const questions: AIGeneratedQuestion[] = [];
     let questionIndex = 0;
 
     for (const [type, count] of Object.entries(questionTypes)) {
+      console.log(`🔄 Verwerken type: ${type}, aantal: ${count}`);
       if (count > 0) {
         for (let i = 0; i < count && questionIndex < parsedQuestions.length; i++) {
           const aiQuestion = parsedQuestions[questionIndex];
-          questions.push({
+          console.log(`   - Verwerken vraag ${questionIndex}:`, JSON.stringify(aiQuestion, null, 2));
+          
+          const transformedQuestion = {
             type,
             content: JSON.stringify(aiQuestion),
             maxScore: type === 'essay' ? 5 : (type === 'matching' ? 2 : 1)
-          });
+          };
+          
+          console.log(`   - Getransformeerd naar:`, JSON.stringify(transformedQuestion, null, 2));
+          questions.push(transformedQuestion);
           questionIndex++;
         }
       }
     }
+
+    console.log('🎯 FINALE QUESTIONS ARRAY:', JSON.stringify(questions, null, 2));
 
     if (questions.length === 0) {
       throw new Error('Geen vragen gegenereerd. Probeer andere instellingen.');
@@ -178,8 +217,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Note: Authentication is handled by the worksheet creation process
-    // and the supabase client will use the user's session
+    // Get authorization header for user session
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, message: 'Geen geldige autorisatie. Log opnieuw in.' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Create authenticated Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      }
+    );
+
+    // Verify user is authenticated and get user info
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: 'Ongeldige gebruikerssessie. Log opnieuw in.' },
+        { status: 401 }
+      );
+    }
     
     // Generate questions with AI
     const generatedQuestions = await generateQuestionsWithAI(
@@ -210,17 +279,22 @@ export async function POST(request: NextRequest) {
       position: nextPosition + index
     }));
 
+    console.log('💾 DATABASE INSERT VOORBEREID:');
+    console.log('Elements to insert:', JSON.stringify(elementsToInsert, null, 2));
+
     const { error: insertError } = await supabase
       .from('worksheet_elements')
       .insert(elementsToInsert);
 
     if (insertError) {
-      console.error('Database insert error:', insertError);
+      console.error('❌ DATABASE INSERT ERROR:', insertError);
       return NextResponse.json(
         { success: false, message: 'Kon gegenereerde vragen niet opslaan in database. Probeer het opnieuw.' },
         { status: 500 }
       );
     }
+
+    console.log('✅ DATABASE INSERT SUCCESVOL!');
 
     return NextResponse.json({
       success: true,
