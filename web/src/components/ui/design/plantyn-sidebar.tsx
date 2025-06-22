@@ -45,7 +45,7 @@ export function PlantynSidebar({
 
   return (
     <div
-      className={`plantyn-sidebar h-screen flex flex-col transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`}
+      className={`fixed left-0 top-0 h-full bg-slate-700 text-white flex flex-col transition-all duration-300 z-30 ${isCollapsed ? "w-16" : "w-64"}`}
     >
       {/* Header */}
       <div className="p-4 border-b border-slate-600">
