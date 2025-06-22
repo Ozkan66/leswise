@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { Folder } from "../types/database";
 
-export default function WorksheetCreateForm({ onWorksheetCreated }: { onWorksheetCreated?: () => void }) {
+interface WorksheetCreateFormProps {
+  onWorksheetCreated?: () => void;
+  onWorksheetCreatedWithAI?: (worksheetId: string) => void;
+}
+
+export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCreatedWithAI }: WorksheetCreateFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -11,6 +16,7 @@ export default function WorksheetCreateForm({ onWorksheetCreated }: { onWorkshee
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [useAI, setUseAI] = useState(false);
 
   useEffect(() => {
     const fetchFolders = async () => {
@@ -55,8 +61,17 @@ export default function WorksheetCreateForm({ onWorksheetCreated }: { onWorkshee
     setInstructions("");
     setFolderId("");
     setStatus('draft');
+    setUseAI(false);
     setLoading(false);
-    if (onWorksheetCreated) onWorksheetCreated();
+    
+    // Call appropriate callback based on AI selection
+    if (useAI && onWorksheetCreatedWithAI) {
+      // For AI mode, we'll use a simpler approach - just signal AI mode
+      // The worksheet will be selected by the user for AI generation
+      onWorksheetCreatedWithAI("new-worksheet");
+    } else if (onWorksheetCreated) {
+      onWorksheetCreated();
+    }
   };
 
   return (
@@ -119,6 +134,23 @@ export default function WorksheetCreateForm({ onWorksheetCreated }: { onWorkshee
           <option value="draft">Draft (work in progress)</option>
           <option value="published">Published (available to students)</option>
         </select>
+      </div>
+
+      <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 6, border: '1px solid #ddd' }}>
+        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={useAI}
+            onChange={(e) => setUseAI(e.target.checked)}
+            style={{ marginRight: 8 }}
+          />
+          <span style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+            🤖 AI-ondersteuning inschakelen
+          </span>
+        </label>
+        <div style={{ fontSize: '0.9em', color: '#666', marginTop: 4, marginLeft: 24 }}>
+          Na het aanmaken krijg je de optie om vragen automatisch te laten genereren door AI
+        </div>
       </div>
 
       <button type="submit" disabled={loading} style={{ padding: '8px 16px' }}>
