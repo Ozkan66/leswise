@@ -30,7 +30,7 @@ async function generateQuestionsWithAI(
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
   if (!openaiApiKey) {
-    throw new Error('OpenAI API key not configured');
+    throw new Error('OpenAI API key niet geconfigureerd. Controleer of OPENAI_API_KEY is ingesteld in de omgevingsvariabelen.');
   }
 
   // Build prompt based on question types and quantities
@@ -71,7 +71,7 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -88,14 +88,25 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OpenAI API Response:', response.status, errorText);
+      
+      if (response.status === 401) {
+        throw new Error('OpenAI API key is ongeldig. Controleer de API key configuratie.');
+      } else if (response.status === 429) {
+        throw new Error('OpenAI API limiet bereikt. Probeer het later opnieuw.');
+      } else if (response.status === 500) {
+        throw new Error('OpenAI service is tijdelijk niet beschikbaar. Probeer het later opnieuw.');
+      } else {
+        throw new Error(`OpenAI API fout: ${response.status} - ${errorText}`);
+      }
     }
 
     const data = await response.json();
     const aiResponse = data.choices[0]?.message?.content;
 
     if (!aiResponse) {
-      throw new Error('No response from AI');
+      throw new Error('Geen antwoord ontvangen van OpenAI API');
     }
 
     // Parse AI response
@@ -108,8 +119,13 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
       if (jsonMatch) {
         parsedQuestions = JSON.parse(jsonMatch[0]);
       } else {
-        throw new Error('Invalid JSON response from AI');
+        console.error('Invalid AI response:', aiResponse);
+        throw new Error('Ongeldig JSON antwoord van AI. Probeer het opnieuw.');
       }
+    }
+
+    if (!Array.isArray(parsedQuestions)) {
+      throw new Error('AI antwoord is geen geldige array van vragen');
     }
 
     // Convert to our format and assign types
@@ -130,11 +146,21 @@ Return alleen een JSON array met de vragen, geen extra tekst.`;
       }
     }
 
+    if (questions.length === 0) {
+      throw new Error('Geen vragen gegenereerd. Probeer andere instellingen.');
+    }
+
     return questions;
 
   } catch (error) {
     console.error('AI generation error:', error);
-    throw new Error('Failed to generate questions with AI');
+    
+    if (error instanceof Error) {
+      // Re-throw our custom error messages
+      throw error;
+    }
+    
+    throw new Error('Onbekende fout bij genereren van vragen. Probeer het opnieuw.');
   }
 }
 
@@ -147,7 +173,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!worksheetId || !gradeLevel || !subject || !topic) {
       return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
+        { success: false, message: 'Ontbrekende verplichte velden. Controleer of alle velden zijn ingevuld.' },
         { status: 400 }
       );
     }
@@ -191,21 +217,21 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       console.error('Database insert error:', insertError);
       return NextResponse.json(
-        { success: false, message: 'Failed to save generated questions' },
+        { success: false, message: 'Kon gegenereerde vragen niet opslaan in database. Probeer het opnieuw.' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: `Successfully generated ${generatedQuestions.length} questions`,
+      message: `Succesvol ${generatedQuestions.length} vragen gegenereerd`,
       questionsGenerated: generatedQuestions.length
     });
 
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, message: error instanceof Error ? error.message : 'Interne serverfout opgetreden' },
       { status: 500 }
     );
   }
