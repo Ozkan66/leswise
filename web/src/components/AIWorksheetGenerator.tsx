@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "../utils/supabaseClient";
 
 interface AIGenerationSettings {
   gradeLevel: string;
@@ -74,10 +75,17 @@ export default function AIWorksheetGenerator({ worksheetId, onQuestionsGenerated
     setError("");
 
     try {
+      // Get user session for authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Niet ingelogd. Log opnieuw in.');
+      }
+
       const response = await fetch('/api/ai/generate-questions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           worksheetId,
@@ -86,7 +94,8 @@ export default function AIWorksheetGenerator({ worksheetId, onQuestionsGenerated
       });
 
       if (!response.ok) {
-        throw new Error('Generatie mislukt');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Generatie mislukt');
       }
 
       const result = await response.json();
