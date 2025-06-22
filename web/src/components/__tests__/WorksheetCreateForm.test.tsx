@@ -33,7 +33,7 @@ describe('WorksheetCreateForm', () => {
       error: null
     });
 
-    // Mock folders query
+    // Mock folders and worksheets queries  
     mockSupabase.from.mockReturnValue({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockResolvedValue({
@@ -42,6 +42,10 @@ describe('WorksheetCreateForm', () => {
           ],
           error: null
         })
+      }),
+      insert: jest.fn().mockResolvedValue({
+        data: null,
+        error: null
       })
     });
 
