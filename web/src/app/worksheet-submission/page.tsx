@@ -90,12 +90,19 @@ function WorksheetSubmissionContent() {
           }
           
           // Check if user has access to this worksheet
-          const { data: hasAccessData } = await supabase
+          const { data: hasAccessData, error: accessError } = await supabase
             .rpc('user_has_worksheet_access', {
               p_user_id: user.id,
               p_worksheet_id: worksheetId,
               p_required_permission: 'submit'
             });
+            
+          if (accessError) {
+            console.error('Error checking worksheet access:', accessError);
+            setError("Error checking worksheet permissions. Please try again.");
+            setLoading(false);
+            return;
+          }
             
           if (!hasAccessData) {
             setError("You don't have permission to access this worksheet");
@@ -194,12 +201,18 @@ function WorksheetSubmissionContent() {
       if (isAnonymous) {
         // Handle anonymous submission
         // First check and increment attempts
-        const { data: canSubmit } = await supabase
+        const { data: canSubmit, error: attemptError } = await supabase
           .rpc('check_and_increment_attempts', {
             p_user_id: null,
             p_worksheet_id: currentWorksheetId,
             p_anonymous_link_id: anonymousLink?.id
           });
+          
+        if (attemptError) {
+          console.error('Error checking attempt limits:', attemptError);
+          setError("Error checking attempt limits. Please try again.");
+          return;
+        }
           
         if (!canSubmit) {
           setError("Maximum attempts reached for this worksheet.");
@@ -232,12 +245,18 @@ function WorksheetSubmissionContent() {
         if (!user) throw new Error("Niet ingelogd");
         
         // Check attempt limits for regular users
-        const { data: canSubmit } = await supabase
+        const { data: canSubmit, error: attemptError } = await supabase
           .rpc('check_and_increment_attempts', {
             p_user_id: user.id,
             p_worksheet_id: currentWorksheetId,
             p_anonymous_link_id: null
           });
+          
+        if (attemptError) {
+          console.error('Error checking attempt limits:', attemptError);
+          setError("Error checking attempt limits. Please try again.");
+          return;
+        }
           
         if (!canSubmit) {
           setError("Maximum attempts reached for this worksheet.");
