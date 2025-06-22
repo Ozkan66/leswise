@@ -6,7 +6,16 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
   const [elements, setElements] = useState<WorksheetElement[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState<any>(null);
+  const [editContent, setEditContent] = useState<{
+    text?: string;
+    question?: string;
+    options?: string[];
+    correctAnswers?: number[];
+    pairs?: Array<{left: string, right: string}>;
+    correctOrder?: string[];
+    textWithGaps?: string;
+    [key: string]: unknown;
+  } | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
 
@@ -112,7 +121,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
         default:
           return <div>{content.text || JSON.stringify(content)}</div>;
       }
-    } catch (e) {
+    } catch {
       return <div style={{ color: 'red' }}>Invalid content format</div>;
     }
   };
@@ -121,7 +130,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     setEditingId(el.id);
     try {
       setEditContent(JSON.parse(el.content));
-    } catch (e) {
+    } catch {
       setEditContent({ text: el.content });
     }
   };

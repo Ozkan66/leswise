@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { Worksheet } from "../types/database";
+import WorksheetSharingForm from "./WorksheetSharingForm";
 
 export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksheet: Worksheet) => void, refresh?: number }) {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
@@ -13,6 +14,7 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
     status: 'draft' | 'published';
   }>({ title: '', description: '', instructions: '', status: 'draft' });
   const [userId, setUserId] = useState<string | null>(null);
+  const [sharingWorksheet, setSharingWorksheet] = useState<Worksheet | null>(null);
 
   useEffect(() => {
     const fetchWorksheets = async () => {
@@ -203,6 +205,12 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
                           Edit
                         </button>
                         <button 
+                          onClick={() => setSharingWorksheet(ws)}
+                          style={{ marginRight: 8, padding: '4px 8px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: 3 }}
+                        >
+                          Share
+                        </button>
+                        <button 
                           onClick={() => handleDelete(ws)}
                           style={{ color: 'red', padding: '4px 8px' }}
                         >
@@ -217,6 +225,18 @@ export default function WorksheetList({ onSelect, refresh }: { onSelect: (worksh
           </li>
         ))}
       </ul>
+      
+      {sharingWorksheet && (
+        <WorksheetSharingForm
+          worksheetId={sharingWorksheet.id}
+          worksheetTitle={sharingWorksheet.title}
+          onClose={() => setSharingWorksheet(null)}
+          onShared={() => {
+            // Optionally refresh the worksheet list or show a success message
+            console.log('Worksheet shared successfully');
+          }}
+        />
+      )}
     </div>
   );
 }

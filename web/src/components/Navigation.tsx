@@ -31,6 +31,7 @@ export default function Navigation() {
           <Link href="/groups" style={{ marginRight: 12 }}>Groups</Link>
           <Link href="/folders" style={{ marginRight: 12 }}>Folders</Link>
           <Link href="/worksheets" style={{ marginRight: 12 }}>Worksheets</Link>
+          <Link href="/shared-worksheets" style={{ marginRight: 12 }}>Shared Worksheets</Link>
           <Link href="/worksheet-submission" style={{ marginRight: 12 }}>Submissions</Link>
           <Link href="/student-submissions" style={{ marginRight: 12 }}>My Submissions</Link>
           <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
