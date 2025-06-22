@@ -33,7 +33,7 @@ export default function Navigation() {
           <Link href="/worksheets" style={{ marginRight: 12 }}>Worksheets</Link>
           <Link href="/shared-worksheets" style={{ marginRight: 12 }}>Shared Worksheets</Link>
           <Link href="/worksheet-submission" style={{ marginRight: 12 }}>Submissions</Link>
-          <Link href="/student-submissions" style={{ marginRight: 12 }}>My Submissions</Link>
+          <Link href="/student-submissions" style={{ marginRight: 12 }}>Mijn Werkbladen</Link>
           <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
           
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
