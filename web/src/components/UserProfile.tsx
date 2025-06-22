@@ -112,7 +112,7 @@ export default function UserProfile() {
   };
 
   const handleNotificationChange = (
-  field: keyof NonNullable<UserProfileData['notificationSettings']>,
+  field: keyof NotificationSettings,
   value: boolean
 ) => {
     setProfileData(prev => ({
