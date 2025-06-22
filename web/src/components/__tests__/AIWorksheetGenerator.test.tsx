@@ -5,6 +5,23 @@ import AIWorksheetGenerator from '../AIWorksheetGenerator';
 // Mock fetch
 global.fetch = jest.fn();
 
+// Mock Supabase auth session
+jest.mock('../../utils/supabaseClient', () => ({
+  supabase: {
+    auth: {
+      getSession: jest.fn(() => Promise.resolve({
+        data: {
+          session: {
+            access_token: 'mock-access-token',
+            user: { id: 'mock-user-id' }
+          }
+        },
+        error: null
+      }))
+    }
+  }
+}));
+
 describe('AIWorksheetGenerator', () => {
   const mockOnQuestionsGenerated = jest.fn();
   const mockWorksheetId = 'test-worksheet-id';
@@ -107,6 +124,7 @@ describe('AIWorksheetGenerator', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer mock-access-token'
         },
         body: JSON.stringify({
           worksheetId: mockWorksheetId,
@@ -126,7 +144,8 @@ describe('AIWorksheetGenerator', () => {
   it('shows error when API call fails', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
-      status: 500
+      status: 500,
+      json: jest.fn().mockResolvedValue({ message: 'Server error' })
     });
 
     render(
@@ -155,7 +174,7 @@ describe('AIWorksheetGenerator', () => {
     fireEvent.click(screen.getByRole('button', { name: '🚀 Genereer Vragen' }));
     
     await waitFor(() => {
-      expect(screen.getByText('Generatie mislukt')).toBeInTheDocument();
+      expect(screen.getByText('Server error')).toBeInTheDocument();
     });
   });
 });
