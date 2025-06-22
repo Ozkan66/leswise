@@ -76,14 +76,14 @@ export default function WorksheetSharingForm({
         `)
         .eq('worksheet_id', worksheetId);
       setExistingShares(sharesData || []);
-
+   
       // Fetch anonymous links  
       await supabase
-      const { data: linksData } = await supabase
+      const { data: linksData, error } = await supabase
         .from('anonymous_links')
         .select('*')
-        .filter('worksheet_id', 'eq', worksheetId)
-        .filter('is_active',     'eq', true);
+        .eq('worksheet_id', worksheetId)
+        .eq('is_active', true);       // ✅ keep chained .eq() – v2 supports it
       setAnonymousLinks(linksData || []);
 
     } catch (err) {
