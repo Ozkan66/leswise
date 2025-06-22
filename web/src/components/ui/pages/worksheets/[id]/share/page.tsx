@@ -131,7 +131,10 @@ export default function WorksheetSharePage({ params }: { params: { id: string } 
             </div>
 
             <div className="flex items-center space-x-2">
-              <Checkbox checked={allowReview} onCheckedChange={setAllowReview} />
+              <Checkbox 
+                checked={allowReview} 
+                onCheckedChange={(checked) => setAllowReview(checked === true)} 
+              />
               <Label>Allow students to review answers after submission</Label>
             </div>
           </CardContent>
