@@ -26,6 +26,9 @@ jest.mock('./src/utils/supabaseClient', () => {
     eq: jest.fn(() => createChainableMock()),
     order: jest.fn(() => createChainableMock()),
     limit: jest.fn(() => createChainableMock()),
+    match: jest.fn(() => createChainableMock()),
+    in: jest.fn(() => createChainableMock()),
+    single: jest.fn(() => createChainableMock()),
     then: jest.fn(() => Promise.resolve({ data: null, error: null }))
   });
 
