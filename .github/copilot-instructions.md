@@ -306,6 +306,39 @@ if (isUser(data)) {
 }
 ```
 
+### 4. Supabase Query Response Types - Match Actual Structure
+```typescript
+// ❌ FOUT - Type doesn't match Supabase join response
+type UserRoleData = {
+  users?: {
+    id?: string;
+    email?: string;
+  };
+  role: string;
+};
+
+// ✅ CORRECT - Type matches actual Supabase response structure
+type UserRoleData = {
+  user_id: string;
+  role: string;
+  users: {
+    id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+  }[];
+};
+
+// ✅ Access joined data correctly
+const usersList = usersData?.map((ur: UserRoleData) => ({
+  id: ur.users[0]?.id || '',
+  email: ur.users[0]?.email || '',
+  firstName: ur.users[0]?.first_name || undefined,
+  lastName: ur.users[0]?.last_name || undefined,
+  role: ur.role
+}));
+```
+
 ## 📦 Project-Specific Patterns
 
 ### 1. Supabase Integration
@@ -363,6 +396,9 @@ Voor elke nieuwe component/feature, controleer:
 - [ ] TypeScript interfaces zijn expliciet gedefinieerd
 - [ ] Component props hebben interface definities
 - [ ] Event handlers hebben correcte types
+- [ ] Supabase query response types matchen actual database structure
+- [ ] Join queries gebruik correct array access pattern (users[0] vs users)
+- [ ] Database null values worden correct behandeld (string | null)
 
 ## 📚 Referenties
 
@@ -373,5 +409,5 @@ Voor elke nieuwe component/feature, controleer:
 
 ---
 
-**Laatste update**: December 2024  
-**Gebaseerd op**: Leswise test/lint error fixes en best practices
+**Laatste update**: Juni 2025  
+**Gebaseerd op**: Leswise test/lint error fixes, Vercel deployment fixes en best practices
