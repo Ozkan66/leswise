@@ -2,12 +2,12 @@
 -- Migration for worksheet sharing functionality
 
 -- Create worksheet_shares table for tracking shared worksheets (US 2.2.1)
-CREATE TABLE worksheet_shares (
+CREATE TABLE IF NOT EXISTS worksheet_shares (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  worksheet_id UUID REFERENCES worksheets(id) ON DELETE CASCADE NOT NULL,
-  shared_by_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  shared_with_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  shared_with_group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+  worksheet_id UUID REFERENCES public.worksheets(id) ON DELETE CASCADE NOT NULL,
+  shared_by_user_id UUID REFERENCES public.user_profiles(user_id) ON DELETE CASCADE NOT NULL,
+  shared_with_user_id UUID REFERENCES public.user_profiles(user_id) ON DELETE CASCADE,
+  shared_with_group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
   permission_level VARCHAR(20) DEFAULT 'read' CHECK (permission_level IN ('read', 'submit', 'edit')),
   max_attempts INTEGER DEFAULT NULL, -- NULL means unlimited attempts
   attempts_used INTEGER DEFAULT 0,
@@ -22,10 +22,10 @@ CREATE TABLE worksheet_shares (
 );
 
 -- Create anonymous_links table for anonymous sharing (US 2.2.2)
-CREATE TABLE anonymous_links (
+CREATE TABLE IF NOT EXISTS anonymous_links (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  worksheet_id UUID REFERENCES worksheets(id) ON DELETE CASCADE NOT NULL,
-  created_by_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  worksheet_id UUID REFERENCES public.worksheets(id) ON DELETE CASCADE NOT NULL,
+  created_by_user_id UUID REFERENCES public.user_profiles(user_id) ON DELETE CASCADE NOT NULL,
   link_code VARCHAR(32) UNIQUE NOT NULL, -- Unique code for the link
   max_attempts INTEGER DEFAULT NULL, -- NULL means unlimited
   attempts_used INTEGER DEFAULT 0,
@@ -36,10 +36,10 @@ CREATE TABLE anonymous_links (
 );
 
 -- Create anonymous_submissions table to track anonymous submissions
-CREATE TABLE anonymous_submissions (
+CREATE TABLE IF NOT EXISTS anonymous_submissions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   anonymous_link_id UUID REFERENCES anonymous_links(id) ON DELETE CASCADE NOT NULL,
-  worksheet_id UUID REFERENCES worksheets(id) ON DELETE CASCADE NOT NULL,
+  worksheet_id UUID REFERENCES public.worksheets(id) ON DELETE CASCADE NOT NULL,
   participant_name VARCHAR(255), -- Optional name provided by anonymous user
   session_id VARCHAR(255), -- Browser session identifier
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -47,17 +47,17 @@ CREATE TABLE anonymous_submissions (
 );
 
 -- Add indexes for better performance
-CREATE INDEX idx_worksheet_shares_worksheet_id ON worksheet_shares(worksheet_id);
-CREATE INDEX idx_worksheet_shares_shared_with_user ON worksheet_shares(shared_with_user_id);
-CREATE INDEX idx_worksheet_shares_shared_with_group ON worksheet_shares(shared_with_group_id);
-CREATE INDEX idx_worksheet_shares_shared_by ON worksheet_shares(shared_by_user_id);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS idx_worksheet_shares_worksheet_id ON worksheet_shares(worksheet_id);
+CREATE INDEX IF NOT EXISTS idx_worksheet_shares_shared_with_user ON worksheet_shares(shared_with_user_id);
+CREATE INDEX IF NOT EXISTS idx_worksheet_shares_shared_with_group ON worksheet_shares(shared_with_group_id);
+CREATE INDEX IF NOT EXISTS idx_worksheet_shares_shared_by ON worksheet_shares(shared_by_user_id);
 
-CREATE INDEX idx_anonymous_links_worksheet_id ON anonymous_links(worksheet_id);
-CREATE INDEX idx_anonymous_links_link_code ON anonymous_links(link_code);
-CREATE INDEX idx_anonymous_links_created_by ON anonymous_links(created_by_user_id);
+CREATE INDEX IF NOT EXISTS idx_anonymous_links_worksheet_id ON anonymous_links(worksheet_id);
+CREATE INDEX IF NOT EXISTS idx_anonymous_links_link_code ON anonymous_links(link_code);
+CREATE INDEX IF NOT EXISTS idx_anonymous_links_created_by ON anonymous_links(created_by_user_id);
 
-CREATE INDEX idx_anonymous_submissions_link_id ON anonymous_submissions(anonymous_link_id);
-CREATE INDEX idx_anonymous_submissions_worksheet_id ON anonymous_submissions(worksheet_id);
+CREATE INDEX IF NOT EXISTS idx_anonymous_submissions_link_id ON anonymous_submissions(anonymous_link_id);
+CREATE INDEX IF NOT EXISTS idx_anonymous_submissions_worksheet_id ON anonymous_submissions(worksheet_id);
 
 -- Enable Row Level Security
 ALTER TABLE worksheet_shares ENABLE ROW LEVEL SECURITY;
@@ -71,7 +71,7 @@ FOR SELECT USING (
   auth.uid() = shared_by_user_id OR 
   auth.uid() = shared_with_user_id OR
   shared_with_group_id IN (
-    SELECT group_id FROM group_members WHERE user_id = auth.uid()
+    SELECT group_id FROM public.group_members WHERE user_id = auth.uid()
   )
 );
 
@@ -79,7 +79,7 @@ FOR SELECT USING (
 CREATE POLICY "Worksheet owners can create shares" ON worksheet_shares
 FOR INSERT WITH CHECK (
   auth.uid() = shared_by_user_id AND
-  worksheet_id IN (SELECT id FROM worksheets WHERE owner_id = auth.uid())
+  worksheet_id IN (SELECT id FROM public.worksheets WHERE owner_id = auth.uid())
 );
 
 -- Only the creator can update/delete shares
@@ -98,7 +98,7 @@ FOR SELECT USING (auth.uid() = created_by_user_id);
 CREATE POLICY "Worksheet owners can create anonymous links" ON anonymous_links
 FOR INSERT WITH CHECK (
   auth.uid() = created_by_user_id AND
-  worksheet_id IN (SELECT id FROM worksheets WHERE owner_id = auth.uid())
+  worksheet_id IN (SELECT id FROM public.worksheets WHERE owner_id = auth.uid())
 );
 
 -- Only the creator can update/delete anonymous links
@@ -112,7 +112,7 @@ FOR DELETE USING (auth.uid() = created_by_user_id);
 -- Only worksheet owners can see anonymous submissions for their worksheets
 CREATE POLICY "Worksheet owners can view anonymous submissions" ON anonymous_submissions
 FOR SELECT USING (
-  worksheet_id IN (SELECT id FROM worksheets WHERE owner_id = auth.uid())
+  worksheet_id IN (SELECT id FROM public.worksheets WHERE owner_id = auth.uid())
 );
 
 -- Anonymous submissions can be inserted without authentication (handled by application logic)
@@ -220,7 +220,7 @@ BEGIN
     FROM worksheet_shares
     WHERE worksheet_id = p_worksheet_id 
     AND (shared_with_user_id = p_user_id OR shared_with_group_id IN (
-      SELECT group_id FROM group_members WHERE user_id = p_user_id
+      SELECT group_id FROM public.group_members WHERE user_id = p_user_id
     ))
     ORDER BY max_attempts DESC NULLS LAST -- Prioritize higher limits
     LIMIT 1;
@@ -234,7 +234,7 @@ BEGIN
     SET attempts_used = attempts_used + 1, updated_at = NOW()
     WHERE worksheet_id = p_worksheet_id 
     AND (shared_with_user_id = p_user_id OR shared_with_group_id IN (
-      SELECT group_id FROM group_members WHERE user_id = p_user_id
+      SELECT group_id FROM public.group_members WHERE user_id = p_user_id
     ));
   END IF;
   

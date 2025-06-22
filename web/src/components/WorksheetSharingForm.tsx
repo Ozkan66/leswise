@@ -41,28 +41,16 @@ export default function WorksheetSharingForm({
     try {
       // Fetch users (teachers and students for sharing)
       const { data: usersData } = await supabase
-        .from('user_roles')
-        .select('user_id, role, users!inner(id, email, first_name, last_name)')
+        .from('user_profiles')
+        .select('user_id, email, first_name, last_name, role')
         .in('role', ['teacher', 'student']);
       
-      // Define type matching actual Supabase response structure
-      type UserRoleData = {
-        user_id: string;
-        role: string;
-        users: {
-          id: string;
-          email: string;
-          first_name: string | null;
-          last_name: string | null;
-        }[];
-      };
-      
-      const usersList = usersData?.map((ur: UserRoleData) => ({
-        id: ur.users[0]?.id || '',
-        email: ur.users[0]?.email || '',
-        firstName: ur.users[0]?.first_name || undefined,
-        lastName: ur.users[0]?.last_name || undefined,
-        role: ur.role
+      const usersList = usersData?.map((up) => ({
+        id: up.user_id || '',
+        email: up.email || '',
+        firstName: up.first_name || undefined,
+        lastName: up.last_name || undefined,
+        role: up.role
       })).filter(u => u.id) || [];
       setUsers(usersList as User[]);
 
