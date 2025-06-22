@@ -165,7 +165,16 @@ export default function WorksheetSharingForm({
       if (!user) throw new Error('Not authenticated');
 
       // Generate unique link code
-      const { data: linkCode } = await supabase.rpc('generate_link_code');
+      const { data: linkCode, error: rpcError } = await supabase.rpc('generate_link_code');
+      
+      if (rpcError) {
+        console.error('Error generating link code:', rpcError);
+        throw new Error('Failed to generate unique link code. Please try again.');
+      }
+      
+      if (!linkCode) {
+        throw new Error('Failed to generate unique link code. Please try again.');
+      }
       
       const linkData = {
         worksheet_id: worksheetId,
