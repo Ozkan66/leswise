@@ -5,7 +5,22 @@ export interface User {
   email: string;
   firstName?: string;
   lastName?: string;
+  role?: 'student' | 'teacher' | 'admin';
+  birth_year?: number;
+  education_type?: string;
   email_confirmed_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UserProfile {
+  user_id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: 'student' | 'teacher' | 'admin';
+  birth_year?: number;
+  education_type?: string;
   created_at?: string;
   updated_at?: string;
 }

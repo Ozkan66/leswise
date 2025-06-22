@@ -176,7 +176,7 @@ describe('WorksheetSharingForm', () => {
     const { supabase } = require('../../utils/supabaseClient');
     // Mock the first query to return an error, which should trigger the catch block
     supabase.from.mockImplementation((table: string) => {
-      if (table === 'user_roles') {
+      if (table === 'user_profiles') {
         return {
           select: jest.fn(() => {
             throw new Error('Database connection failed');
