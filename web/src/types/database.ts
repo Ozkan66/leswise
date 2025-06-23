@@ -40,12 +40,23 @@ export interface Worksheet {
 export interface WorksheetElement {
   id: string;
   worksheet_id?: string;
-  content: string;
+  content: Record<string, unknown>; // JSONB field - can contain any object structure
   position?: number;
   type?: string;
   max_score?: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   worksheets?: any; // For joins 
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Task {
+  id: string;
+  worksheet_id: string;
+  title: string;
+  task_type: 'open-question' | 'multiple-choice' | 'information' | 'text' | 'single_choice' | 'short_answer' | 'essay' | 'matching' | 'ordering' | 'fill_gaps';
+  order_index: number;
+  content?: string; // For storing question details, options, etc.
   created_at?: string;
   updated_at?: string;
 }

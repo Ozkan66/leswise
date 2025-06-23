@@ -321,9 +321,15 @@ function WorksheetSubmissionContent() {
         </div>
         {elements.map(el => {
           const answerObj = mySubmissionElements.find(a => a.worksheet_element_id === el.id);
+          // Handle content as either string (old format) or object (new format)
+          const contentObj = typeof el.content === 'string' 
+            ? JSON.parse(el.content) 
+            : el.content;
+          const questionText = (contentObj as { text?: string })?.text || 'Question text not available';
+          
           return (
             <div key={el.id} style={{ marginBottom: 24, borderBottom: '1px solid #333', paddingBottom: 12 }}>
-              <b>{JSON.parse(el.content).text}</b> <span style={{ color: '#888' }}>(max {el.max_score} punten)</span>
+              <b>{questionText}</b> <span style={{ color: '#888' }}>(max {el.max_score} punten)</span>
               <div style={{ marginLeft: 16, marginBottom: 8 }}>
                 <span style={{ color: '#ccc' }}>Jouw antwoord:</span> {answerObj ? answerObj.answer : <i>Geen antwoord</i>}
               </div>
@@ -375,21 +381,29 @@ function WorksheetSubmissionContent() {
             </label>
           </div>
         )}
-        {elements.map((el) => (
-          <div key={el.id} style={{ marginBottom: 24 }}>
-            <label>
-              <b>{JSON.parse(el.content).text}</b>
-              <br />
-              <input
-                type="text"
-                value={answers[el.id] || ""}
-                onChange={(e) => handleChange(el.id, e.target.value)}
-                style={{ width: "100%", padding: 8, marginTop: 8 }}
-                required
-              />
-            </label>
-          </div>
-        ))}
+        {elements.map((el) => {
+          // Handle content as either string (old format) or object (new format)
+          const contentObj = typeof el.content === 'string' 
+            ? JSON.parse(el.content) 
+            : el.content;
+          const questionText = (contentObj as { text?: string })?.text || 'Question text not available';
+          
+          return (
+            <div key={el.id} style={{ marginBottom: 24 }}>
+              <label>
+                <b>{questionText}</b>
+                <br />
+                <input
+                  type="text"
+                  value={answers[el.id] || ""}
+                  onChange={(e) => handleChange(el.id, e.target.value)}
+                  style={{ width: "100%", padding: 8, marginTop: 8 }}
+                  required
+                />
+              </label>
+            </div>
+          );
+        })}
         <button type="submit" style={{ padding: "8px 24px" }}>
           {isAnonymous ? "Submit Anonymous Response" : "Indienen"}
         </button>

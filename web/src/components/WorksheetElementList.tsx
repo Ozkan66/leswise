@@ -57,7 +57,10 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
 
   const renderElementContent = (el: WorksheetElement) => {
     try {
-      const content = JSON.parse(el.content);
+      // Handle content as either string (old format) or object (new format)
+      const content = typeof el.content === 'string' 
+        ? JSON.parse(el.content) 
+        : el.content;
       switch (el.type) {
         case "text":
           return <div style={{ fontStyle: 'italic' }}>{content.text}</div>;
@@ -129,9 +132,14 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
   const handleEdit = (el: WorksheetElement) => {
     setEditingId(el.id);
     try {
-      setEditContent(JSON.parse(el.content));
+      // Handle content as either string (old format) or object (new format)
+      const content = typeof el.content === 'string' 
+        ? JSON.parse(el.content) 
+        : el.content;
+      setEditContent(content);
     } catch {
-      setEditContent({ text: el.content });
+      // Fallback for invalid content format
+      setEditContent({ text: typeof el.content === 'string' ? el.content : 'Invalid content' });
     }
   };
 

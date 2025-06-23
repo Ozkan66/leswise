@@ -158,9 +158,15 @@ export default function TeacherSubmissionsPage() {
 
           {elements.map(el => {
             const answerObj = answers.find(a => a.worksheet_element_id === el.id);
+            // Handle content as either string (old format) or object (new format)
+            const contentObj = typeof el.content === 'string' 
+              ? JSON.parse(el.content) 
+              : el.content;
+            const questionText = (contentObj as { text?: string })?.text || 'Question text not available';
+            
             return (
               <div key={el.id} style={{ marginBottom: 24, borderBottom: '1px solid #333', paddingBottom: 12 }}>
-                <b>{JSON.parse(el.content).text}</b>
+                <b>{questionText}</b>
                 <div style={{ marginLeft: 16, marginBottom: 8 }}>
                   <span style={{ color: '#ccc' }}>Antwoord:</span> {answerObj ? answerObj.answer : <i>Geen antwoord</i>}
                 </div>
