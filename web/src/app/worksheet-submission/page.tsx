@@ -325,7 +325,7 @@ function WorksheetSubmissionContent() {
           const contentObj = typeof el.content === 'string' 
             ? JSON.parse(el.content) 
             : el.content;
-          const questionText = (contentObj as { text?: string })?.text || 'Question text not available';
+          const questionText = (contentObj as { text?: string, question?: string })?.text || (contentObj as { text?: string, question?: string })?.question || 'Question text not available';
           
           return (
             <div key={el.id} style={{ marginBottom: 24, borderBottom: '1px solid #333', paddingBottom: 12 }}>
@@ -386,7 +386,7 @@ function WorksheetSubmissionContent() {
           const contentObj = typeof el.content === 'string' 
             ? JSON.parse(el.content) 
             : el.content;
-          const questionText = (contentObj as { text?: string })?.text || 'Question text not available';
+            const questionText = (contentObj as { text?: string, question?: string })?.text || (contentObj as { text?: string, question?: string })?.question || 'Question text not available';
           
           return (
             <div key={el.id} style={{ marginBottom: 24 }}>

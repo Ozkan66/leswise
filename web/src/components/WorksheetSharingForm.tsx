@@ -74,7 +74,9 @@ export default function WorksheetSharingForm({
       const { data: sharesData } = await supabase
         .from('worksheet_shares')
         .select(`
-          *
+          *,
+          shared_with_user:user_profiles(email, first_name, last_name),
+          shared_with_group:groups(name)
         `)
         .eq('worksheet_id', worksheetId);
       setExistingShares(sharesData || []);
@@ -249,23 +251,23 @@ export default function WorksheetSharingForm({
     return `${window.location.origin}/worksheet-submission?anonymous=${linkCode}`;
   };
 
-  if (loading && existingShares.length === 0) {
-    return <div>Loading sharing options...</div>;
-  }
+  const getShareDisplayText = (share: any) => {
+    if (share.shared_with_user) {
+      const user = share.shared_with_user;
+      const name = (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : user.email;
+      return `User: ${name}`;
+    }
+    if (share.shared_with_group) {
+      return `Group: ${share.shared_with_group.name}`;
+    }
+    // Fallback for older shares that might not have the joined data
+    if(share.shared_with_user_id) return `User ID: ${share.shared_with_user_id}`;
+    if(share.shared_with_group_id) return `Group ID: ${share.shared_with_group_id}`;
+    return 'Unknown Share';
+  };
 
   return (
-    <div style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.5)', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div style={{ 
         backgroundColor: 'white', 
         padding: '24px', 
@@ -289,36 +291,26 @@ export default function WorksheetSharingForm({
         {/* Existing Shares */}
         {existingShares.length > 0 && (
           <div style={{ marginBottom: '24px' }}>
-            <h3>Current Shares</h3>
-            <div style={{ maxHeight: '200px', overflow: 'auto' }}>
-              {existingShares.map(share => (
-                <div key={share.id} style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  padding: '8px',
-                  margin: '4px 0',
-                  backgroundColor: '#f5f5f5',
-                  borderRadius: '4px'
-                }}>
-                  <div>
-                    <strong>
-                      {share.shared_with_user_id ? `User ID: ${share.shared_with_user_id}` : `Group ID: ${share.shared_with_group_id}`}
-                    </strong>
-                    <span style={{ marginLeft: '8px', fontSize: '0.9em', color: '#666' }}>
-                      ({share.permission_level})
-                      {share.max_attempts && ` - ${share.attempts_used}/${share.max_attempts} attempts`}
+            <h3 className="text-lg font-semibold mb-4">Current Shares</h3>
+            {existingShares.length > 0 ? (
+              <ul className="space-y-2 mb-6 max-h-40 overflow-y-auto">
+                {existingShares.map((share) => (
+                  <li key={share.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                    <span>
+                      {getShareDisplayText(share)} ({share.permission_level}) - {share.max_attempts || 'unlimited'} attempts
                     </span>
-                  </div>
-                  <button 
-                    onClick={() => handleDeleteShare(share.id)}
-                    style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer' }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <button 
+                      onClick={() => handleDeleteShare(share.id)} 
+                      className="text-red-500 hover:text-red-700 font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 text-sm">No shares found for this worksheet.</p>
+            )}
           </div>
         )}
 
