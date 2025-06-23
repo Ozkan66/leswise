@@ -8,6 +8,7 @@ import { Worksheet } from '../types/database';
 
 export default function TeacherHomepage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [profile, setProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
   const [stats, setStats] = useState({
     worksheets: 0,
     folders: 0,
@@ -22,6 +23,19 @@ export default function TeacherHomepage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
+        // Fetch user profile
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError.message);
+        } else {
+          setProfile(userProfile);
+        }
+        
         // Fetch recent worksheets for the list
         const { data: recentWorksheets, error: worksheetsError } = await supabase
           .from('worksheets')
@@ -92,7 +106,7 @@ export default function TeacherHomepage() {
         {/* User Info */}
         <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
-            Welkom! Ozkan Yilmaz
+            Welkom! {loading ? '...' : (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Gebruiker')}
           </h2>
           <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', display: 'none' }}>
             Plantyn Salesforce NL Institute SE
@@ -246,7 +260,7 @@ export default function TeacherHomepage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827', margin: 0 }}>
-                Welkom terug, Ozkan
+                Welkom terug, {loading ? '...' : (profile?.first_name || 'Gebruiker')}
               </h1>
               <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>
                 Hier is een overzicht van je werkbladen en klassen
