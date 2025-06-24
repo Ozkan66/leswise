@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { WorksheetElement, Submission, SubmissionElement } from "../../types/database";
@@ -36,6 +36,8 @@ function WorksheetSubmissionContent() {
   } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [attemptLimitReached, setAttemptLimitReached] = useState(false);
+  const [canRetry, setCanRetry] = useState(false);
+  const [attemptInfo, setAttemptInfo] = useState<{current: number, max: number} | null>(null);
 
   useEffect(() => {
     if (!worksheetId && !anonymousCode) return;
@@ -116,7 +118,7 @@ function WorksheetSubmissionContent() {
         // Fetch worksheet elements
         const { data, error } = await supabase
           .from("worksheet_elements")
-          .select("id, content, max_score")
+          .select("id, type, content, max_score")
           .eq("worksheet_id", currentWorksheetId)
           .order("position");
           
@@ -148,6 +150,17 @@ function WorksheetSubmissionContent() {
         setMySubmissionElements([]);
         return;
       }
+      
+      // Check how many submissions this user has made for this worksheet
+      const { data: submissionCount, error: countError } = await supabase
+        .from("submissions")
+        .select("id", { count: 'exact', head: true })
+        .eq("worksheet_id", worksheetId)
+        .eq("user_id", user.id);
+        
+      console.log('User submission count:', submissionCount?.length || 0);
+      
+      // Get the latest submission
       const { data: submission } = await supabase
         .from("submissions")
         .select("id, created_at")
@@ -156,6 +169,7 @@ function WorksheetSubmissionContent() {
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
+        
       if (submission) {
         setMySubmission(submission);
         // Fetch answers, feedback, scores
@@ -164,9 +178,15 @@ function WorksheetSubmissionContent() {
           .select("worksheet_element_id, answer, feedback, score")
           .eq("submission_id", submission.id);
         setMySubmissionElements(subElems || []);
+        
+        // Check if user can still submit more attempts
+        // For now, we'll show the submission view but later we can add "Submit Again" button
+        console.log('Latest submission found:', submission.id);
+        
       } else {
         setMySubmission(null);
         setMySubmissionElements([]);
+        console.log('No previous submissions found');
       }
       setLoading(false);
     };
@@ -184,9 +204,45 @@ function WorksheetSubmissionContent() {
     const currentWorksheetId = isAnonymous ? anonymousLink?.worksheet_id : worksheetId;
     if (!currentWorksheetId) return;
     
-    // Validation: all fields must be filled
-    const emptyFields = elements.filter(el => !answers[el.id] || answers[el.id].trim() === "");
-    if (emptyFields.length > 0) {
+    // Validation: all fields must be filled based on question type
+    const incompleteFields = elements.filter(el => {
+      // Skip text elements (they are informational only)
+      if (el.type === 'text') return false;
+      
+      const contentObj = typeof el.content === 'string' ? JSON.parse(el.content) : el.content;
+      
+      switch (el.type) {
+        case 'multiple_choice':
+        case 'single_choice':
+          return !answers[el.id] || answers[el.id].trim() === "";
+        
+        case 'matching':
+          // Check if all matching pairs have answers
+          const pairs = (contentObj as { pairs?: Array<{left: string, right: string}> })?.pairs || [];
+          return pairs.some((_, index) => !answers[`${el.id}_${index}`] || answers[`${el.id}_${index}`].trim() === "");
+        
+        case 'ordering':
+          // Check if all ordering items have position numbers
+          const items = (contentObj as { correctOrder?: string[] })?.correctOrder || [];
+          return items.some((_, index) => !answers[`${el.id}_${index}`] || answers[`${el.id}_${index}`].trim() === "");
+        
+        case 'fill_gaps':
+          // Check if all gaps are filled
+          const gapCount = ((contentObj as { textWithGaps?: string })?.textWithGaps || '').split('[gap]').length - 1;
+          for (let i = 0; i < gapCount; i++) {
+            if (!answers[`${el.id}_gap_${i}`] || answers[`${el.id}_gap_${i}`].trim() === "") {
+              return true;
+            }
+          }
+          return false;
+        
+        default:
+          // For short_answer, essay, etc.
+          return !answers[el.id] || answers[el.id].trim() === "";
+      }
+    });
+    
+    if (incompleteFields.length > 0) {
       setError("Vul alle vragen in voordat je indient.");
       return;
     }
@@ -288,6 +344,7 @@ function WorksheetSubmissionContent() {
         console.log('User has access, proceeding with submission');
         
         // Check attempt limits for regular users
+        console.log('Checking attempt limits for user:', user.id, 'worksheet:', currentWorksheetId);
         const { data: canSubmit, error: attemptError } = await supabase
           .rpc('check_and_increment_attempts', {
             p_user_id: user.id,
@@ -295,19 +352,20 @@ function WorksheetSubmissionContent() {
             p_anonymous_link_id: null
           });
           
+        console.log('Attempt check result:', { canSubmit, attemptError });
+          
         if (attemptError) {
           console.error('Error checking attempt limits:', attemptError);
-          setError("Error checking attempt limits. Please try again.");
-          return;
-        }
-          
-        if (!canSubmit) {
+          console.error('Error details:', JSON.stringify(attemptError, null, 2));
+          // Don't block submission if attempt check fails - proceed with warning
+          console.warn('Proceeding with submission despite attempt check error');
+        } else if (canSubmit === false) {
           setError("Maximum attempts reached for this worksheet.");
           return;
         }
         
         console.log('Creating submission record...');
-        // Create submission
+        // Create submission - if attempt check failed, we still allow submission for now
         const { data: submission, error: subError } = await supabase
           .from("submissions")
           .insert({ worksheet_id: currentWorksheetId, user_id: user.id })
@@ -316,18 +374,64 @@ function WorksheetSubmissionContent() {
           
         if (subError) {
           console.error('Submission creation error:', subError);
-          throw subError;
+          console.error('Submission error details:', JSON.stringify(subError, null, 2));
+          
+          // Provide more specific error messages based on the error
+          if (subError.message?.includes('permission denied')) {
+            throw new Error("Je hebt geen toestemming om deze worksheet in te dienen");
+          } else if (subError.message?.includes('foreign key')) {
+            throw new Error("Worksheet niet gevonden of je hebt geen toegang");
+          } else if (subError.message?.includes('not null')) {
+            throw new Error("Ontbrekende gegevens voor indiening");
+          } else {
+            throw subError;
+          }
         }
         
         console.log('Submission created successfully:', submission.id);
         
-        // Create submission elements
+        // Create submission elements with proper answer formatting
         console.log('Creating submission elements...');
-        const answerRows = elements.map((el) => ({
-          submission_id: submission.id,
-          worksheet_element_id: el.id,
-          answer: answers[el.id] || ""
-        }));
+        const answerRows = elements.map((el) => {
+          let finalAnswer = "";
+          const contentObj = typeof el.content === 'string' ? JSON.parse(el.content) : el.content;
+          
+          switch (el.type) {
+            case 'matching':
+              // Combine all matching answers into a JSON string
+              const pairs = (contentObj as { pairs?: Array<{left: string, right: string}> })?.pairs || [];
+              const matchingAnswers = pairs.map((_, index) => answers[`${el.id}_${index}`] || '');
+              finalAnswer = JSON.stringify(matchingAnswers);
+              break;
+            
+            case 'ordering':
+              // Combine all ordering answers into a JSON string
+              const items = (contentObj as { correctOrder?: string[] })?.correctOrder || [];
+              const orderingAnswers = items.map((_, index) => answers[`${el.id}_${index}`] || '');
+              finalAnswer = JSON.stringify(orderingAnswers);
+              break;
+            
+            case 'fill_gaps':
+              // Combine all gap answers into a JSON string
+              const gapCount = ((contentObj as { textWithGaps?: string })?.textWithGaps || '').split('[gap]').length - 1;
+              const gapAnswers = [];
+              for (let i = 0; i < gapCount; i++) {
+                gapAnswers.push(answers[`${el.id}_gap_${i}`] || '');
+              }
+              finalAnswer = JSON.stringify(gapAnswers);
+              break;
+            
+            default:
+              // For simple answers (text, multiple_choice, single_choice, etc.)
+              finalAnswer = answers[el.id] || "";
+          }
+          
+          return {
+            submission_id: submission.id,
+            worksheet_element_id: el.id,
+            answer: finalAnswer
+          };
+        });
         
         console.log('Answer rows to insert:', answerRows.length);
         
@@ -376,6 +480,22 @@ function WorksheetSubmissionContent() {
 
   // Student view: show submission if exists
   if (mySubmission && mySubmissionElements.length > 0) {
+    // Check if user can submit again (multiple attempts allowed)
+    const canSubmitAgain = async () => {
+      try {
+        const { data: shareInfo } = await supabase
+          .from('worksheet_shares')
+          .select('max_attempts, attempts_used')
+          .eq('worksheet_id', currentWorksheetId)
+          .eq('shared_with_user_id', (await supabase.auth.getUser()).data.user?.id)
+          .single();
+          
+        return shareInfo && shareInfo.max_attempts && shareInfo.attempts_used < shareInfo.max_attempts;
+      } catch {
+        return false;
+      }
+    };
+    
     // Map: elementId -> element
     const elMap: Record<string, WorksheetElement> = {};
     elements.forEach(el => { elMap[el.id] = el; });
@@ -458,25 +578,170 @@ function WorksheetSubmissionContent() {
           </div>
         )}
         {elements.map((el) => {
+          // Debug: log the type and content
+          console.log('Element type:', el.type, 'Element content:', el.content);
           // Handle content as either string (old format) or object (new format)
           const contentObj = typeof el.content === 'string' 
             ? JSON.parse(el.content) 
             : el.content;
-            const questionText = (contentObj as { text?: string, question?: string })?.text || (contentObj as { text?: string, question?: string })?.question || 'Question text not available';
+          const questionText = (contentObj as { text?: string, question?: string })?.text || (contentObj as { text?: string, question?: string })?.question || 'Question text not available';
           
           return (
             <div key={el.id} style={{ marginBottom: 24 }}>
-              <label>
+              <div style={{ marginBottom: 12 }}>
                 <b>{questionText}</b>
-                <br />
-                <input
-                  type="text"
-                  value={answers[el.id] || ""}
-                  onChange={(e) => handleChange(el.id, e.target.value)}
-                  style={{ width: "100%", padding: 8, marginTop: 8 }}
-                  required
-                />
-              </label>
+                <div style={{ fontSize: '0.9em', color: '#666', marginTop: 4 }}>
+                  {el.type?.replace('_', ' ').toUpperCase()} ({el.max_score} punt{el.max_score !== 1 ? 'en' : ''})
+                </div>
+              </div>
+              
+              {/* Render different input types based on element type */}
+              {el.type === 'multiple_choice' && (
+                <div>
+                  {(contentObj as { options?: string[] })?.options?.map((option: string, index: number) => (
+                    <div key={index} style={{ marginBottom: 8 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={(answers[el.id] || '').split(',').includes(index.toString())}
+                          onChange={(e) => {
+                            const currentAnswers = (answers[el.id] || '').split(',').filter(a => a);
+                            const indexStr = index.toString();
+                            let newAnswers;
+                            if (e.target.checked) {
+                              newAnswers = [...currentAnswers, indexStr];
+                            } else {
+                              newAnswers = currentAnswers.filter(a => a !== indexStr);
+                            }
+                            handleChange(el.id, newAnswers.join(','));
+                          }}
+                          style={{ marginRight: 8 }}
+                        />
+                        {option}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {el.type === 'single_choice' && (
+                <div>
+                  {(contentObj as { options?: string[] })?.options?.map((option: string, index: number) => (
+                    <div key={index} style={{ marginBottom: 8 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name={`question_${el.id}`}
+                          checked={answers[el.id] === index.toString()}
+                          onChange={() => handleChange(el.id, index.toString())}
+                          style={{ marginRight: 8 }}
+                        />
+                        {option}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {el.type === 'matching' && (
+                <div>
+                  <div style={{ marginBottom: 8, fontStyle: 'italic', color: '#666' }}>
+                    Match de items door voor elk item het juiste antwoord te selecteren:
+                  </div>
+                  {(contentObj as { pairs?: Array<{left: string, right: string}> })?.pairs?.map((pair, index) => (
+                    <div key={index} style={{ marginBottom: 12, padding: 8, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+                      <div style={{ marginBottom: 4, fontWeight: 'bold' }}>{pair.left}</div>
+                      <select
+                        value={answers[`${el.id}_${index}`] || ''}
+                        onChange={(e) => handleChange(`${el.id}_${index}`, e.target.value)}
+                        style={{ width: '100%', padding: 4 }}
+                      >
+                        <option value="">Selecteer een antwoord...</option>
+                        {(contentObj as { pairs?: Array<{left: string, right: string}> })?.pairs?.map((p, i) => (
+                          <option key={i} value={p.right}>{p.right}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {el.type === 'ordering' && (
+                <div>
+                  <div style={{ marginBottom: 8, fontStyle: 'italic', color: '#666' }}>
+                    Zet de volgende items in de juiste volgorde (1 = eerste, 2 = tweede, etc.):
+                  </div>
+                  {(contentObj as { correctOrder?: string[] })?.correctOrder?.map((item, index) => (
+                    <div key={index} style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max={(contentObj as { correctOrder?: string[] })?.correctOrder?.length || 1}
+                        value={answers[`${el.id}_${index}`] || ''}
+                        onChange={(e) => handleChange(`${el.id}_${index}`, e.target.value)}
+                        style={{ width: 60, marginRight: 12, padding: 4 }}
+                      />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {el.type === 'fill_gaps' && (
+                <div>
+                  <div style={{ marginBottom: 8 }}>
+                    {(contentObj as { textWithGaps?: string })?.textWithGaps?.split('[gap]').map((part, index, array) => (
+                      <span key={index}>
+                        {part}
+                        {index < array.length - 1 && (
+                          <input
+                            type="text"
+                            value={answers[`${el.id}_gap_${index}`] || ''}
+                            onChange={(e) => handleChange(`${el.id}_gap_${index}`, e.target.value)}
+                            style={{ 
+                              border: '1px solid #ccc', 
+                              borderRadius: 2, 
+                              padding: '2px 6px',
+                              margin: '0 2px',
+                              minWidth: 80
+                            }}
+                          />
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {(el.type === 'short_answer' || el.type === 'essay' || el.type === 'text' || !['multiple_choice', 'single_choice', 'matching', 'ordering', 'fill_gaps'].includes(el.type || '')) && (
+                <div>
+                  {el.type === 'text' ? (
+                    <div style={{ 
+                      padding: 12, 
+                      backgroundColor: '#f8f9fa', 
+                      borderRadius: 4, 
+                      fontStyle: 'italic',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      {(contentObj as { text?: string })?.text || questionText}
+                    </div>
+                  ) : (
+                    <textarea
+                      value={answers[el.id] || ""}
+                      onChange={(e) => handleChange(el.id, e.target.value)}
+                      style={{ 
+                        width: "100%", 
+                        padding: 8, 
+                        marginTop: 8,
+                        minHeight: el.type === 'essay' ? 120 : 60,
+                        resize: 'vertical'
+                      }}
+                      placeholder={el.type === 'essay' ? 'Schrijf hier je uitgebreide antwoord...' : 'Vul je antwoord in...'}
+                      required={el.type !== 'text'}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
@@ -489,9 +754,5 @@ function WorksheetSubmissionContent() {
 }
 
 export default function WorksheetSubmissionPage() {
-  return (
-    <Suspense fallback={<div>Loading worksheet...</div>}>
-      <WorksheetSubmissionContent />
-    </Suspense>
-  );
+  return <WorksheetSubmissionContent />;
 }

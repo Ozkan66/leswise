@@ -275,3 +275,44 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION generate_link_code TO authenticated;
+
+-- Create function to create worksheet shares with elevated privileges
+CREATE OR REPLACE FUNCTION create_worksheet_share(
+  p_worksheet_id UUID,
+  p_shared_by_user_id UUID,
+  p_shared_with_user_id UUID,
+  p_permission_level TEXT,
+  p_max_attempts INTEGER DEFAULT NULL,
+  p_expires_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER -- This allows the function to bypass RLS
+AS $$
+DECLARE
+  share_id UUID;
+BEGIN
+  -- Insert the worksheet share
+  INSERT INTO worksheet_shares (
+    worksheet_id,
+    shared_by_user_id,
+    shared_with_user_id,
+    permission_level,
+    max_attempts,
+    expires_at
+  ) VALUES (
+    p_worksheet_id,
+    p_shared_by_user_id,
+    p_shared_with_user_id,
+    p_permission_level,
+    p_max_attempts,
+    p_expires_at
+  ) RETURNING id INTO share_id;
+  
+  RETURN share_id;
+END;
+$$;
+
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION create_worksheet_share TO authenticated;
+GRANT EXECUTE ON FUNCTION create_worksheet_share TO anon;

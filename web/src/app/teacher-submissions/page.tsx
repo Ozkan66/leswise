@@ -8,6 +8,131 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Component to show submissions for a single worksheet (as cards)
+const WorksheetSubmissionsCards = ({ worksheet, onViewSubmission }: { 
+  worksheet: Worksheet; 
+  onViewSubmission: (submission: Submission) => void; 
+}) => {
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("submissions")
+        .select(`
+          id, 
+          user_id, 
+          submitted_at,
+          created_at, 
+          feedback, 
+          score,
+          user_profiles!submissions_user_id_fkey(email, first_name, last_name)
+        `)
+        .eq("worksheet_id", worksheet.id)
+        .order("submitted_at", { ascending: false });
+      if (!error && data) {
+        setSubmissions(data);
+      } else {
+        // Fallback without join
+        const { data: data2 } = await supabase
+          .from("submissions")
+          .select("id, user_id, submitted_at, created_at, feedback, score")
+          .eq("worksheet_id", worksheet.id)
+          .order("submitted_at", { ascending: false });
+        if (data2) {
+          const enrichedData = await Promise.all(
+            data2.map(async (sub) => {
+              const { data: userData } = await supabase
+                .from("user_profiles")
+                .select("email, first_name, last_name")
+                .eq("user_id", sub.user_id)
+                .single();
+              return { ...sub, user_profiles: userData };
+            })
+          );
+          setSubmissions(enrichedData);
+        }
+      }
+      setLoading(false);
+    };
+    fetchSubmissions();
+  }, [worksheet.id]);
+
+  if (loading) {
+    return (
+      <div style={{ minWidth: 280, margin: 8, padding: 24, background: '#f8f9fa', borderRadius: 8, boxShadow: '0 1px 4px #0001' }}>
+        <b>{worksheet.title}</b>
+        <div style={{ color: '#888', marginTop: 8 }}>Laden...</div>
+      </div>
+    );
+  }
+  if (submissions.length === 0) {
+    return (
+      <div style={{ minWidth: 280, margin: 8, padding: 24, background: '#f8f9fa', borderRadius: 8, boxShadow: '0 1px 4px #0001' }}>
+        <b>{worksheet.title}</b>
+        <div style={{ color: '#888', marginTop: 8 }}>Geen inzendingen</div>
+      </div>
+    );
+  }
+  return (
+    <>
+      {submissions.map((submission) => (
+        <div
+          key={submission.id}
+          style={{
+            minWidth: 280,
+            maxWidth: 340,
+            margin: 8,
+            padding: 24,
+            background: '#fff',
+            borderRadius: 10,
+            boxShadow: '0 1px 8px #0002',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: 12
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{worksheet.title}</div>
+          <div style={{ color: '#007acc', fontWeight: 500 }}>
+            {submission.user_profiles?.email || `User: ${submission.user_id.slice(0, 8)}...`}
+          </div>
+          <div style={{ color: '#888', fontSize: 13 }}>
+            Ingediend op: {new Date(submission.created_at).toLocaleString()}
+          </div>
+          <div style={{ margin: '8px 0' }}>
+            {submission.feedback && submission.feedback.includes('Beoordeeld') ? (
+              <span style={{ color: 'green' }}>✅ Beoordeeld</span>
+            ) : (
+              <span style={{ color: 'orange' }}>⏳ Te beoordelen</span>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              // Gebruik router.push om naar de subpagina te navigeren
+              window.location.href = `/teacher-submissions/${submission.id}`;
+            }}
+            style={{
+              backgroundColor: '#007acc',
+              color: 'white',
+              padding: '8px 0',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '15px',
+              marginTop: 8
+            }}
+          >
+            📝 Beoordeel
+          </button>
+        </div>
+      ))}
+    </>
+  );
+};
+
 export default function TeacherSubmissionsPage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [selectedWorksheet, setSelectedWorksheet] = useState<string | null>(null);
@@ -21,10 +146,17 @@ export default function TeacherSubmissionsPage() {
     const fetchWorksheets = async () => {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
+      
+      console.log('Current user ID:', user.id);
+      
       const { data, error } = await supabase
         .from("worksheets")
-        .select("id, title")
+        .select("id, title, owner_id")
         .eq("owner_id", user.id);
+        
+      console.log('Worksheets query result:', { data, error });
+      console.log('Worksheet IDs:', data?.map(w => ({ id: w.id, title: w.title })));
+      
       if (error) setError(error.message);
       else setWorksheets(data || []);
     };
@@ -39,13 +171,152 @@ export default function TeacherSubmissionsPage() {
     setElements([]);
     
     const fetchSubmissions = async () => {
-      const { data, error } = await supabase
+      console.log('Fetching submissions for worksheet:', selectedWorksheet);
+      
+      // First, let's verify the current user and worksheet ownership
+      const user = (await supabase.auth.getUser()).data.user;
+      console.log('Current user in fetchSubmissions:', user?.id);
+      
+      // Verify worksheet ownership
+      const { data: worksheetData, error: worksheetError } = await supabase
+        .from("worksheets")
+        .select("id, title, owner_id")
+        .eq("id", selectedWorksheet)
+        .single();
+        
+      console.log('Selected worksheet details:', { worksheetData, worksheetError });
+      
+      // Debug: Check total submissions count
+      const { count: totalSubmissions } = await supabase
         .from("submissions")
-        .select("id, user_id, created_at, feedback, score, users: user_id (email)")
+        .select("*", { count: 'exact', head: true })
+        .eq("worksheet_id", selectedWorksheet);
+        
+      console.log('Total submissions for this worksheet:', totalSubmissions);
+      
+      // Debug: Show all submissions to see what worksheet_ids exist
+      const { data: allSubmissions } = await supabase
+        .from("submissions")
+        .select("id, worksheet_id, user_id, created_at")
+        .limit(10);
+        
+      console.log('All submissions in database:', allSubmissions);
+      console.log('Submission details:', JSON.stringify(allSubmissions, null, 2));
+      console.log('Looking for worksheet_id:', selectedWorksheet);
+      
+      // Check if the submission's worksheet is owned by this teacher
+      if (allSubmissions && allSubmissions.length > 0) {
+        const submissionWorksheetId = allSubmissions[0].worksheet_id;
+        const { data: submissionWorksheet } = await supabase
+          .from("worksheets")
+          .select("id, title, owner_id")
+          .eq("id", submissionWorksheetId)
+          .single();
+          
+        console.log('Submission is for worksheet:', submissionWorksheet);
+        console.log('Is this teacher the owner?', submissionWorksheet?.owner_id === user?.id);
+      }
+      
+      // Try multiple query approaches to handle different database schemas
+      let submissionsData = null;
+      let submissionsError = null;
+      
+      // Approach 1: Try with user_profiles join (specify the relationship)
+      const { data: data1, error: error1 } = await supabase
+        .from("submissions")
+        .select(`
+          id, 
+          user_id, 
+          submitted_at,
+          created_at, 
+          feedback, 
+          score,
+          user_profiles!submissions_user_id_fkey(email, first_name, last_name)
+        `)
         .eq("worksheet_id", selectedWorksheet)
-        .order("created_at", { ascending: false });
-      if (error) setError(error.message);
-      else setSubmissions(data || []);
+        .order("submitted_at", { ascending: false });
+        
+      if (!error1 && data1) {
+        submissionsData = data1;
+        console.log('✅ Submissions found with user_profiles join:', submissionsData);
+        console.log('First submission structure:', JSON.stringify(submissionsData[0], null, 2));
+      } else {
+        console.log('❌ user_profiles join failed:', error1);
+        
+        // Approach 1b: Try alternative join syntax
+        const { data: data1b, error: error1b } = await supabase
+          .from("submissions")
+          .select(`
+            id, 
+            user_id, 
+            submitted_at,
+            created_at, 
+            feedback, 
+            score,
+            user_profiles!user_id(email, first_name, last_name)
+          `)
+          .eq("worksheet_id", selectedWorksheet)
+          .order("submitted_at", { ascending: false });
+          
+        if (!error1b && data1b) {
+          submissionsData = data1b;
+          console.log('✅ Submissions found with alternative user_profiles join:', submissionsData);
+        } else {
+          console.log('❌ Alternative user_profiles join also failed:', error1b);
+          
+          // Approach 2: Try basic query without join
+          const { data: data2, error: error2 } = await supabase
+            .from("submissions")
+            .select(`
+              id, 
+              user_id, 
+              submitted_at,
+              created_at, 
+              feedback, 
+              score
+            `)
+            .eq("worksheet_id", selectedWorksheet)
+            .order("submitted_at", { ascending: false });
+            
+          if (!error2 && data2) {
+            submissionsData = data2;
+            console.log('✅ Submissions found without join:', submissionsData);
+            
+            // Manually fetch user emails for each submission
+            for (const submission of submissionsData) {
+              const { data: userData } = await supabase
+                .from("user_profiles")
+                .select("email, first_name, last_name")
+                .eq("user_id", submission.user_id)
+                .single();
+                
+              if (userData) {
+                submission.user_profiles = userData;
+              } else {
+                // Fallback: just show user ID
+                submission.user_profiles = { 
+                  email: `User ${submission.user_id.slice(0, 8)}...`, 
+                  first_name: 'Unknown', 
+                  last_name: 'User' 
+                };
+              }
+            }
+          } else {
+            submissionsError = error2;
+            console.log('❌ Basic submissions query ook mislukt:', error2);
+          }
+        }
+      }
+        
+      // Set final result
+      if (submissionsData) {
+        setSubmissions(submissionsData);
+      } else if (submissionsError) {
+        console.error('All submission queries failed:', submissionsError);
+        setError(`Error loading submissions: ${submissionsError.message}`);
+      } else {
+        setSubmissions([]);
+      }
       
     };
     fetchSubmissions();
@@ -58,8 +329,12 @@ export default function TeacherSubmissionsPage() {
     const fetchElements = async () => {
       const { data: elementsData, error: elError } = await supabase
         .from("worksheet_elements")
-        .select("id, content")
+        .select("id, content, max_score")
         .eq("worksheet_id", selectedWorksheet);
+      
+      console.log('Elements data:', elementsData);
+      console.log('Elements error:', elError);
+      
       if (elError) setError(elError.message);
       else setElements(elementsData || []);
       
@@ -77,6 +352,10 @@ export default function TeacherSubmissionsPage() {
         .from("submission_elements")
         .select("worksheet_element_id, answer, feedback, score")
         .eq("submission_id", selectedSubmission.id);
+      
+      console.log('Fetched answers:', data);
+      console.log('Answers error:', error);
+      
       if (error) setError(error.message);
       else setAnswers(data || []);
       
@@ -84,54 +363,289 @@ export default function TeacherSubmissionsPage() {
     fetchAnswers();
   }, [selectedSubmission, selectedWorksheet]);
 
+  // Auto-scoring function (supports all question types)
+  const calculateAutoScore = (element: WorksheetElement, answer: string): number => {
+    if (!element.content || answer == null) return 0;
+    const content = typeof element.content === 'string' ? JSON.parse(element.content) : element.content;
+    const maxScore = element.max_score || 1;
+
+    // Multiple Choice (multiple correct answers, answer is comma-separated indices)
+    if (element.type === 'multiple_choice' && Array.isArray(content.correctAnswers)) {
+      const correct = content.correctAnswers.map(String).sort();
+      const given = (answer || '').split(',').map(s => s.trim()).filter(Boolean).sort();
+      if (correct.length === given.length && correct.every((v: string, i: number) => v === given[i])) {
+        return maxScore;
+      }
+      return 0;
+    }
+
+    // Single Choice (one correct answer, answer is index as string)
+    if (element.type === 'single_choice' && typeof content.correctAnswers?.[0] !== 'undefined') {
+      return String(content.correctAnswers[0]) === String(answer) ? maxScore : 0;
+    }
+
+    // Short Answer (case-insensitive, trims)
+    if (element.type === 'short_answer' && typeof content.correctAnswer === 'string') {
+      return content.correctAnswer.trim().toLowerCase() === answer.trim().toLowerCase() ? maxScore : 0;
+    }
+
+    // Essay: altijd handmatig beoordelen
+    if (element.type === 'essay') {
+      return 0;
+    }
+
+    // Matching (answer is JSON.stringify(array of selected right values))
+    if (element.type === 'matching' && Array.isArray(content.pairs)) {
+      try {
+        const given = JSON.parse(answer);
+        const correct = content.pairs.map((p: { right: string }) => p.right);
+        if (Array.isArray(given) && given.length === correct.length && given.every((val: string, i: number) => val === correct[i])) {
+          return maxScore;
+        }
+      } catch {}
+      return 0;
+    }
+
+    // Ordering (answer is JSON.stringify(array of user order))
+    if (element.type === 'ordering' && Array.isArray(content.correctOrder)) {
+      try {
+        const given = JSON.parse(answer);
+        if (Array.isArray(given) && given.length === content.correctOrder.length && given.every((val: string, i: number) => val === content.correctOrder[i])) {
+          return maxScore;
+        }
+      } catch {}
+      return 0;
+    }
+
+    // Fill the Gaps (answer is JSON.stringify(array of gap answers))
+    if (element.type === 'fill_gaps' && Array.isArray(content.gapAnswers)) {
+      try {
+        const given = JSON.parse(answer);
+        if (Array.isArray(given) && given.length === content.gapAnswers.length && given.every((val: string, i: number) => val.trim().toLowerCase() === String(content.gapAnswers[i]).trim().toLowerCase())) {
+          return maxScore;
+        }
+      } catch {}
+      return 0;
+    }
+
+    // Text/information: geen score
+    if (element.type === 'text') {
+      return 0;
+    }
+
+    // Fallback: probeer op string match correctAnswer
+    if (typeof content.correctAnswer === 'string') {
+      return content.correctAnswer.trim().toLowerCase() === answer.trim().toLowerCase() ? maxScore : 0;
+    }
+
+    return 0;
+  };
+
+  // Auto-score all answers when submission is loaded (only for unscored answers)
+  useEffect(() => {
+    if (answers.length > 0 && elements.length > 0) {
+      const updatedAnswers = answers.map(answer => {
+        // Only auto-score if there's no score yet (null or undefined)
+        if ((answer.score === null || answer.score === undefined) && answer.answer) {
+          const element = elements.find(el => el.id === answer.worksheet_element_id);
+          if (element) {
+            const autoScore = calculateAutoScore(element, answer.answer);
+            console.log(`Auto-scoring ${answer.worksheet_element_id}: ${answer.answer} -> ${autoScore}`);
+            return { ...answer, score: autoScore };
+          }
+        }
+        return answer;
+      });
+      
+      // Update state if any scores were auto-calculated
+      const hasNewScores = updatedAnswers.some((updated, index) => 
+        (updated.score !== answers[index].score) && (answers[index].score === null || answers[index].score === undefined)
+      );
+      
+      if (hasNewScores) {
+        setAnswers(updatedAnswers);
+        console.log('Auto-scored answers (only unscored):', updatedAnswers);
+      }
+    }
+  }, [answers.length, elements.length]);
+
   return (
-    <div style={{ maxWidth: 800, margin: "2rem auto" }}>
-      <h2>Inzendingen per werkblad</h2>
-      {error && <div style={{ color: "red" }}>{error}</div>}
-      {/* Worksheet selector */}
+    <div style={{ maxWidth: 1200, margin: "2rem auto" }}>
+      <h2>Inzendingen Overzicht</h2>
+      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+      {/* All submissions as flex cards */}
       <div style={{ marginBottom: 24 }}>
-        <label>
-          Kies werkblad:
-          <select
-            value={selectedWorksheet || ""}
-            onChange={e => {
-              setSelectedWorksheet(e.target.value);
-              setSelectedSubmission(null);
-              setAnswers([]);
-              setElements([]);
-            }}
-            style={{ marginLeft: 8 }}
-          >
-            <option value="">-- Kies --</option>
-            {worksheets.map(ws => (
-              <option key={ws.id} value={ws.id}>{ws.title}</option>
+        <h3>Alle Inzendingen</h3>
+        {worksheets.length === 0 ? (
+          <div>Geen werkbladen gevonden.</div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch', margin: '0 -8px' }}>
+            {worksheets.map(worksheet => (
+              <WorksheetSubmissionsCards
+                key={worksheet.id}
+                worksheet={worksheet}
+                onViewSubmission={(submission) => {
+                  setSelectedWorksheet(worksheet.id);
+                  setSelectedSubmission(submission);
+                }}
+              />
             ))}
-          </select>
-        </label>
+          </div>
+        )}
       </div>
-      {/* Submissions list */}
-      {selectedWorksheet && (
-        <div style={{ marginBottom: 24 }}>
-          <h3>Inzendingen</h3>
-          {submissions.length === 0 ? (
-            <div>Geen inzendingen gevonden.</div>
-          ) : (
-            <ul>
-              {submissions.map(sub => (
-                <li key={sub.id}>
-                  <button onClick={() => setSelectedSubmission(sub)}>
-                    {sub.users?.email || sub.user_id} ({new Date(sub.created_at).toLocaleString()})
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      {/* Submission detail */}
-      {selectedSubmission && (
-        <div style={{ border: "1px solid #666", padding: 24, marginTop: 24 }}>
-          <h4>Antwoorden</h4>
+      {/* Detail-view als apart paneel onder de kaarten */}
+      {selectedSubmission && selectedWorksheet && (
+        <div style={{ border: "1px solid #666", padding: 24, marginTop: 24, background: '#fafbfc', borderRadius: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h4>Beoordeling: {worksheets.find(w => w.id === selectedWorksheet)?.title}</h4>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => {
+                  setSelectedSubmission(null);
+                  setAnswers([]);
+                  setElements([]);
+                }}
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                ← Terug naar overzicht
+              </button>
+              <button
+                onClick={async () => {
+                  setError(null);
+                  try {
+                    // Auto-score all answers
+                    const updatedAnswers = answers.map(answer => {
+                      const element = elements.find(el => el.id === answer.worksheet_element_id);
+                      if (element && answer.answer) {
+                        const autoScore = calculateAutoScore(element, answer.answer);
+                        return { ...answer, score: autoScore };
+                      }
+                      return answer;
+                    });
+                    
+                    setAnswers(updatedAnswers);
+                    alert('Automatische scoring toegepast!');
+                  } catch (err) {
+                    setError(`Error auto-scoring: ${(err as Error).message}`);
+                  }
+                }}
+                style={{
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                🤖 Auto-score
+              </button>
+              <button
+                onClick={async () => {
+                  setError(null);
+                  try {
+                    // Save all feedback and scores to database
+                    for (const answer of answers) {
+                      const { error } = await supabase
+                        .from('submission_elements')
+                        .update({ 
+                          feedback: answer.feedback || '', 
+                          score: answer.score || 0 
+                        })
+                        .eq('submission_id', selectedSubmission.id)
+                        .eq('worksheet_element_id', answer.worksheet_element_id);
+                      
+                      if (error) throw error;
+                    }
+                    
+                    // Update the submission with overall feedback
+                    const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
+                    const { error: submissionError } = await supabase
+                      .from('submissions')
+                      .update({ 
+                        feedback: 'Beoordeeld door docent',
+                        score: totalScore 
+                      })
+                      .eq('id', selectedSubmission.id);
+                    
+                    if (submissionError) throw submissionError;
+                    
+                    alert('✅ Beoordeling opgeslagen in database!');
+                  } catch (err) {
+                    setError(`Error saving: ${(err as Error).message}`);
+                  }
+                }}
+                style={{
+                  backgroundColor: '#007acc',
+                  color: 'white',
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                💾 Opslaan in Database
+              </button>
+              <button
+                onClick={async () => {
+                  setError(null);
+                  try {
+                    // First save to database
+                    for (const answer of answers) {
+                      const { error } = await supabase
+                        .from('submission_elements')
+                        .update({ 
+                          feedback: answer.feedback || '', 
+                          score: answer.score || 0 
+                        })
+                        .eq('submission_id', selectedSubmission.id)
+                        .eq('worksheet_element_id', answer.worksheet_element_id);
+                      
+                      if (error) throw error;
+                    }
+                    
+                    // Update submission status
+                    const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
+                    const maxScore = elements.reduce((sum, el) => sum + (el.max_score || 1), 0);
+                    const { error: submissionError } = await supabase
+                      .from('submissions')
+                      .update({ 
+                        feedback: `Beoordeeld: ${totalScore}/${maxScore} punten`,
+                        score: totalScore 
+                      })
+                      .eq('id', selectedSubmission.id);
+                    
+                    if (submissionError) throw submissionError;
+                    
+                    // TODO: Send notification to student (email/in-app notification)
+                    alert('✅ Beoordeling verstuurd naar student!');
+                    
+                    // Refresh the page data
+                    window.location.reload();
+                  } catch (err) {
+                    setError(`Error sending feedback: ${(err as Error).message}`);
+                  }
+                }}
+                style={{
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                📤 Verstuur naar Student
+              </button>
+            </div>
+          </div>
           {/* Totale score als percentage */}
           {(() => {
             // Map: elementId -> max_score
@@ -158,11 +672,26 @@ export default function TeacherSubmissionsPage() {
 
           {elements.map(el => {
             const answerObj = answers.find(a => a.worksheet_element_id === el.id);
+            
+            console.log('Element:', el);
+            console.log('Element content type:', typeof el.content);
+            console.log('Element content value:', el.content);
+            
             // Handle content as either string (old format) or object (new format)
-            const contentObj = typeof el.content === 'string' 
-              ? JSON.parse(el.content) 
-              : el.content;
-            const questionText = (contentObj as { text?: string })?.text || 'Question text not available';
+            let questionText = 'Question text not available';
+            try {
+              const contentObj = typeof el.content === 'string' 
+                ? JSON.parse(el.content) 
+                : el.content;
+              console.log('Parsed content:', contentObj);
+              // Try different possible property names for the question text
+              questionText = (contentObj as { question?: string; text?: string })?.question 
+                          || (contentObj as { question?: string; text?: string })?.text 
+                          || 'Question text not available';
+            } catch (e) {
+              console.error('Error parsing content:', e);
+              questionText = 'Error parsing question content';
+            }
             
             return (
               <div key={el.id} style={{ marginBottom: 24, borderBottom: '1px solid #333', paddingBottom: 12 }}>
@@ -211,7 +740,8 @@ export default function TeacherSubmissionsPage() {
                         type="number"
                         min={0}
                         max={el.max_score ?? 1}
-                        defaultValue={answerObj?.score ?? ''}
+                        step="0.1"
+                        defaultValue={answerObj?.score !== null && answerObj?.score !== undefined ? String(answerObj.score) : ''}
                         style={{ width: 100, padding: 6, marginLeft: 8, marginTop: 4 }}
                         placeholder={`Score (max ${el.max_score ?? 1})`}
                       />
