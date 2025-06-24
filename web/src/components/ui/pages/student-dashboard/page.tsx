@@ -222,7 +222,7 @@ export default function StudentDashboard() {
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
                               <h3 className="font-semibold text-gray-900">{worksheet.title}</h3>
-                              <Badge variant={worksheet.statusColor as any}>{worksheet.status}</Badge>
+                              <Badge variant={worksheet.statusColor as "default" | "secondary" | "destructive" | "outline"}>{worksheet.status}</Badge>
                               {worksheet.priority === "high" && (
                                 <Badge variant="destructive" className="text-xs">
                                   Urgent

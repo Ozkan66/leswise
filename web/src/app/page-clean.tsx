@@ -11,10 +11,7 @@ import {
   Filter,
   Grid3X3,
   List,
-  Clock,
-  MoreHorizontal,
-  Bell,
-  ChevronDown
+  Clock
 } from "lucide-react"
 
 export default function TeacherHomepage() {

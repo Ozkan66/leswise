@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabaseClient';
-import { Worksheet, Folder, WorksheetElement } from '../../types/database';
+import { Worksheet, Folder } from '../../types/database';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { AIGenerator } from '../../components/AIGenerator';
 
@@ -200,7 +200,7 @@ export default function WorksheetsPage() {
     }
   };
 
-  const handleAITasksGenerated = (tasks: WorksheetElement[]) => {
+  const handleAITasksGenerated = () => {
     // Refresh worksheets list to show the updated worksheet
     fetchInitialData();
     setShowAIGenerator(false);

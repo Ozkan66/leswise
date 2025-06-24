@@ -60,10 +60,6 @@ export default function GroupsPage() {
     setGroups(groups.filter((group) => group.id !== id))
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}

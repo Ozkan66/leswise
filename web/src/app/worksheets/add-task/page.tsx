@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -83,7 +83,6 @@ export default function AddTaskPage() {
 }
 
 function AddTaskPageContent() {
-  const [selectedType, setSelectedType] = useState<TaskType | null>(null);
   const [worksheetId, setWorksheetId] = useState<string | null>(null);
   const [worksheetTitle, setWorksheetTitle] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -102,9 +101,9 @@ function AddTaskPageContent() {
       setError('No worksheet selected');
       setLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, fetchWorksheetDetails]);
 
-  const fetchWorksheetDetails = async (id: string) => {
+  const fetchWorksheetDetails = useCallback(async (id: string) => {
     try {
       const { data, error } = await supabase
         .from('worksheets')
@@ -126,7 +125,7 @@ function AddTaskPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const handleTypeSelection = (type: TaskType) => {
     if (!worksheetId) return;
@@ -234,7 +233,7 @@ function AddTaskPageContent() {
                   fontSize: '0.875rem',
                   margin: '0.25rem 0 0 0'
                 }}>
-                  to "{worksheetTitle}"
+                  to &quot;{worksheetTitle}&quot;
                 </p>
               )}
             </div>

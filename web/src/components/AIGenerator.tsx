@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { WorksheetElement } from '../types/database';
-import { useAuth } from '../contexts/AuthContext';
 
 interface AIGeneratorProps {
   worksheetId: string;
@@ -12,7 +11,6 @@ interface AIGeneratorProps {
 }
 
 export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGeneratorProps) => {
-  const { user } = useAuth();
   const [gradeLevel, setGradeLevel] = useState('');
   const [subject, setSubject] = useState('');
   const [topic, setTopic] = useState('');

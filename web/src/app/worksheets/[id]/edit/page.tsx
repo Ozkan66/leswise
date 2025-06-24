@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../utils/supabaseClient';
-import { Worksheet, WorksheetElement, Folder } from '../../../../types/database';
+import { Worksheet, WorksheetElement } from '../../../../types/database';
 import { ArrowLeft, Settings, PlusCircle, BarChart2, Trash2, Edit3 } from 'lucide-react';
 import { CreateTaskForm } from '@/components/CreateTaskForm';
 import { AdvancedTaskForm } from '@/components/AdvancedTaskForm';
@@ -13,26 +13,22 @@ import { AIGenerator } from '../../../../components/AIGenerator';
 // Custom tabs component with inline styles
 const CustomTabs = ({
     worksheet,
-    folders,
     worksheetId,
     tasks,
     onTitleChange,
     onDescriptionChange,
     onStatusChange,
-    onFolderChange,
     onTaskAdded,
     onTaskDeleted,
     initialTab = 'editor',
     newTaskType = null
 }: {
     worksheet: Worksheet | null;
-    folders: { id: string; name: string; }[];
     worksheetId: string;
     tasks: WorksheetElement[];
     onTitleChange: (title: string) => void;
     onDescriptionChange: (description: string) => void;
     onStatusChange: (status: string) => void;
-    onFolderChange: (folderId: string | null) => void;
     onTaskAdded: (task: WorksheetElement) => void;
     onTaskDeleted: (taskId: string) => void;
     initialTab?: string;
@@ -113,9 +109,7 @@ const CustomTabs = ({
                 {activeTab === 'settings' && (
                     <SettingsTab 
                         worksheet={worksheet} 
-                        folders={folders}
                         onStatusChange={onStatusChange}
-                        onFolderChange={onFolderChange}
                     />
                 )}                {activeTab === 'add-tasks' && (
                     <AddTasksTab 
@@ -211,14 +205,10 @@ const EditorTab = ({
 
 const SettingsTab = ({ 
     worksheet, 
-    folders, 
     onStatusChange, 
-    onFolderChange 
 }: { 
     worksheet: Worksheet | null;
-    folders: { id: string; name: string; }[];
     onStatusChange: (status: string) => void;
-    onFolderChange: (folderId: string | null) => void;
 }) => (
     <div style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>Settings</h3>
@@ -253,38 +243,6 @@ const SettingsTab = ({
             >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
-            </select>
-        </div>
-        <div style={{ marginTop: '16px' }}>
-            <label htmlFor="worksheet-folder" style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-            }}>Folder</label>
-            <select 
-                id="worksheet-folder" 
-                value={worksheet?.folder_id || ''} 
-                onChange={(e) => onFolderChange(e.target.value || null)}
-                style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: 'white',
-                    outline: 'none',
-                    transition: 'border-color 0.2s',
-                    cursor: 'pointer'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-            >
-                <option value="">No folder</option>
-                {folders.map(folder => (
-                    <option key={folder.id} value={folder.id}>{folder.name}</option>
-                ))}
             </select>
         </div>
         <div style={{
@@ -360,10 +318,6 @@ const AddTasksTab = ({
         // Since we don't have direct access to update the tasks array here,
         // we'll need to refresh the page or implement a proper update callback
         window.location.reload();
-    };
-
-    const handleCancelEdit = () => {
-        setEditingTask(null);
     };
 
     return (
@@ -565,7 +519,7 @@ const AddTasksTab = ({
                         }}>
                             <p style={{ margin: 0, fontSize: '0.875rem' }}>No tasks added yet.</p>
                             <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
-                                Click "Choose Task Type" above to add your first task.
+                                Click &quot;Choose Task Type&quot; above to add your first task.
                             </p>
                         </div>
                     )}
@@ -633,7 +587,6 @@ export default function EditWorksheetPage() {
     const router = useRouter();
     const [worksheet, setWorksheet] = useState<Worksheet | null>(null);
     const [tasks, setTasks] = useState<WorksheetElement[]>([]);
-    const [folders, setFolders] = useState<{ id: string; name: string; }[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -689,18 +642,6 @@ export default function EditWorksheetPage() {
             setTasks(tasksData || []);
         }
 
-        // Fetch folders
-        const { data: foldersData, error: foldersError } = await supabase
-            .from('folders')
-            .select('id, name')
-            .eq('owner_id', user.id);
-
-        if (foldersError) {
-            console.error("Error fetching folders:", foldersError);
-        } else {
-            setFolders(foldersData || []);
-        }
-
         setLoading(false);
     }, [id]);
 
@@ -715,8 +656,7 @@ export default function EditWorksheetPage() {
         const hasChanges = 
             originalWorksheet.title !== worksheet.title ||
             originalWorksheet.description !== worksheet.description ||
-            originalWorksheet.status !== worksheet.status ||
-            originalWorksheet.folder_id !== worksheet.folder_id;
+            originalWorksheet.status !== worksheet.status;
             
         setHasUnsavedChanges(hasChanges);
     }, [worksheet, originalWorksheet]);
@@ -762,11 +702,6 @@ export default function EditWorksheetPage() {
     const handleStatusChange = (status: string) => {
         if (!worksheet) return;
         setWorksheet({ ...worksheet, status: status as 'draft' | 'published' });
-    };
-
-    const handleFolderChange = (folderId: string | null) => {
-        if (!worksheet) return;
-        setWorksheet({ ...worksheet, folder_id: folderId || undefined });
     };
 
     const handleTaskAdded = (newTask: WorksheetElement) => {
@@ -909,13 +844,11 @@ export default function EditWorksheetPage() {
             }}>
                 <CustomTabs 
                     worksheet={worksheet}
-                    folders={folders}
                     worksheetId={id}
                     tasks={tasks}
                     onTitleChange={handleTitleChange}
                     onDescriptionChange={handleDescriptionChange}
                     onStatusChange={handleStatusChange}
-                    onFolderChange={handleFolderChange}
                     onTaskAdded={handleTaskAdded}
                     onTaskDeleted={handleTaskDeleted}
                     initialTab={initialTab}

@@ -1,21 +1,13 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabaseClient';
-import { Worksheet, Folder, WorksheetElement } from '../../types/database';
+import { Worksheet, Folder } from '../../types/database';
 import { AIGenerator } from '../../components/AIGenerator';
 
 // --- Helper Components ---
-
-const Stat = ({ label, value }: { label: string; value: string | number }) => (
-  <div>
-    <p className="text-sm font-medium text-gray-500">{label}</p>
-    <p className="text-2xl font-bold text-gray-800">{value}</p>
-  </div>
-);
 
 const ActionButton = ({ href, onClick, children }: { href?: string; onClick?: () => void; children: React.ReactNode }) => {
   if (onClick) {
@@ -162,7 +154,7 @@ export default function WorksheetsPageNew() {
     }
   };
 
-  const handleAITasksGenerated = (tasks: WorksheetElement[]) => {
+  const handleAITasksGenerated = () => {
     // Refresh worksheets list to show the updated worksheet
     const fetchInitialData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -255,7 +247,7 @@ export default function WorksheetsPageNew() {
             </div>
           ) : (
             <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
-              <p className="text-gray-500">You haven't created any worksheets yet.</p>
+              <p className="text-gray-500">You haven&apos;t created any worksheets yet.</p>
               <p className="text-gray-400 text-sm mt-1">Use the form above to get started.</p>
             </div>
           )}

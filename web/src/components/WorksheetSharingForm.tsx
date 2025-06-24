@@ -273,7 +273,7 @@ export default function WorksheetSharingForm({
     return `${window.location.origin}/worksheet-submission?anonymous=${linkCode}`;
   };
 
-  const getShareDisplayText = (share: any) => {
+  const getShareDisplayText = (share: WorksheetShare) => {
     if (share.shared_with_user) {
       const user = share.shared_with_user;
       const name = (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : user.email;
@@ -287,6 +287,10 @@ export default function WorksheetSharingForm({
     if(share.shared_with_group_id) return `Group ID: ${share.shared_with_group_id}`;
     return 'Unknown Share';
   };
+
+  if (loading) {
+    return <div>Loading sharing options...</div>;
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">

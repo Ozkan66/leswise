@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -288,7 +287,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                                 [Open question - students can provide detailed written answers here]
                                 {task.type && task.type !== 'open-question' && (
                                     <div style={{ marginTop: '0.5rem', color: '#dc2626', fontSize: '0.75rem' }}>
-                                        Warning: Unknown task type "{task.type}" - falling back to open question display
+                                        Warning: Unknown task type &quot;{task.type}&quot; - falling back to open question display
                                     </div>
                                 )}
                             </div>
@@ -628,7 +627,7 @@ export default function PreviewWorksheetPage() {
                             border: '2px dashed #d1d5db'
                         }}>
                             <p style={{ color: '#6b7280', fontSize: '1.125rem' }}>
-                                This worksheet doesn't have any tasks yet.
+                                This worksheet doesn&apos;t have any tasks yet.
                             </p>
                             <Link
                                 href={`/worksheets/${id}/edit?tab=add-tasks`}

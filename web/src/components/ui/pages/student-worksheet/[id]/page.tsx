@@ -14,8 +14,8 @@ import { useRouter } from "next/navigation"
 export default function StudentWorksheetPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, any>>({})
-  const [timeRemaining, setTimeRemaining] = useState(25 * 60) // 25 minutes in seconds
+  // Gebruik expliciete types voor answers:
+  const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
 
   const worksheetData = {
     id: params.id,
@@ -90,7 +90,7 @@ export default function StudentWorksheetPage({ params }: { params: { id: string 
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  const handleAnswerChange = (questionId: number, value: any) => {
+  const handleAnswerChange = (questionId: number, value: string | string[]) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,
@@ -130,8 +130,8 @@ export default function StudentWorksheetPage({ params }: { params: { id: string 
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm">
               <Clock className="w-4 h-4 text-orange-600" />
-              <span className={`font-medium ${timeRemaining < 300 ? "text-red-600" : "text-gray-700"}`}>
-                {formatTime(timeRemaining)}
+              <span className={`font-medium`}>
+                {formatTime(worksheetData.timeLimit * 60)}
               </span>
             </div>
             <Badge variant="outline">
@@ -197,12 +197,12 @@ export default function StudentWorksheetPage({ params }: { params: { id: string 
                         value={option.id}
                         checked={
                           currentQuestionData.allowMultiple
-                            ? (answers[currentQuestionData.id] || []).includes(option.id)
+                            ? (answers[currentQuestionData.id] as string[]).includes(option.id)
                             : answers[currentQuestionData.id] === option.id
                         }
                         onChange={(e) => {
                           if (currentQuestionData.allowMultiple) {
-                            const current = answers[currentQuestionData.id] || []
+                            const current = answers[currentQuestionData.id] as string[] || []
                             const updated = e.target.checked
                               ? [...current, option.id]
                               : current.filter((id: string) => id !== option.id)
@@ -223,7 +223,7 @@ export default function StudentWorksheetPage({ params }: { params: { id: string 
               {currentQuestionData.type === "SHORT_ANSWER" && (
                 <Input
                   placeholder="Typ je antwoord hier..."
-                  value={answers[currentQuestionData.id] || ""}
+                  value={answers[currentQuestionData.id] as string || ""}
                   onChange={(e) => handleAnswerChange(currentQuestionData.id, e.target.value)}
                   maxLength={currentQuestionData.maxLength}
                   className="text-lg"
@@ -235,7 +235,7 @@ export default function StudentWorksheetPage({ params }: { params: { id: string 
                 <div>
                   <Textarea
                     placeholder="Schrijf je uitgebreide antwoord hier..."
-                    value={answers[currentQuestionData.id] || ""}
+                    value={answers[currentQuestionData.id] as string || ""}
                     onChange={(e) => handleAnswerChange(currentQuestionData.id, e.target.value)}
                     rows={8}
                     className="text-base"
@@ -243,7 +243,7 @@ export default function StudentWorksheetPage({ params }: { params: { id: string 
                   <div className="flex justify-between text-sm text-gray-500 mt-2">
                     <span>Minimaal {currentQuestionData.minLength} woorden vereist</span>
                     <span>
-                      {(answers[currentQuestionData.id] || "").split(" ").filter((w: string) => w.length > 0).length}{" "}
+                      {(answers[currentQuestionData.id] as string || "").split(" ").filter((w: string) => w.length > 0).length}{" "}
                       woorden
                     </span>
                   </div>

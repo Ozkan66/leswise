@@ -84,7 +84,7 @@ export default function StudentSubmissionsPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <Badge variant={worksheet.statusColor as any}>{worksheet.status}</Badge>
+                        <Badge variant={worksheet.statusColor as "default" | "secondary" | "destructive" | "outline"}>{worksheet.status}</Badge>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-gray-600">{worksheet.feedback}</span>

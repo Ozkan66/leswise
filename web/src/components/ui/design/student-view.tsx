@@ -139,7 +139,7 @@ export default function StudentView() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900">{worksheet.title}</h3>
-                          <Badge variant={worksheet.statusColor as any}>{worksheet.status}</Badge>
+                          <Badge variant={worksheet.statusColor as "destructive"}>{worksheet.status}</Badge>
                         </div>
                         <p className="text-gray-600 mb-2">{worksheet.subject}</p>
                         <p className="text-sm text-gray-500 mb-3">{worksheet.description}</p>
