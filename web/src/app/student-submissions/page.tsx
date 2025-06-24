@@ -51,8 +51,9 @@ export default function StudentSubmissionsPage() {
       }
 
       // Extract worksheets from the joined data, filtering out nulls
+      // Fix: Supabase returns worksheets as an array, not a single object
       const accessibleWorksheets: Worksheet[] = (sharedWorksheetsData || [])
-        .map((share: { worksheets: Worksheet | null }) => share.worksheets)
+        .flatMap((share: { worksheets?: Worksheet[] }) => share.worksheets ?? [])
         .filter((worksheet: Worksheet | null): worksheet is Worksheet => worksheet !== null);
       
       setWorksheets(accessibleWorksheets);
