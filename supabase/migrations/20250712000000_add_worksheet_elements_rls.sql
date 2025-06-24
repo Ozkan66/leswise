@@ -1,0 +1,2 @@
+-- This file is for worksheet elements RLS policies
+-- Currently empty - will be populated when needed
