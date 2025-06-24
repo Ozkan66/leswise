@@ -60,9 +60,7 @@ export default function WorksheetSharingForm({
         const { data: groupsData } = await supabase
           .from('group_members')
           .select('group_id, groups(id, name, description, type), role')
-          .eq('user_id', user.id)
-          .eq('status', 'active');
-        
+          .match({ user_id: user.id, status: 'active' });
         const groupsList = groupsData?.map((gm: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
           ...gm.groups,
           role: gm.role
@@ -115,6 +113,11 @@ export default function WorksheetSharingForm({
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Not authenticated');
 
+      console.log('DEBUG SHARING: User authenticated:', user.id);
+      console.log('DEBUG SHARING: Worksheet ID:', worksheetId);
+      console.log('DEBUG SHARING: Selected user ID:', selectedUserId);
+      console.log('DEBUG SHARING: Permission level:', permissionLevel);
+
       interface ShareData {
         worksheet_id: string;
         shared_by_user_id: string;
@@ -139,11 +142,29 @@ export default function WorksheetSharingForm({
         shareData.shared_with_group_id = selectedGroupId;
       }
 
-      const { error: shareError } = await supabase
-        .from('worksheet_shares')
-        .insert([shareData]);
+      console.log('DEBUG SHARING: Share data to insert:', shareData);
 
-      if (shareError) throw shareError;
+      // Get the current auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Use our API endpoint to bypass RLS issues
+      const response = await fetch('/api/worksheet-shares', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify(shareData),
+      });
+
+      const result = await response.json();
+      console.log('DEBUG SHARING: API response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create share');
+      }
+
+      console.log('DEBUG SHARING: Share created successfully!');
 
       // Reset form
       setSelectedUserId('');
@@ -157,6 +178,7 @@ export default function WorksheetSharingForm({
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to share worksheet';
+      console.error('DEBUG SHARING: Error occurred:', err);
       setError(errorMessage);
     } finally {
       setLoading(false);
