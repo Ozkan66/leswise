@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabaseClient";
 import { Worksheet, Submission } from "@/types/database";
 import { useUserRole } from "@/hooks/useUserRole";
-import Link from "next/link";
 
 export default function StudentSubmissionsPage() {
   const router = useRouter();
@@ -53,7 +52,7 @@ export default function StudentSubmissionsPage() {
 
       // Extract worksheets from the joined data, filtering out nulls
       const accessibleWorksheets: Worksheet[] = (sharedWorksheetsData || [])
-        .map((share: any) => share.worksheets)
+        .map((share: { worksheets: Worksheet | null }) => share.worksheets)
         .filter((worksheet: Worksheet | null): worksheet is Worksheet => worksheet !== null);
       
       setWorksheets(accessibleWorksheets);

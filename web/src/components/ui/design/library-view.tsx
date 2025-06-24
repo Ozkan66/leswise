@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Filter, Grid3X3, List, Bookmark, BookOpen, Clock, Star } from "lucide-react"
+import Image from "next/image"
 
 export default function LibraryView() {
   const [viewMode, setViewMode] = useState("grid")
@@ -174,9 +175,11 @@ export default function LibraryView() {
               <Card key={book.id} className="group cursor-pointer hover:shadow-lg transition-all duration-200">
                 <CardContent className="p-4">
                   <div className="relative mb-4">
-                    <img
+                    <Image
                       src={book.cover || "/placeholder.svg"}
                       alt={book.title}
+                      width={120}
+                      height={160}
                       className="w-full h-40 object-cover rounded-lg"
                     />
                     <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-white/80 hover:bg-white">
@@ -227,9 +230,11 @@ export default function LibraryView() {
               <Card key={book.id} className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
-                    <img
+                    <Image
                       src={book.cover || "/placeholder.svg"}
                       alt={book.title}
+                      width={64}
+                      height={80}
                       className="w-16 h-20 object-cover rounded-lg"
                     />
                     <div className="flex-1 min-w-0">

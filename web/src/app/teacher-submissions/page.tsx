@@ -8,12 +8,18 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Extend Submission type to include user_profiles for local use
+interface SubmissionWithUserProfiles extends Submission {
+  user_profiles?: {
+    email: string;
+    first_name: string;
+    last_name: string;
+  };
+}
+
 // Component to show submissions for a single worksheet (as cards)
-const WorksheetSubmissionsCards = ({ worksheet, onViewSubmission }: { 
-  worksheet: Worksheet; 
-  onViewSubmission: (submission: Submission) => void; 
-}) => {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+const WorksheetSubmissionsCards = ({ worksheet }: { worksheet: Worksheet }) => {
+  const [submissions, setSubmissions] = useState<SubmissionWithUserProfiles[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -33,7 +39,12 @@ const WorksheetSubmissionsCards = ({ worksheet, onViewSubmission }: {
         .eq("worksheet_id", worksheet.id)
         .order("submitted_at", { ascending: false });
       if (!error && data) {
-        setSubmissions(data);
+        // When fetching submissions with a join, normalize user_profiles to a single object
+        const normalized = data.map((sub) => ({
+          ...sub,
+          user_profiles: Array.isArray(sub.user_profiles) ? sub.user_profiles[0] : sub.user_profiles,
+        }));
+        setSubmissions(normalized);
       } else {
         // Fallback without join
         const { data: data2 } = await supabase
@@ -42,14 +53,23 @@ const WorksheetSubmissionsCards = ({ worksheet, onViewSubmission }: {
           .eq("worksheet_id", worksheet.id)
           .order("submitted_at", { ascending: false });
         if (data2) {
-          const enrichedData = await Promise.all(
-            data2.map(async (sub) => {
+          // When manually enriching submissions, always return a new object with user_profiles
+          // Fix: never mutate submission.user_profiles, always return a new object
+          const enrichedData: SubmissionWithUserProfiles[] = await Promise.all(
+            data2.map(async (submission) => {
               const { data: userData } = await supabase
                 .from("user_profiles")
                 .select("email, first_name, last_name")
-                .eq("user_id", sub.user_id)
+                .eq("user_id", submission.user_id)
                 .single();
-              return { ...sub, user_profiles: userData };
+              return {
+                ...submission,
+                user_profiles: userData || {
+                  email: `User ${submission.user_id?.slice(0, 8)}...`,
+                  first_name: "Unknown",
+                  last_name: "User",
+                },
+              };
             })
           );
           setSubmissions(enrichedData);
@@ -86,27 +106,31 @@ const WorksheetSubmissionsCards = ({ worksheet, onViewSubmission }: {
             maxWidth: 340,
             margin: 8,
             padding: 24,
-            background: '#fff',
+            background: "#fff",
             borderRadius: 10,
-            boxShadow: '0 1px 8px #0002',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: 12
+            boxShadow: "0 1px 8px #0002",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: 12,
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: 4 }}>{worksheet.title}</div>
-          <div style={{ color: '#007acc', fontWeight: 500 }}>
-            {submission.user_profiles?.email || `User: ${submission.user_id.slice(0, 8)}...`}
+          <div style={{ color: "#007acc", fontWeight: 500 }}>
+            {submission.user_profiles?.email || `User: ${submission.user_id?.slice(0, 8)}...`}
           </div>
-          <div style={{ color: '#888', fontSize: 13 }}>
+          <div style={{ color: "#888", fontSize: 13 }}>
             Ingediend op: {new Date(submission.created_at).toLocaleString()}
           </div>
-          <div style={{ margin: '8px 0' }}>
-            {submission.feedback && submission.feedback.includes('Beoordeeld') ? (
-              <span style={{ color: 'green' }}>✅ Beoordeeld</span>
+          <div style={{ margin: "8px 0" }}>
+            {submission.feedback && submission.feedback.includes("Beoordeeld") ? (
+              <span style={{ color: "green" }}>
+                ✅ Beoordeeld
+              </span>
             ) : (
-              <span style={{ color: 'orange' }}>⏳ Te beoordelen</span>
+              <span style={{ color: "orange" }}>
+                ⏳ Te beoordelen
+              </span>
             )}
           </div>
           <button
@@ -115,14 +139,14 @@ const WorksheetSubmissionsCards = ({ worksheet, onViewSubmission }: {
               window.location.href = `/teacher-submissions/${submission.id}`;
             }}
             style={{
-              backgroundColor: '#007acc',
-              color: 'white',
-              padding: '8px 0',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '15px',
-              marginTop: 8
+              backgroundColor: "#007acc",
+              color: "white",
+              padding: "8px 0",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "15px",
+              marginTop: 8,
             }}
           >
             📝 Beoordeel
@@ -135,8 +159,6 @@ const WorksheetSubmissionsCards = ({ worksheet, onViewSubmission }: {
 
 export default function TeacherSubmissionsPage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
-  const [selectedWorksheet, setSelectedWorksheet] = useState<string | null>(null);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [elements, setElements] = useState<WorksheetElement[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -165,13 +187,13 @@ export default function TeacherSubmissionsPage() {
 
   // Fetch submissions for selected worksheet
   useEffect(() => {
-    if (!selectedWorksheet) return;
+    if (!selectedSubmission) return;
     setSelectedSubmission(null); // Reset detail panel every time worksheet changes
     setAnswers([]);
     setElements([]);
     
     const fetchSubmissions = async () => {
-      console.log('Fetching submissions for worksheet:', selectedWorksheet);
+      console.log('Fetching submissions for worksheet:', selectedSubmission);
       
       // First, let's verify the current user and worksheet ownership
       const user = (await supabase.auth.getUser()).data.user;
@@ -181,7 +203,7 @@ export default function TeacherSubmissionsPage() {
       const { data: worksheetData, error: worksheetError } = await supabase
         .from("worksheets")
         .select("id, title, owner_id")
-        .eq("id", selectedWorksheet)
+        .eq("id", selectedSubmission)
         .single();
         
       console.log('Selected worksheet details:', { worksheetData, worksheetError });
@@ -190,7 +212,7 @@ export default function TeacherSubmissionsPage() {
       const { count: totalSubmissions } = await supabase
         .from("submissions")
         .select("*", { count: 'exact', head: true })
-        .eq("worksheet_id", selectedWorksheet);
+        .eq("worksheet_id", selectedSubmission);
         
       console.log('Total submissions for this worksheet:', totalSubmissions);
       
@@ -202,7 +224,7 @@ export default function TeacherSubmissionsPage() {
         
       console.log('All submissions in database:', allSubmissions);
       console.log('Submission details:', JSON.stringify(allSubmissions, null, 2));
-      console.log('Looking for worksheet_id:', selectedWorksheet);
+      console.log('Looking for worksheet_id:', selectedSubmission);
       
       // Check if the submission's worksheet is owned by this teacher
       if (allSubmissions && allSubmissions.length > 0) {
@@ -233,7 +255,7 @@ export default function TeacherSubmissionsPage() {
           score,
           user_profiles!submissions_user_id_fkey(email, first_name, last_name)
         `)
-        .eq("worksheet_id", selectedWorksheet)
+        .eq("worksheet_id", selectedSubmission)
         .order("submitted_at", { ascending: false });
         
       if (!error1 && data1) {
@@ -255,7 +277,7 @@ export default function TeacherSubmissionsPage() {
             score,
             user_profiles!user_id(email, first_name, last_name)
           `)
-          .eq("worksheet_id", selectedWorksheet)
+          .eq("worksheet_id", selectedSubmission)
           .order("submitted_at", { ascending: false });
           
         if (!error1b && data1b) {
@@ -275,7 +297,7 @@ export default function TeacherSubmissionsPage() {
               feedback, 
               score
             `)
-            .eq("worksheet_id", selectedWorksheet)
+            .eq("worksheet_id", selectedSubmission)
             .order("submitted_at", { ascending: false });
             
           if (!error2 && data2) {
@@ -320,7 +342,7 @@ export default function TeacherSubmissionsPage() {
       
     };
     fetchSubmissions();
-  }, [selectedWorksheet]);
+  }, [selectedSubmission]);
 
   // Fetch answers for selected submission
   useEffect(() => {
@@ -330,7 +352,7 @@ export default function TeacherSubmissionsPage() {
       const { data: elementsData, error: elError } = await supabase
         .from("worksheet_elements")
         .select("id, content, max_score")
-        .eq("worksheet_id", selectedWorksheet);
+        .eq("worksheet_id", selectedSubmission);
       
       console.log('Elements data:', elementsData);
       console.log('Elements error:', elError);
@@ -340,7 +362,7 @@ export default function TeacherSubmissionsPage() {
       
     };
     fetchElements();
-  }, [selectedSubmission, selectedWorksheet]);
+  }, [selectedSubmission]);
 
   // Fetch answers for selected submission
   const [answers, setAnswers] = useState<SubmissionElement[]>([]);
@@ -361,7 +383,7 @@ export default function TeacherSubmissionsPage() {
       
     };
     fetchAnswers();
-  }, [selectedSubmission, selectedWorksheet]);
+  }, [selectedSubmission, elements, answers]);
 
   // Auto-scoring function (supports all question types)
   const calculateAutoScore = (element: WorksheetElement, answer: string): number => {
@@ -457,7 +479,7 @@ export default function TeacherSubmissionsPage() {
         return answer;
       });
       
-      // Update state if any scores were auto-calculated
+      // Update state if scores were auto-calculated
       const hasNewScores = updatedAnswers.some((updated, index) => 
         (updated.score !== answers[index].score) && (answers[index].score === null || answers[index].score === undefined)
       );
@@ -484,20 +506,16 @@ export default function TeacherSubmissionsPage() {
               <WorksheetSubmissionsCards
                 key={worksheet.id}
                 worksheet={worksheet}
-                onViewSubmission={(submission) => {
-                  setSelectedWorksheet(worksheet.id);
-                  setSelectedSubmission(submission);
-                }}
               />
             ))}
           </div>
         )}
       </div>
       {/* Detail-view als apart paneel onder de kaarten */}
-      {selectedSubmission && selectedWorksheet && (
+      {selectedSubmission && (
         <div style={{ border: "1px solid #666", padding: 24, marginTop: 24, background: '#fafbfc', borderRadius: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h4>Beoordeling: {worksheets.find(w => w.id === selectedWorksheet)?.title}</h4>
+            <h4>Beoordeling: {worksheets.find(w => w.id === selectedSubmission.worksheet_id)?.title}</h4>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => {
