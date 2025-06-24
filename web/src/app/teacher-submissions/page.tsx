@@ -53,26 +53,24 @@ const WorksheetSubmissionsCards = ({ worksheet }: { worksheet: Worksheet }) => {
           .eq("worksheet_id", worksheet.id)
           .order("submitted_at", { ascending: false });
         if (data2) {
-          // When manually enriching submissions, always return a new object with user_profiles
-          // Fix: never mutate submission.user_profiles, always return a new object
-          const enrichedData: SubmissionWithUserProfiles[] = await Promise.all(
-            data2.map(async (submission) => {
+          // Replace manual enrichment loop with mapping that returns new objects
+          setSubmissions(await Promise.all(
+            data2.map(async (sub) => {
               const { data: userData } = await supabase
                 .from("user_profiles")
                 .select("email, first_name, last_name")
-                .eq("user_id", submission.user_id)
+                .eq("user_id", sub.user_id)
                 .single();
               return {
-                ...submission,
+                ...sub,
                 user_profiles: userData || {
-                  email: `User ${submission.user_id?.slice(0, 8)}...`,
-                  first_name: "Unknown",
-                  last_name: "User",
-                },
+                  email: `User ${sub.user_id.slice(0, 8)}...`,
+                  first_name: 'Unknown',
+                  last_name: 'User'
+                }
               };
             })
-          );
-          setSubmissions(enrichedData);
+          ));
         }
       }
       setLoading(false);
@@ -301,28 +299,24 @@ export default function TeacherSubmissionsPage() {
             .order("submitted_at", { ascending: false });
             
           if (!error2 && data2) {
-            submissionsData = data2;
-            console.log('✅ Submissions found without join:', submissionsData);
-            
-            // Manually fetch user emails for each submission
-            for (const submission of submissionsData) {
-              const { data: userData } = await supabase
-                .from("user_profiles")
-                .select("email, first_name, last_name")
-                .eq("user_id", submission.user_id)
-                .single();
-                
-              if (userData) {
-                submission.user_profiles = userData;
-              } else {
-                // Fallback: just show user ID
-                submission.user_profiles = { 
-                  email: `User ${submission.user_id.slice(0, 8)}...`, 
-                  first_name: 'Unknown', 
-                  last_name: 'User' 
+            // Replace manual enrichment loop with mapping that returns new objects
+            submissionsData = await Promise.all(
+              data2.map(async (sub) => {
+                const { data: userData } = await supabase
+                  .from("user_profiles")
+                  .select("email, first_name, last_name")
+                  .eq("user_id", sub.user_id)
+                  .single();
+                return {
+                  ...sub,
+                  user_profiles: userData || {
+                    email: `User ${sub.user_id.slice(0, 8)}...`,
+                    first_name: 'Unknown',
+                    last_name: 'User'
+                  }
                 };
-              }
-            }
+              })
+            );
           } else {
             submissionsError = error2;
             console.log('❌ Basic submissions query ook mislukt:', error2);
