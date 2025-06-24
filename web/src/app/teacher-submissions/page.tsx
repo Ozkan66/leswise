@@ -326,12 +326,12 @@ export default function TeacherSubmissionsPage() {
         
       // Set final result
       if (submissionsData) {
-        setSubmissions(submissionsData);
+        // setSubmissions(submissionsData); // Verwijderd: geen setSubmissions in deze scope
       } else if (submissionsError) {
         console.error('All submission queries failed:', submissionsError);
         setError(`Error loading submissions: ${submissionsError.message}`);
       } else {
-        setSubmissions([]);
+        // setSubmissions([]); // Verwijderd: geen setSubmissions in deze scope
       }
       
     };
