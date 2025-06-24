@@ -276,7 +276,10 @@ export default function WorksheetSharingForm({
   const getShareDisplayText = (share: WorksheetShare) => {
     if (share.shared_with_user) {
       const user = share.shared_with_user;
-      const name = (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : user.email;
+      // Use the correct property names based on the actual Supabase data structure
+      const firstName = (user as any).first_name || user.firstName || '';
+      const lastName = (user as any).last_name || user.lastName || '';
+      const name = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : user.email;
       return `User: ${name}`;
     }
     if (share.shared_with_group) {

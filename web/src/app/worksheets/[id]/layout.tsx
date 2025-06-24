@@ -7,13 +7,12 @@ import { usePathname } from 'next/navigation';
 
 export default function WorksheetLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: { id: string };
 }) {
   const pathname = usePathname();
-  const worksheetId = params.id;
+  // Extract worksheet ID from pathname instead of params (Next.js 15 compatibility)
+  const worksheetId = pathname.split('/')[2];
 
   const navLinks = [
     // Note: Adjust these paths if your routes are different

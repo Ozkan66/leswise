@@ -92,17 +92,6 @@ function AddTaskPageContent() {
   const router = useRouter();
   const { user } = useAuth();
 
-  useEffect(() => {
-    const id = searchParams.get('worksheet');
-    if (id) {
-      setWorksheetId(id);
-      fetchWorksheetDetails(id);
-    } else {
-      setError('No worksheet selected');
-      setLoading(false);
-    }
-  }, [searchParams, fetchWorksheetDetails]);
-
   const fetchWorksheetDetails = useCallback(async (id: string) => {
     try {
       const { data, error } = await supabase
@@ -126,6 +115,17 @@ function AddTaskPageContent() {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    const id = searchParams.get('worksheet');
+    if (id) {
+      setWorksheetId(id);
+      fetchWorksheetDetails(id);
+    } else {
+      setError('No worksheet selected');
+      setLoading(false);
+    }
+  }, [searchParams, fetchWorksheetDetails]);
 
   const handleTypeSelection = (type: TaskType) => {
     if (!worksheetId) return;
