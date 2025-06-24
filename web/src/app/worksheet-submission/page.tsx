@@ -200,6 +200,8 @@ function WorksheetSubmissionContent() {
     try {
       if (isAnonymous) {
         // Handle anonymous submission
+        console.log('Attempting anonymous submission for worksheet:', currentWorksheetId);
+        
         // First check and increment attempts
         const { data: canSubmit, error: attemptError } = await supabase
           .rpc('check_and_increment_attempts', {
@@ -241,8 +243,49 @@ function WorksheetSubmissionContent() {
         
       } else {
         // Handle regular user submission
+        console.log('Attempting regular user submission for worksheet:', currentWorksheetId);
+        
         const user = (await supabase.auth.getUser()).data.user;
         if (!user) throw new Error("Niet ingelogd");
+        
+        console.log('User attempting submission:', user.id);
+        
+        // Check if user profile exists
+        const { data: userProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (profileError) {
+          console.error('Error checking user profile:', profileError);
+          throw new Error("Gebruikersprofiel niet gevonden. Log opnieuw in.");
+        }
+        
+        if (!userProfile) {
+          throw new Error("Gebruikersprofiel niet gevonden. Log opnieuw in.");
+        }
+        
+        console.log('User profile found, continuing...');
+        
+        // Verify user still has access to this worksheet before submitting
+        const { data: accessCheck, error: accessError } = await supabase
+          .rpc('user_has_worksheet_access', {
+            p_user_id: user.id,
+            p_worksheet_id: currentWorksheetId,
+            p_required_permission: 'submit'
+          });
+          
+        if (accessError) {
+          console.error('Error checking worksheet access:', accessError);
+          throw new Error("Fout bij controleren van toegang tot worksheet");
+        }
+        
+        if (!accessCheck) {
+          throw new Error("Je hebt geen toegang (meer) tot deze worksheet");
+        }
+        
+        console.log('User has access, proceeding with submission');
         
         // Check attempt limits for regular users
         const { data: canSubmit, error: attemptError } = await supabase
@@ -263,6 +306,7 @@ function WorksheetSubmissionContent() {
           return;
         }
         
+        console.log('Creating submission record...');
         // Create submission
         const { data: submission, error: subError } = await supabase
           .from("submissions")
@@ -270,25 +314,57 @@ function WorksheetSubmissionContent() {
           .select()
           .single();
           
-        if (subError) throw subError;
+        if (subError) {
+          console.error('Submission creation error:', subError);
+          throw subError;
+        }
+        
+        console.log('Submission created successfully:', submission.id);
         
         // Create submission elements
+        console.log('Creating submission elements...');
         const answerRows = elements.map((el) => ({
           submission_id: submission.id,
           worksheet_element_id: el.id,
           answer: answers[el.id] || ""
         }));
         
+        console.log('Answer rows to insert:', answerRows.length);
+        
         const { error: elemError } = await supabase
           .from("submission_elements")
           .insert(answerRows);
           
-        if (elemError) throw elemError;
+        if (elemError) {
+          console.error('Submission elements creation error:', elemError);
+          throw elemError;
+        }
+        
+        console.log('Submission completed successfully');
         setSubmitted(true);
       }
       
     } catch (err: unknown) {
-      setError((err as Error).message || "Onbekende fout bij indienen");
+      console.error('Submission error:', err);
+      
+      // Provide more specific error messages
+      if (err && typeof err === 'object' && 'message' in err) {
+        const errorMessage = (err as Error).message;
+        
+        if (errorMessage.includes('permission denied') || errorMessage.includes('RLS')) {
+          setError("Je hebt geen toestemming om deze worksheet in te dienen. Controleer of je de juiste toegang hebt.");
+        } else if (errorMessage.includes('foreign key') || errorMessage.includes('constraint')) {
+          setError("Er is een probleem met de worksheet gegevens. Probeer de pagina te verversen.");
+        } else if (errorMessage.includes('authentication') || errorMessage.includes('auth')) {
+          setError("Je bent niet ingelogd. Log opnieuw in en probeer het nog een keer.");
+        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+          setError("Netwerkfout. Controleer je internetverbinding en probeer het opnieuw.");
+        } else {
+          setError(`Fout bij indienen: ${errorMessage}`);
+        }
+      } else {
+        setError("Onbekende fout bij indienen. Probeer het opnieuw.");
+      }
     }
   };
 
