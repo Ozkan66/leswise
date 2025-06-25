@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { BookOpen, Eye, EyeOff, User, GraduationCap } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "../../../../contexts/AuthContext"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -16,10 +17,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [userType, setUserType] = useState<"teacher" | "student" | null>(null)
   const router = useRouter()
+  const { signIn } = useAuth()
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    // Hier kun je eventueel Supabase authenticatie toevoegen
+    // const { error } = await signIn(email, password);
+    // if (error) { ...error handling... }
     if (userType === "teacher") {
-      router.push("/")
+      router.push("/dashboard")
     } else if (userType === "student") {
       router.push("/student-dashboard")
     }
