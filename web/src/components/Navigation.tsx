@@ -3,6 +3,11 @@ import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
+// Helper to get user role from user_metadata or fallback
+function getUserRole(user: any): string | undefined {
+  return user?.user_metadata?.role || user?.role;
+}
+
 export default function Navigation() {
   const { user, signOut, loading } = useAuth();
   const router = useRouter();
@@ -22,6 +27,8 @@ export default function Navigation() {
     );
   }
 
+  const role = user ? getUserRole(user) : undefined;
+
   return (
     <nav style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}>
       <Link href="/" style={{ marginRight: 12, fontWeight: 'bold' }}>Leswise</Link>
@@ -32,10 +39,17 @@ export default function Navigation() {
           <Link href="/folders" style={{ marginRight: 12 }}>Folders</Link>
           <Link href="/worksheets" style={{ marginRight: 12 }}>Worksheets</Link>
           <Link href="/shared-worksheets" style={{ marginRight: 12 }}>Shared Worksheets</Link>
-          <Link href="/worksheet-submission" style={{ marginRight: 12 }}>Submissions</Link>
-          <Link href="/student-submissions" style={{ marginRight: 12 }}>Mijn Werkbladen</Link>
-          <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
-          
+          {/* Only show for students */}
+          {role !== 'teacher' && (
+            <>
+              <Link href="/worksheet-submission" style={{ marginRight: 12 }}>Submissions</Link>
+              <Link href="/student-submissions" style={{ marginRight: 12 }}>Mijn Werkbladen</Link>
+            </>
+          )}
+          {/* Only show for teachers */}
+          {role === 'teacher' && (
+            <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
+          )}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             <Link 
               href="/profile" 

@@ -1,98 +1,450 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useAuth } from "../../contexts/AuthContext";
-import { useRouter } from "next/navigation";
-
-interface AssignedWorksheet {
-  id: number;
-  title: string;
-  subject: string;
-  teacher: string;
-  dueDate: string;
-  status: string;
-  statusColor: string;
-  estimatedTime: string;
-  attempts: number;
-  maxAttempts: number;
-  description: string;
-  priority: string;
-}
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useAuth } from '../../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../utils/supabaseClient';
+import { Worksheet } from '../../types/database';
 
 export default function StudentDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [joinCode, setJoinCode] = useState("");
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [profile, setProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
+  const [stats, setStats] = useState({
+    worksheets: 0,
+    folders: 0,
+    groups: 0,
+    submissions: 0,
+  });
+  const [loadingData, setLoading] = useState(true);
 
-  // Redirect niet-ingelogde gebruikers naar login
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/login");
+      router.replace('/login');
     }
   }, [user, loading, router]);
 
-  // Dummy data, vervang later door fetch uit Supabase
-  const assignedWorksheets: AssignedWorksheet[] = [
-    {
-      id: 1,
-      title: "Wiskunde taak",
-      subject: "Hoofdstuk 1",
-      teacher: "Mr. Johnson",
-      dueDate: "2024-01-15",
-      status: "Niet ingediend",
-      statusColor: "destructive",
-      estimatedTime: "15-20 min",
-      attempts: 0,
-      maxAttempts: 3,
-      description: "Los de wiskundeproblemen op",
-      priority: "high",
-    },
-    // ...meer taken
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        // Fetch user profile
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError.message);
+        } else {
+          setProfile(userProfile);
+        }
+        
+        // Fetch recent worksheets for the list (for students: assigned worksheets)
+        const { data: assignedWorksheets, error: worksheetsError } = await supabase
+          .from('student_worksheets')
+          .select('id, title, description')
+          .eq('student_id', user.id)
+          .order('assigned_at', { ascending: false })
+          .limit(2);
+
+        if (worksheetsError) {
+          console.error('Error fetching worksheets:', worksheetsError.message);
+          setWorksheets([]);
+        } else if (assignedWorksheets) {
+          setWorksheets(assignedWorksheets as Worksheet[]);
+        }
+
+        // Fetch all stats in parallel (customize for student if needed)
+        const [
+          worksheetsCount,
+          foldersCount,
+          groupsCount,
+          submissionsCount,
+        ] = await Promise.all([
+          supabase.from('student_worksheets').select('id', { count: 'exact', head: true }).eq('student_id', user.id),
+          supabase.from('folders').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
+          supabase.from('group_members').select('group_id', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('student_id', user.id)
+        ]);
+
+        setStats({
+          worksheets: worksheetsCount.count ?? 0,
+          folders: foldersCount.count ?? 0,
+          groups: groupsCount.count ?? 0,
+          submissions: submissionsCount.count ?? 0,
+        });
+
+      } else {
+        setWorksheets([]);
+        setStats({ worksheets: 0, folders: 0, groups: 0, submissions: 0 });
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  if (loadingData) return <p>Loading...</p>;
 
   return (
-    <main className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Welkom student!</h1>
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Jouw taken</h2>
-        {assignedWorksheets.length === 0 ? (
-          <p>Je hebt nog geen taken toegewezen gekregen.</p>
-        ) : (
-          <ul>
-            {assignedWorksheets.map(ws => (
-              <li key={ws.id} className="mb-2 p-4 bg-blue-50 rounded">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="font-semibold">{ws.title}</span> <span className="text-gray-500 ml-2">({ws.subject})</span>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      {/* Fixed Sidebar */}
+      <div style={{ 
+        width: '256px', 
+        backgroundColor: 'white', 
+        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
+        position: 'fixed', 
+        height: '100vh', 
+        left: 0, 
+        top: 0,
+        zIndex: 10
+      }}>
+        {/* User Info */}
+        <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
+            Welkom! {loading ? '...' : (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Student')}
+          </h2>
+        </div>
+        {/* Navigation */}
+        <div style={{ padding: '24px 12px' }}>
+          <div style={{ marginBottom: '8px' }}>
+            <Link href="/" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>🏠</span>
+              Home
+            </Link>
+            <Link href="/groups" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>👥</span>
+              Mijn klassen
+            </Link>
+            <Link href="/folders" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>📚</span>
+              Mappen
+            </Link>
+            <Link href="/student-worksheets" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>📝</span>
+              Mijn werkbladen
+            </Link>
+            <Link href="/shared-worksheets" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>🔗</span>
+              Gedeelde werkbladen
+            </Link>
+            <Link href="/student-submissions" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>📩</span>
+              Inzendingen
+            </Link>
+          </div>
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '32px' }}>
+            <Link href="/profile" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>👤</span>
+              Mijn profiel
+            </Link>
+            <a href="#" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>❓</span>
+              Help
+            </a>
+            <a href="#" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              <span style={{ marginRight: '12px' }}>🚪</span>
+              Uitloggen
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div style={{ marginLeft: '256px', flex: 1 }}>
+        {/* Top Header */}
+        <div style={{ 
+          backgroundColor: 'white', 
+          borderBottom: '1px solid #e5e7eb',
+          padding: '24px 32px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827', margin: 0 }}>
+                Welkom terug, {loading ? '...' : (profile?.first_name || 'Student')}
+              </h1>
+              <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>
+                Hier is een overzicht van je werkbladen en klassen
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button style={{
+                backgroundColor: '#4b5563',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <span style={{ marginRight: '8px' }}>🔍</span>
+                Zoeken
+              </button>
+              <button style={{
+                backgroundColor: '#2563eb',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <span style={{ marginRight: '8px' }}>➕</span>
+                Nieuw werkblad
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Content */}
+        <div style={{ padding: '32px' }}>
+          {/* Stats Cards */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gap: '24px', 
+            marginBottom: '32px' 
+          }}>
+            <Link href="/student-worksheets" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                cursor: 'pointer'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ccfbf1'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>📝</span>
                   </div>
-                  <span className="text-xs text-blue-700">{ws.dueDate}</span>
+                  <div style={{ marginLeft: '16px' }}>
+                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
+                      Werkbladen
+                    </p>
+                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
+                      {loading ? '...' : stats.worksheets}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-700 mt-1">{ws.description}</div>
-                <div className="flex gap-4 mt-2">
-                  <span className="text-xs">Status: <b>{ws.status}</b></span>
-                  <span className="text-xs">Pogingen: {ws.attempts}/{ws.maxAttempts}</span>
-                  <span className="text-xs">Tijd: {ws.estimatedTime}</span>
+              </div>
+            </Link>
+            {/* Add more cards as needed for student stats */}
+          </div>
+
+          {/* Quick Actions */}
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+              Snel naar
+            </h2>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+              gap: '16px' 
+            }}>
+              <Link href="/student-worksheets" style={{ textDecoration: 'none' }}>
+                <button style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}>
+                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>📝</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Werkbladen</span>
+                </button>
+              </Link>
+              <button style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                cursor: 'pointer',
+                textAlign: 'center',
+                width: '100%',
+                height: '100%'
+              }}>
+                <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>🤖</span>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>AI Hulpmiddelen</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Worksheets Section */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
+          }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', margin: 0 }}>
+                  Werkbladen
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <Link href="/student-worksheets" style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#374151',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textDecoration: 'none'
+                  }}>
+                    Alles bekijken
+                  </Link>
                 </div>
-                <Link href={`/student-worksheet/${ws.id}`} className="text-blue-700 hover:underline text-sm mt-2 inline-block">Bekijk taak</Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <section>
-        <h2 className="text-xl font-semibold mb-2">Groep joinen</h2>
-        <form className="flex gap-2">
-          <input
-            type="text"
-            className="border rounded px-2 py-1"
-            placeholder="Groepscode"
-            value={joinCode}
-            onChange={e => setJoinCode(e.target.value)}
-          />
-          <button type="submit" className="bg-blue-700 text-white px-4 py-1 rounded">Join</button>
-        </form>
-      </section>
-    </main>
+              </div>
+            </div>
+            <div style={{ padding: '24px' }}>
+              {loading ? (
+                <p>Werkbladen laden...</p>
+              ) : worksheets.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {worksheets.map((worksheet) => (
+                    <div key={worksheet.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                      <div>
+                        <h3 style={{ fontWeight: '600', color: '#111827', margin: 0 }}>{worksheet.title}</h3>
+                        <p style={{ color: '#6b7280', margin: '4px 0 0 0', fontSize: '14px' }}>{worksheet.description || 'Geen beschrijving'}</p>
+                      </div>
+                      <Link href={`/student-worksheets/${worksheet.id}/view`} passHref>
+                        <button style={{
+                          backgroundColor: '#2563eb',
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}>
+                          Openen
+                        </button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '32px' }}>
+                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Je hebt nog geen werkbladen toegewezen gekregen.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

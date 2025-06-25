@@ -1,63 +1,192 @@
 "use client";
 
-import React from "react";
-import Image from "next/image";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../contexts/AuthContext";
 
 const uspList = [
-  {
-    title: "Direct aan de slag",
-    description: "Start eenvoudig met het maken en delen van werkbladen."
-  },
-  {
-    title: "Voor docenten & leerlingen",
-    description: "Leswise is ontworpen voor het onderwijs, met focus op gebruiksgemak."
-  },
-  {
-    title: "Veilig & privacyvriendelijk",
-    description: "Jouw data is veilig en wordt niet gedeeld met derden."
-  }
+	{
+		title: "Direct aan de slag",
+		description: "Start eenvoudig met het maken en delen van werkbladen.",
+	},
+	{
+		title: "Voor docenten & leerlingen",
+		description:
+			"Leswise is ontworpen voor het onderwijs, met focus op gebruiksgemak.",
+	},
+	{
+		title: "Veilig & privacyvriendelijk",
+		description: "Jouw data is veilig en wordt niet gedeeld met derden.",
+	},
 ];
 
+const illustrationUrl =
+	"https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=600&q=80";
+
 const LandingPage: React.FC = () => {
-  return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-blue-50 p-4">
-      <header className="mb-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 text-blue-900">Welkom bij Leswise</h1>
-        <p className="text-lg md:text-xl text-blue-700 max-w-2xl mx-auto">
-          De slimme tool voor het maken, delen en beoordelen van digitale werkbladen in het onderwijs.
-        </p>
-      </header>
-      <section className="flex flex-col md:flex-row gap-8 mb-8 w-full max-w-4xl items-center">
-        <div className="flex-1 flex flex-col gap-4">
-          {uspList.map((usp) => (
-            <div key={usp.title} className="bg-white rounded-lg shadow p-4 border border-blue-100">
-              <h2 className="text-xl font-semibold text-blue-800 mb-1">{usp.title}</h2>
-              <p className="text-blue-700">{usp.description}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex-1 flex justify-center">
-          <Image
-            src="/illustration-landing.png"
-            alt="Leswise illustratie"
-            width={320}
-            height={240}
-            className="rounded-lg shadow-lg border border-blue-100"
-            priority
-          />
-        </div>
-      </section>
-      <div className="flex gap-6 mt-4">
-        <Link href="/login" passHref legacyBehavior>
-          <a className="px-6 py-3 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-800 transition">Aanmelden</a>
-        </Link>
-        <Link href="/signup" passHref legacyBehavior>
-          <a className="px-6 py-3 bg-white text-blue-700 border border-blue-700 rounded-lg font-semibold shadow hover:bg-blue-50 transition">Account aanmaken</a>
-        </Link>
-      </div>
-    </main>
-  );
+	const { user, loading } = useAuth();
+	const router = useRouter();
+
+	useEffect(() => {
+		if (!loading && user) {
+			// Hier kun je eventueel user metadata/rol ophalen
+			// Voor nu: redirect standaard naar /dashboard
+			router.replace("/dashboard");
+		}
+	}, [user, loading, router]);
+
+	return (
+		<main
+			style={{
+				minHeight: "100vh",
+				display: "flex",
+				flexDirection: "column",
+				alignItems: "center",
+				justifyContent: "center",
+				background: "linear-gradient(to bottom, #fff, #e0e7ff)",
+				padding: "2rem 1rem",
+			}}
+		>
+			<header style={{ marginBottom: 40, textAlign: "center" }}>
+				<h1
+					style={{
+						fontSize: "2.5rem",
+						fontWeight: 700,
+						marginBottom: 16,
+						color: "#1e3a8a",
+					}}
+				>
+					Welkom bij Leswise
+				</h1>
+				<p
+					style={{
+						fontSize: "1.25rem",
+						color: "#2563eb",
+						maxWidth: 600,
+						margin: "0 auto",
+					}}
+				>
+					De slimme tool voor het maken, delen en beoordelen van digitale
+					werkbladen in het onderwijs.
+				</p>
+			</header>
+			<section
+				style={{
+					display: "flex",
+					flexDirection: "row",
+					gap: 40,
+					marginBottom: 40,
+					width: "100%",
+					maxWidth: 1100,
+					alignItems: "center",
+					flexWrap: "wrap",
+				}}
+			>
+				<div
+					style={{
+						flex: 1,
+						display: "flex",
+						flexDirection: "column",
+						gap: 24,
+					}}
+				>
+					{uspList.map((usp) => (
+						<div
+							key={usp.title}
+							style={{
+								background: "#fff",
+								borderRadius: 16,
+								boxShadow: "0 2px 12px #e0e7ff",
+								padding: 24,
+								border: "1px solid #dbeafe",
+							}}
+						>
+							<h2
+								style={{
+									fontSize: "1.5rem",
+									fontWeight: 600,
+									color: "#1e40af",
+									marginBottom: 8,
+								}}
+							>
+								{usp.title}
+							</h2>
+							<p
+								style={{
+									color: "#2563eb",
+									fontSize: "1rem",
+								}}
+							>
+								{usp.description}
+							</p>
+						</div>
+					))}
+				</div>
+				<div
+					style={{
+						flex: 1,
+						display: "flex",
+						justifyContent: "center",
+					}}
+				>
+					<img
+						src={illustrationUrl}
+						alt="Leswise illustratie"
+						width={350}
+						height={260}
+						style={{
+							borderRadius: 12,
+							boxShadow: "0 4px 24px #c7d2fe",
+							border: "1px solid #dbeafe",
+							objectFit: "cover",
+						}}
+					/>
+				</div>
+			</section>
+			<div
+				style={{
+					display: "flex",
+					gap: 32,
+					marginTop: 16,
+				}}
+			>
+				<Link
+					href="/login"
+					style={{
+						padding: "18px 40px",
+						background: "#2563eb",
+						color: "#fff",
+						borderRadius: 12,
+						fontWeight: 600,
+						fontSize: "1.15rem",
+						boxShadow: "0 2px 8px #dbeafe",
+						textDecoration: "none",
+						transition: "background 0.2s",
+					}}
+				>
+					Aanmelden
+				</Link>
+				<Link
+					href="/register"
+					style={{
+						padding: "18px 40px",
+						background: "#fff",
+						color: "#2563eb",
+						border: "2px solid #2563eb",
+						borderRadius: 12,
+						fontWeight: 600,
+						fontSize: "1.15rem",
+						boxShadow: "0 2px 8px #dbeafe",
+						textDecoration: "none",
+						transition: "background 0.2s",
+					}}
+				>
+					Account aanmaken
+				</Link>
+			</div>
+		</main>
+	);
 };
 
 export default LandingPage;

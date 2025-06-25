@@ -23,10 +23,13 @@ export default function LoginPage() {
     // Hier kun je eventueel Supabase authenticatie toevoegen
     // const { error } = await signIn(email, password);
     // if (error) { ...error handling... }
+    // Simuleer een rol-gebaseerde redirect na login
     if (userType === "teacher") {
-      router.push("/dashboard")
+      router.push("/dashboard");
     } else if (userType === "student") {
-      router.push("/student-dashboard")
+      router.push("/student-dashboard");
+    } else {
+      router.push("/");
     }
   }
 
