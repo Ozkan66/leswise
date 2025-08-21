@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 import { supabase } from '../utils/supabaseClient';
 import { Worksheet } from '../types/database';
 
 
 export default function TeacherHomepage() {
+  const { theme, systemTheme } = useTheme();
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [profile, setProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
   const [stats, setStats] = useState({
@@ -16,6 +18,9 @@ export default function TeacherHomepage() {
     submissions: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  // Determine if we're in dark mode
+  const isDark = theme === 'dark' || (theme === 'system' && systemTheme === 'dark');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,60 +96,177 @@ export default function TeacherHomepage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div style={{ 
+      display: 'flex', 
+      minHeight: '100vh', 
+      backgroundColor: isDark ? '#111827' : '#f9fafb' 
+    }}>
       {/* Fixed Sidebar */}
-      <div className="plantyn-sidebar w-64 shadow-lg">
+      <div style={{
+        width: '256px',
+        backgroundColor: '#1f2937',
+        position: 'fixed',
+        height: '100vh',
+        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
+      }}>
       
         {/* User Info */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-          <h2 className="text-lg font-semibold text-white m-0">
+        <div style={{ 
+          padding: '24px', 
+          borderBottom: '1px solid #374151' 
+        }}>
+          <h2 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            color: 'white', 
+            margin: 0 
+          }}>
             Welkom! {loading ? '...' : (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Gebruiker')}
           </h2>
-          <p className="text-sm text-gray-300 mt-1 hidden">
+          <p style={{ 
+            fontSize: '14px', 
+            color: '#d1d5db', 
+            marginTop: '4px', 
+            display: 'none' 
+          }}>
             Plantyn Salesforce NL Institute SE
           </p>
         </div>
         
         {/* Navigation */}
-        <div className="p-6 px-3">
-          <div className="mb-2">
-            <Link href="/" className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">🏠</span>
+        <div style={{ padding: '24px 12px' }}>
+          <div style={{ marginBottom: '8px' }}>
+            <Link href="/" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>🏠</span>
               Home
             </Link>
-            <Link href="/groups" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">👥</span>
+            <Link href="/groups" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>👥</span>
               Mijn klassen
             </Link>
-            <Link href="/folders" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">📚</span>
+            <Link href="/folders" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>📚</span>
               Mappen Beheren
             </Link>
-            <Link href="/worksheets" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">📝</span>
+            <Link href="/worksheets" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>📝</span>
               Mijn werkbladen
             </Link>
-            <Link href="/shared-worksheets" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">🔗</span>
+            <Link href="/shared-worksheets" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>🔗</span>
               Gedeelde werkbladen
             </Link>
-            <Link href="/teacher-submissions" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">📩</span>
+            <Link href="/teacher-submissions" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>📩</span>
               Inzendingen
             </Link>
           </div>
           
-          <div className="border-t border-gray-600 pt-6 mt-8">
-            <Link href="/profile" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">👤</span>
+          <div style={{ 
+            borderTop: '1px solid #374151', 
+            paddingTop: '24px', 
+            marginTop: '32px' 
+          }}>
+            <Link href="/profile" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>👤</span>
               Mijn profiel
             </Link>
-            <a href="#" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium mb-1">
-              <span className="mr-3">❓</span>
+            <a href="#" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>❓</span>
               Help
             </a>
-            <a href="#" className="flex items-center px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md no-underline text-sm font-medium">
-              <span className="mr-3">🚪</span>
+            <a href="#" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#d1d5db',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              <span style={{ marginRight: '12px' }}>🚪</span>
               Uitloggen
             </a>
           </div>
@@ -152,25 +274,59 @@ export default function TeacherHomepage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="ml-64 flex-1">
+      <div style={{ marginLeft: '256px', flex: 1 }}>
         {/* Top Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-6 px-8">
-          <div className="flex justify-between items-center">
+        <div style={{ 
+          backgroundColor: isDark ? '#1f2937' : 'white', 
+          borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+          padding: '24px 32px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white m-0">
+              <h1 style={{ 
+                fontSize: '24px', 
+                fontWeight: '600', 
+                color: isDark ? 'white' : '#111827', 
+                margin: 0 
+              }}>
                 Welkom terug, {loading ? '...' : (profile?.first_name || 'Gebruiker')}
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 mt-1 m-0">
+              <p style={{ 
+                color: isDark ? '#d1d5db' : '#6b7280', 
+                margin: '4px 0 0 0' 
+              }}>
                 Hier is een overzicht van je werkbladen en klassen
               </p>
             </div>
-            <div className="flex gap-3">
-              <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg border-none text-sm font-medium cursor-pointer flex items-center">
-                <span className="mr-2">🔍</span>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button style={{
+                backgroundColor: '#4b5563',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <span style={{ marginRight: '8px' }}>🔍</span>
                 Zoeken
               </button>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg border-none text-sm font-medium cursor-pointer flex items-center">
-                <span className="mr-2">➕</span>
+              <button style={{
+                backgroundColor: '#2563eb',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <span style={{ marginRight: '8px' }}>➕</span>
                 Nieuw werkblad
               </button>
             </div>
@@ -178,20 +334,46 @@ export default function TeacherHomepage() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="p-8">
+        <div style={{ padding: '32px' }}>
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Link href="/worksheets" className="no-underline">
-              <div className="plantyn-card p-6 cursor-pointer transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-teal-100 dark:bg-teal-900">
-                    <span className="text-xl">📝</span>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gap: '24px', 
+            marginBottom: '32px' 
+          }}>
+            <Link href="/worksheets" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{
+                backgroundColor: isDark ? '#1f2937' : 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                cursor: 'pointer'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: isDark ? '#0f766e' : '#ccfbf1'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>📝</span>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 m-0">
+                  <div style={{ marginLeft: '16px' }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Werkbladen
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 m-0">
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.worksheets}
                     </p>
                   </div>
@@ -199,17 +381,38 @@ export default function TeacherHomepage() {
               </div>
             </Link>
             
-            <Link href="/folders" className="no-underline">
-              <div className="plantyn-card p-6 cursor-pointer transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900">
-                    <span className="text-xl">📁</span>
+            <Link href="/folders" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{
+                backgroundColor: isDark ? '#1f2937' : 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                cursor: 'pointer'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: isDark ? '#c2410c' : '#fed7aa'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>📁</span>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 m-0">
+                  <div style={{ marginLeft: '16px' }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Mappen
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 m-0">
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.folders}
                     </p>
                   </div>
@@ -217,17 +420,38 @@ export default function TeacherHomepage() {
               </div>
             </Link>
             
-            <Link href="/groups" className="no-underline">
-              <div className="plantyn-card p-6 cursor-pointer transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
-                    <span className="text-xl">👥</span>
+            <Link href="/groups" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{
+                backgroundColor: isDark ? '#1f2937' : 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                cursor: 'pointer'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: isDark ? '#1e40af' : '#dbeafe'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>👥</span>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 m-0">
+                  <div style={{ marginLeft: '16px' }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Klassen
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 m-0">
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.groups}
                     </p>
                   </div>
@@ -235,17 +459,38 @@ export default function TeacherHomepage() {
               </div>
             </Link>
             
-            <Link href="/teacher-submissions" className="no-underline">
-              <div className="plantyn-card p-6 cursor-pointer transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
-                    <span className="text-xl">📩</span>
+            <Link href="/teacher-submissions" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{
+                backgroundColor: isDark ? '#1f2937' : 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                cursor: 'pointer'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: isDark ? '#15803d' : '#dcfce7'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>📩</span>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 m-0">
+                  <div style={{ marginLeft: '16px' }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Inzendingen
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 m-0">
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.submissions}
                     </p>
                   </div>
@@ -255,51 +500,135 @@ export default function TeacherHomepage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ 
+              fontSize: '20px', 
+              fontWeight: '600', 
+              color: isDark ? 'white' : '#111827', 
+              marginBottom: '16px' 
+            }}>
               Snel naar
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Link href="/worksheets" className="no-underline">
-                <button className="plantyn-card p-6 cursor-pointer text-center w-full h-full border-none">
-                  <span className="text-2xl block mb-3">📝</span>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Werkbladen</span>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+              gap: '16px' 
+            }}>
+              <Link href="/worksheets" style={{ textDecoration: 'none' }}>
+                <button style={{
+                  backgroundColor: isDark ? '#1f2937' : 'white',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}>
+                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>📝</span>
+                  <span style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: isDark ? '#d1d5db' : '#374151' 
+                  }}>Werkbladen</span>
                 </button>
               </Link>
-              <button className="plantyn-card p-6 cursor-pointer text-center w-full h-full border-none">
-                <span className="text-2xl block mb-3">🤖</span>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">AI Hulpmiddelen</span>
+              <button style={{
+                backgroundColor: isDark ? '#1f2937' : 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                cursor: 'pointer',
+                textAlign: 'center',
+                width: '100%',
+                height: '100%'
+              }}>
+                <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>🤖</span>
+                <span style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '500', 
+                  color: isDark ? '#d1d5db' : '#374151' 
+                }}>AI Hulpmiddelen</span>
               </button>
             </div>
           </div>
 
           {/* Worksheets Section */}
-          <div className="plantyn-card">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white m-0">
+          <div style={{
+            backgroundColor: isDark ? '#1f2937' : 'white',
+            borderRadius: '12px',
+            border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
+          }}>
+            <div style={{ 
+              padding: '24px', 
+              borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb' 
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '600', 
+                  color: isDark ? 'white' : '#111827', 
+                  margin: 0 
+                }}>
                   Werkbladen
                 </h2>
-                <div className="flex items-center gap-4">
-                  <Link href="/worksheets" className="text-sm font-medium text-gray-700 dark:text-gray-300 bg-none border-none cursor-pointer no-underline">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <Link href="/worksheets" style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: isDark ? '#d1d5db' : '#374151', 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    textDecoration: 'none' 
+                  }}>
                     Alles bekijken
                   </Link>
                 </div>
               </div>
             </div>
-            <div className="p-6">
+            <div style={{ padding: '24px' }}>
               {loading ? (
-                <p className="text-gray-600 dark:text-gray-400">Werkbladen laden...</p>
+                <p style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Werkbladen laden...</p>
               ) : worksheets.length > 0 ? (
-                <div className="flex flex-col gap-4">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {worksheets.map((worksheet) => (
-                    <div key={worksheet.id} className="flex justify-between items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div key={worksheet.id} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '16px', 
+                      border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      backgroundColor: isDark ? '#111827' : '#f9fafb' 
+                    }}>
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white m-0">{worksheet.title}</h3>
-                        <p className="text-gray-600 dark:text-gray-400 mt-1 m-0 text-sm">{worksheet.description || 'Geen beschrijving'}</p>
+                        <h3 style={{ 
+                          fontWeight: '600', 
+                          color: isDark ? 'white' : '#111827', 
+                          margin: 0 
+                        }}>{worksheet.title}</h3>
+                        <p style={{ 
+                          color: isDark ? '#9ca3af' : '#6b7280', 
+                          marginTop: '4px', 
+                          margin: '4px 0 0 0', 
+                          fontSize: '14px' 
+                        }}>{worksheet.description || 'Geen beschrijving'}</p>
                       </div>
                       <Link href={`/worksheets/${worksheet.id}/edit`} passHref>
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md border-none text-sm font-medium cursor-pointer">
+                        <button style={{
+                          backgroundColor: '#2563eb',
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}>
                           Openen
                         </button>
                       </Link>
@@ -307,8 +636,11 @@ export default function TeacherHomepage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Je hebt nog geen werkbladen aangemaakt.</p>
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <p style={{ 
+                    fontSize: '14px', 
+                    color: isDark ? '#9ca3af' : '#6b7280' 
+                  }}>Je hebt nog geen werkbladen aangemaakt.</p>
                 </div>
               )}
             </div>
