@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 export default function Navigation() {
   const { user, signOut, loading } = useAuth();
@@ -37,6 +38,7 @@ export default function Navigation() {
           <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
           
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ThemeToggle />
             <Link 
               href="/profile" 
               style={{ 
@@ -62,6 +64,7 @@ export default function Navigation() {
         </>
       ) : (
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+          <ThemeToggle />
           <Link 
             href="/login" 
             style={{ 
