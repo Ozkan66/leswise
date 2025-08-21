@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 import { supabase } from '../utils/supabaseClient';
 import { Worksheet } from '../types/database';
 
 
 export default function TeacherHomepage() {
+  const { theme, systemTheme } = useTheme();
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [profile, setProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
   const [stats, setStats] = useState({
@@ -16,6 +18,9 @@ export default function TeacherHomepage() {
     submissions: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  // Determine if we're in dark mode
+  const isDark = theme === 'dark' || (theme === 'system' && systemTheme === 'dark');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,24 +96,40 @@ export default function TeacherHomepage() {
   }, []);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    <div style={{ 
+      display: 'flex', 
+      minHeight: '100vh', 
+      backgroundColor: isDark ? '#111827' : '#f9fafb' 
+    }}>
       {/* Fixed Sidebar */}
-      <div style={{ 
-        width: '256px', 
-        backgroundColor: 'white', 
-        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
-        position: 'fixed', 
-        height: '100vh', 
-        left: 0, 
-        top: 0,
-        zIndex: 10
+      <div style={{
+        width: '256px',
+        backgroundColor: isDark ? '#1f2937' : 'white',
+        position: 'fixed',
+        height: '100vh',
+        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        borderRight: isDark ? 'none' : '1px solid #e5e7eb'
       }}>
+      
         {/* User Info */}
-        <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
+        <div style={{ 
+          padding: '24px', 
+          borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb'
+        }}>
+          <h2 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            color: isDark ? 'white' : '#111827', 
+            margin: 0 
+          }}>
             Welkom! {loading ? '...' : (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Gebruiker')}
           </h2>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', display: 'none' }}>
+          <p style={{ 
+            fontSize: '14px', 
+            color: '#d1d5db', 
+            marginTop: '4px', 
+            display: 'none' 
+          }}>
             Plantyn Salesforce NL Institute SE
           </p>
         </div>
@@ -135,7 +156,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -149,7 +170,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -163,7 +184,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -177,7 +198,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -191,7 +212,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -203,12 +224,16 @@ export default function TeacherHomepage() {
             </Link>
           </div>
           
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '32px' }}>
+          <div style={{ 
+            borderTop: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
+            paddingTop: '24px', 
+            marginTop: '32px' 
+          }}>
             <Link href="/profile" style={{
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -222,7 +247,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -236,7 +261,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#374151',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -253,16 +278,24 @@ export default function TeacherHomepage() {
       <div style={{ marginLeft: '256px', flex: 1 }}>
         {/* Top Header */}
         <div style={{ 
-          backgroundColor: 'white', 
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: isDark ? '#1f2937' : 'white', 
+          borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
           padding: '24px 32px'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827', margin: 0 }}>
+              <h1 style={{ 
+                fontSize: '24px', 
+                fontWeight: '600', 
+                color: isDark ? 'white' : '#111827', 
+                margin: 0 
+              }}>
                 Welkom terug, {loading ? '...' : (profile?.first_name || 'Gebruiker')}
               </h1>
-              <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>
+              <p style={{ 
+                color: isDark ? '#d1d5db' : '#6b7280', 
+                margin: '4px 0 0 0' 
+              }}>
                 Hier is een overzicht van je werkbladen en klassen
               </p>
             </div>
@@ -312,10 +345,10 @@ export default function TeacherHomepage() {
           }}>
             <Link href="/worksheets" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
-                backgroundColor: 'white',
+                backgroundColor: isDark ? '#1f2937' : 'white',
                 borderRadius: '12px',
                 padding: '24px',
-                border: '1px solid #e5e7eb',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
                 boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
                 cursor: 'pointer'
               }}>
@@ -323,15 +356,25 @@ export default function TeacherHomepage() {
                   <div style={{
                     padding: '12px',
                     borderRadius: '50%',
-                    backgroundColor: '#ccfbf1'
+                    backgroundColor: isDark ? '#0f766e' : '#ccfbf1'
                   }}>
                     <span style={{ fontSize: '20px' }}>📝</span>
                   </div>
                   <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Werkbladen
                     </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.worksheets}
                     </p>
                   </div>
@@ -341,10 +384,10 @@ export default function TeacherHomepage() {
             
             <Link href="/folders" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
-                backgroundColor: 'white',
+                backgroundColor: isDark ? '#1f2937' : 'white',
                 borderRadius: '12px',
                 padding: '24px',
-                border: '1px solid #e5e7eb',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
                 boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
                 cursor: 'pointer'
               }}>
@@ -352,15 +395,25 @@ export default function TeacherHomepage() {
                   <div style={{
                     padding: '12px',
                     borderRadius: '50%',
-                    backgroundColor: '#fed7aa'
+                    backgroundColor: isDark ? '#c2410c' : '#fed7aa'
                   }}>
                     <span style={{ fontSize: '20px' }}>📁</span>
                   </div>
                   <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Mappen
                     </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.folders}
                     </p>
                   </div>
@@ -370,10 +423,10 @@ export default function TeacherHomepage() {
             
             <Link href="/groups" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
-                backgroundColor: 'white',
+                backgroundColor: isDark ? '#1f2937' : 'white',
                 borderRadius: '12px',
                 padding: '24px',
-                border: '1px solid #e5e7eb',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
                 boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
                 cursor: 'pointer'
               }}>
@@ -381,15 +434,25 @@ export default function TeacherHomepage() {
                   <div style={{
                     padding: '12px',
                     borderRadius: '50%',
-                    backgroundColor: '#dbeafe'
+                    backgroundColor: isDark ? '#1e40af' : '#dbeafe'
                   }}>
                     <span style={{ fontSize: '20px' }}>👥</span>
                   </div>
                   <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Klassen
                     </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.groups}
                     </p>
                   </div>
@@ -399,10 +462,10 @@ export default function TeacherHomepage() {
             
             <Link href="/teacher-submissions" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
-                backgroundColor: 'white',
+                backgroundColor: isDark ? '#1f2937' : 'white',
                 borderRadius: '12px',
                 padding: '24px',
-                border: '1px solid #e5e7eb',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
                 boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
                 cursor: 'pointer'
               }}>
@@ -410,15 +473,25 @@ export default function TeacherHomepage() {
                   <div style={{
                     padding: '12px',
                     borderRadius: '50%',
-                    backgroundColor: '#dcfce7'
+                    backgroundColor: isDark ? '#15803d' : '#dcfce7'
                   }}>
                     <span style={{ fontSize: '20px' }}>📩</span>
                   </div>
                   <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: isDark ? '#9ca3af' : '#6b7280', 
+                      margin: 0 
+                    }}>
                       Inzendingen
                     </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
+                    <p style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isDark ? 'white' : '#111827', 
+                      margin: '4px 0 0 0' 
+                    }}>
                       {loading ? '...' : stats.submissions}
                     </p>
                   </div>
@@ -429,7 +502,12 @@ export default function TeacherHomepage() {
 
           {/* Quick Actions */}
           <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+            <h2 style={{ 
+              fontSize: '20px', 
+              fontWeight: '600', 
+              color: isDark ? 'white' : '#111827', 
+              marginBottom: '16px' 
+            }}>
               Snel naar
             </h2>
             <div style={{ 
@@ -439,10 +517,10 @@ export default function TeacherHomepage() {
             }}>
               <Link href="/worksheets" style={{ textDecoration: 'none' }}>
                 <button style={{
-                  backgroundColor: 'white',
+                  backgroundColor: isDark ? '#1f2937' : 'white',
                   borderRadius: '12px',
                   padding: '24px',
-                  border: '1px solid #e5e7eb',
+                  border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
                   boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
                   cursor: 'pointer',
                   textAlign: 'center',
@@ -450,14 +528,18 @@ export default function TeacherHomepage() {
                   height: '100%'
                 }}>
                   <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>📝</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Werkbladen</span>
+                  <span style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: isDark ? '#d1d5db' : '#374151' 
+                  }}>Werkbladen</span>
                 </button>
               </Link>
               <button style={{
-                backgroundColor: 'white',
+                backgroundColor: isDark ? '#1f2937' : 'white',
                 borderRadius: '12px',
                 padding: '24px',
-                border: '1px solid #e5e7eb',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
                 boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
                 cursor: 'pointer',
                 textAlign: 'center',
@@ -465,32 +547,44 @@ export default function TeacherHomepage() {
                 height: '100%'
               }}>
                 <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>🤖</span>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>AI Hulpmiddelen</span>
+                <span style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '500', 
+                  color: isDark ? '#d1d5db' : '#374151' 
+                }}>AI Hulpmiddelen</span>
               </button>
             </div>
           </div>
 
           {/* Worksheets Section */}
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: isDark ? '#1f2937' : 'white',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb',
+            border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
             boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
           }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+            <div style={{ 
+              padding: '24px', 
+              borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb' 
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', margin: 0 }}>
+                <h2 style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '600', 
+                  color: isDark ? 'white' : '#111827', 
+                  margin: 0 
+                }}>
                   Werkbladen
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <Link href="/worksheets" style={{
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'none'
+                  <Link href="/worksheets" style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: isDark ? '#d1d5db' : '#374151', 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    textDecoration: 'none' 
                   }}>
                     Alles bekijken
                   </Link>
@@ -499,14 +593,31 @@ export default function TeacherHomepage() {
             </div>
             <div style={{ padding: '24px' }}>
               {loading ? (
-                <p>Werkbladen laden...</p>
+                <p style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Werkbladen laden...</p>
               ) : worksheets.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {worksheets.map((worksheet) => (
-                    <div key={worksheet.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                    <div key={worksheet.id} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '16px', 
+                      border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      backgroundColor: isDark ? '#111827' : '#f9fafb' 
+                    }}>
                       <div>
-                        <h3 style={{ fontWeight: '600', color: '#111827', margin: 0 }}>{worksheet.title}</h3>
-                        <p style={{ color: '#6b7280', margin: '4px 0 0 0', fontSize: '14px' }}>{worksheet.description || 'Geen beschrijving'}</p>
+                        <h3 style={{ 
+                          fontWeight: '600', 
+                          color: isDark ? 'white' : '#111827', 
+                          margin: 0 
+                        }}>{worksheet.title}</h3>
+                        <p style={{ 
+                          color: isDark ? '#9ca3af' : '#6b7280', 
+                          marginTop: '4px', 
+                          margin: '4px 0 0 0', 
+                          fontSize: '14px' 
+                        }}>{worksheet.description || 'Geen beschrijving'}</p>
                       </div>
                       <Link href={`/worksheets/${worksheet.id}/edit`} passHref>
                         <button style={{
@@ -526,8 +637,11 @@ export default function TeacherHomepage() {
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '32px' }}>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Je hebt nog geen werkbladen aangemaakt.</p>
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <p style={{ 
+                    fontSize: '14px', 
+                    color: isDark ? '#9ca3af' : '#6b7280' 
+                  }}>Je hebt nog geen werkbladen aangemaakt.</p>
                 </div>
               )}
             </div>
