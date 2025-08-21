@@ -483,7 +483,7 @@ export default function TeacherSubmissionsPage() {
         console.log('Auto-scored answers (only unscored):', updatedAnswers);
       }
     }
-  }, [answers.length, elements.length]);
+  }, [answers, elements]);
 
   return (
     <div style={{ maxWidth: 1200, margin: "2rem auto" }}>

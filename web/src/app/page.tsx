@@ -1,653 +1,340 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useTheme } from 'next-themes';
-import { supabase } from '../utils/supabaseClient';
-import { Worksheet } from '../types/database';
+import { useAuth } from '../contexts/AuthContext';
 
-
-export default function TeacherHomepage() {
-  const { theme, systemTheme } = useTheme();
-  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
-  const [profile, setProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
-  const [stats, setStats] = useState({
-    worksheets: 0,
-    folders: 0,
-    groups: 0,
-    submissions: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
-  // Determine if we're in dark mode
-  const isDark = theme === 'dark' || (theme === 'system' && systemTheme === 'dark');
+export default function LandingPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-
+    if (!loading) {
+      setIsLoading(false);
       if (user) {
-        // Fetch user profile
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError.message);
-        } else {
-          setProfile(userProfile);
-        }
-        
-        // Fetch recent worksheets for the list
-        const { data: recentWorksheets, error: worksheetsError } = await supabase
-          .from('worksheets')
-          .select('id, title, description')
-          .eq('owner_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(2);
-
-        if (worksheetsError) {
-          console.error('Error fetching worksheets:', worksheetsError.message);
-          setWorksheets([]);
-        } else if (recentWorksheets) {
-          setWorksheets(recentWorksheets as Worksheet[]);
-        }
-
-        // Fetch all worksheet IDs owned by the user for submission count
-        const { data: ownedWorksheets } = await supabase
-          .from('worksheets')
-          .select('id')
-          .eq('owner_id', user.id);
-        const worksheetIdsOwnedByUser = ownedWorksheets?.map(w => w.id) || [];
-
-        // Fetch all stats in parallel
-        const [
-          worksheetsCount,
-          foldersCount,
-          groupsCount,
-          submissionsCount,
-        ] = await Promise.all([
-          supabase.from('worksheets').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
-          supabase.from('folders').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
-          supabase.from('group_members').select('group_id', { count: 'exact', head: true }).eq('user_id', user.id),
-          worksheetIdsOwnedByUser.length > 0
-            ? supabase.from('submissions').select('id', { count: 'exact', head: true }).in('worksheet_id', worksheetIdsOwnedByUser)
-            : Promise.resolve({ count: 0, error: null })
-        ]);
-
-        setStats({
-          worksheets: worksheetsCount.count ?? 0,
-          folders: foldersCount.count ?? 0,
-          groups: groupsCount.count ?? 0,
-          submissions: submissionsCount.count ?? 0,
-        });
-
-      } else {
-        setWorksheets([]);
-        setStats({ worksheets: 0, folders: 0, groups: 0, submissions: 0 });
+        // Redirect authenticated users to their dashboard
+        // You can implement role-based routing here if needed
+        router.push('/dashboard');
       }
-      setLoading(false);
-    };
+    }
+  }, [user, loading, router]);
 
-    fetchData();
-  }, []);
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        backgroundColor: '#f9fafb'
+      }}>
+        <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ 
-      display: 'flex', 
-      minHeight: '100vh', 
-      backgroundColor: isDark ? '#111827' : '#f9fafb' 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white'
     }}>
-      {/* Fixed Sidebar */}
-      <div style={{
-        width: '256px',
-        backgroundColor: isDark ? '#1f2937' : 'white',
-        position: 'fixed',
-        height: '100vh',
-        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-        borderRight: isDark ? 'none' : '1px solid #e5e7eb'
+      {/* Header */}
+      <header style={{ 
+        padding: '20px 40px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
-      
-        {/* User Info */}
         <div style={{ 
-          padding: '24px', 
-          borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb'
+          fontSize: '24px', 
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <span style={{ marginRight: '8px' }}>📚</span>
+          Leswise
+        </div>
+        <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <Link href="/login" style={{ 
+            color: 'white', 
+            textDecoration: 'none',
+            fontSize: '16px',
+            fontWeight: '500'
+          }}>
+            Aanmelden
+          </Link>
+          <Link href="/register" style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '16px',
+            fontWeight: '500',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            transition: 'all 0.3s ease'
+          }}>
+            Account aanmaken
+          </Link>
+        </nav>
+      </header>
+
+      {/* Hero Section */}
+      <main style={{ 
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '80px 40px 0',
+        textAlign: 'center'
+      }}>
+        <h1 style={{ 
+          fontSize: '48px',
+          fontWeight: 'bold',
+          marginBottom: '24px',
+          lineHeight: '1.2'
+        }}>
+          Welkom bij Leswise
+        </h1>
+        <p style={{ 
+          fontSize: '24px',
+          marginBottom: '48px',
+          opacity: 0.9,
+          maxWidth: '600px',
+          margin: '0 auto 48px'
+        }}>
+          Het moderne platform voor interactieve werkbladen en effectief leren
+        </p>
+
+        {/* CTA Buttons */}
+        <div style={{ 
+          display: 'flex',
+          gap: '20px',
+          justifyContent: 'center',
+          marginBottom: '80px',
+          flexWrap: 'wrap'
+        }}>
+          <Link href="/login" style={{
+            backgroundColor: 'white',
+            color: '#667eea',
+            padding: '16px 32px',
+            borderRadius: '12px',
+            textDecoration: 'none',
+            fontSize: '18px',
+            fontWeight: '600',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.3s ease',
+            display: 'inline-block'
+          }}>
+            Aanmelden
+          </Link>
+          <Link href="/register" style={{
+            backgroundColor: 'transparent',
+            color: 'white',
+            padding: '16px 32px',
+            borderRadius: '12px',
+            textDecoration: 'none',
+            fontSize: '18px',
+            fontWeight: '600',
+            border: '2px solid white',
+            transition: 'all 0.3s ease',
+            display: 'inline-block'
+          }}>
+            Account aanmaken
+          </Link>
+        </div>
+
+        {/* Features Section */}
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '40px',
+          marginTop: '80px',
+          textAlign: 'left'
+        }}>
+          {/* Feature 1 */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            padding: '32px',
+            borderRadius: '16px',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <div style={{ 
+              fontSize: '48px',
+              marginBottom: '16px'
+            }}>
+              🚀
+            </div>
+            <h3 style={{ 
+              fontSize: '24px',
+              fontWeight: 'bold',
+              marginBottom: '16px'
+            }}>
+              Direct aan de slag
+            </h3>
+            <p style={{ 
+              fontSize: '16px',
+              opacity: 0.9,
+              lineHeight: '1.6'
+            }}>
+              Intuïtieve interface waarmee je binnen minuten je eerste interactieve werkbladen kunt maken en delen met je leerlingen.
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            padding: '32px',
+            borderRadius: '16px',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <div style={{ 
+              fontSize: '48px',
+              marginBottom: '16px'
+            }}>
+              👥
+            </div>
+            <h3 style={{ 
+              fontSize: '24px',
+              fontWeight: 'bold',
+              marginBottom: '16px'
+            }}>
+              Voor docenten & leerlingen
+            </h3>
+            <p style={{ 
+              fontSize: '16px',
+              opacity: 0.9,
+              lineHeight: '1.6'
+            }}>
+              Krachtige tools voor docenten om content te maken en beheren, met een eenvoudige interface voor leerlingen om werkbladen in te vullen.
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            padding: '32px',
+            borderRadius: '16px',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <div style={{ 
+              fontSize: '48px',
+              marginBottom: '16px'
+            }}>
+              🔒
+            </div>
+            <h3 style={{ 
+              fontSize: '24px',
+              fontWeight: 'bold',
+              marginBottom: '16px'
+            }}>
+              Veilig & privacyvriendelijk
+            </h3>
+            <p style={{ 
+              fontSize: '16px',
+              opacity: 0.9,
+              lineHeight: '1.6'
+            }}>
+              Jouw gegevens en die van je leerlingen zijn veilig. We hanteren strenge privacy-normen en beveiliging volgens Nederlandse wetgeving.
+            </p>
+          </div>
+        </div>
+
+        {/* Call to Action Section */}
+        <div style={{ 
+          marginTop: '80px',
+          padding: '60px 0',
+          textAlign: 'center'
         }}>
           <h2 style={{ 
-            fontSize: '18px', 
-            fontWeight: '600', 
-            color: isDark ? 'white' : '#111827', 
-            margin: 0 
+            fontSize: '36px',
+            fontWeight: 'bold',
+            marginBottom: '24px'
           }}>
-            Welkom! {loading ? '...' : (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Gebruiker')}
+            Klaar om te beginnen?
           </h2>
           <p style={{ 
-            fontSize: '14px', 
-            color: '#d1d5db', 
-            marginTop: '4px', 
-            display: 'none' 
+            fontSize: '18px',
+            marginBottom: '32px',
+            opacity: 0.9
           }}>
-            Plantyn Salesforce NL Institute SE
+            Maak vandaag nog je gratis account aan en ontdek hoe Leswise jouw lessen kan verbeteren.
           </p>
-        </div>
-        
-        {/* Navigation */}
-        <div style={{ padding: '24px 12px' }}>
-          <div style={{ marginBottom: '8px' }}>
-            <Link href="/" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>🏠</span>
-              Home
-            </Link>
-            <Link href="/groups" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>👥</span>
-              Mijn klassen
-            </Link>
-            <Link href="/folders" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>📚</span>
-              Mappen Beheren
-            </Link>
-            <Link href="/worksheets" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>📝</span>
-              Mijn werkbladen
-            </Link>
-            <Link href="/shared-worksheets" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>🔗</span>
-              Gedeelde werkbladen
-            </Link>
-            <Link href="/teacher-submissions" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>📩</span>
-              Inzendingen
-            </Link>
-          </div>
-          
-          <div style={{ 
-            borderTop: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
-            paddingTop: '24px', 
-            marginTop: '32px' 
+          <Link href="/register" style={{
+            backgroundColor: 'white',
+            color: '#667eea',
+            padding: '20px 40px',
+            borderRadius: '12px',
+            textDecoration: 'none',
+            fontSize: '20px',
+            fontWeight: '600',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.3s ease',
+            display: 'inline-block'
           }}>
-            <Link href="/profile" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
+            Gratis account aanmaken
+          </Link>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer style={{ 
+        borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+        padding: '40px',
+        textAlign: 'center',
+        marginTop: '80px'
+      }}>
+        <div style={{ 
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '20px'
+        }}>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+            📚 Leswise
+          </div>
+          <div style={{ display: 'flex', gap: '30px' }}>
+            <Link href="/privacy-policy" style={{ 
+              color: 'white', 
               textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
+              opacity: 0.8,
+              fontSize: '14px'
             }}>
-              <span style={{ marginRight: '12px' }}>👤</span>
-              Mijn profiel
+              Privacy Policy
             </Link>
-            <a href="#" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
+            <a href="#" style={{ 
+              color: 'white', 
               textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
+              opacity: 0.8,
+              fontSize: '14px'
             }}>
-              <span style={{ marginRight: '12px' }}>❓</span>
+              Contact
+            </a>
+            <a href="#" style={{ 
+              color: 'white', 
+              textDecoration: 'none',
+              opacity: 0.8,
+              fontSize: '14px'
+            }}>
               Help
             </a>
-            <a href="#" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: isDark ? '#d1d5db' : '#4b5563',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              <span style={{ marginRight: '12px' }}>🚪</span>
-              Uitloggen
-            </a>
           </div>
         </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div style={{ marginLeft: '256px', flex: 1 }}>
-        {/* Top Header */}
         <div style={{ 
-          backgroundColor: isDark ? '#1f2937' : 'white', 
-          borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-          padding: '24px 32px'
+          marginTop: '20px',
+          fontSize: '14px',
+          opacity: 0.7
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ 
-                fontSize: '24px', 
-                fontWeight: '600', 
-                color: isDark ? 'white' : '#111827', 
-                margin: 0 
-              }}>
-                Welkom terug, {loading ? '...' : (profile?.first_name || 'Gebruiker')}
-              </h1>
-              <p style={{ 
-                color: isDark ? '#d1d5db' : '#6b7280', 
-                margin: '4px 0 0 0' 
-              }}>
-                Hier is een overzicht van je werkbladen en klassen
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={{
-                backgroundColor: '#4b5563',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <span style={{ marginRight: '8px' }}>🔍</span>
-                Zoeken
-              </button>
-              <button style={{
-                backgroundColor: '#2563eb',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <span style={{ marginRight: '8px' }}>➕</span>
-                Nieuw werkblad
-              </button>
-            </div>
-          </div>
+          © 2024 Leswise. Alle rechten voorbehouden.
         </div>
-
-        {/* Dashboard Content */}
-        <div style={{ padding: '32px' }}>
-          {/* Stats Cards */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-            gap: '24px', 
-            marginBottom: '32px' 
-          }}>
-            <Link href="/worksheets" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: isDark ? '#1f2937' : 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: isDark ? '#0f766e' : '#ccfbf1'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>📝</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ 
-                      fontSize: '14px', 
-                      fontWeight: '500', 
-                      color: isDark ? '#9ca3af' : '#6b7280', 
-                      margin: 0 
-                    }}>
-                      Werkbladen
-                    </p>
-                    <p style={{ 
-                      fontSize: '24px', 
-                      fontWeight: 'bold', 
-                      color: isDark ? 'white' : '#111827', 
-                      margin: '4px 0 0 0' 
-                    }}>
-                      {loading ? '...' : stats.worksheets}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/folders" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: isDark ? '#1f2937' : 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: isDark ? '#c2410c' : '#fed7aa'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>📁</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ 
-                      fontSize: '14px', 
-                      fontWeight: '500', 
-                      color: isDark ? '#9ca3af' : '#6b7280', 
-                      margin: 0 
-                    }}>
-                      Mappen
-                    </p>
-                    <p style={{ 
-                      fontSize: '24px', 
-                      fontWeight: 'bold', 
-                      color: isDark ? 'white' : '#111827', 
-                      margin: '4px 0 0 0' 
-                    }}>
-                      {loading ? '...' : stats.folders}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/groups" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: isDark ? '#1f2937' : 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: isDark ? '#1e40af' : '#dbeafe'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>👥</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ 
-                      fontSize: '14px', 
-                      fontWeight: '500', 
-                      color: isDark ? '#9ca3af' : '#6b7280', 
-                      margin: 0 
-                    }}>
-                      Klassen
-                    </p>
-                    <p style={{ 
-                      fontSize: '24px', 
-                      fontWeight: 'bold', 
-                      color: isDark ? 'white' : '#111827', 
-                      margin: '4px 0 0 0' 
-                    }}>
-                      {loading ? '...' : stats.groups}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/teacher-submissions" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: isDark ? '#1f2937' : 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: isDark ? '#15803d' : '#dcfce7'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>📩</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ 
-                      fontSize: '14px', 
-                      fontWeight: '500', 
-                      color: isDark ? '#9ca3af' : '#6b7280', 
-                      margin: 0 
-                    }}>
-                      Inzendingen
-                    </p>
-                    <p style={{ 
-                      fontSize: '24px', 
-                      fontWeight: 'bold', 
-                      color: isDark ? 'white' : '#111827', 
-                      margin: '4px 0 0 0' 
-                    }}>
-                      {loading ? '...' : stats.submissions}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Quick Actions */}
-          <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ 
-              fontSize: '20px', 
-              fontWeight: '600', 
-              color: isDark ? 'white' : '#111827', 
-              marginBottom: '16px' 
-            }}>
-              Snel naar
-            </h2>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '16px' 
-            }}>
-              <Link href="/worksheets" style={{ textDecoration: 'none' }}>
-                <button style={{
-                  backgroundColor: isDark ? '#1f2937' : 'white',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  width: '100%',
-                  height: '100%'
-                }}>
-                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>📝</span>
-                  <span style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '500', 
-                    color: isDark ? '#d1d5db' : '#374151' 
-                  }}>Werkbladen</span>
-                </button>
-              </Link>
-              <button style={{
-                backgroundColor: isDark ? '#1f2937' : 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer',
-                textAlign: 'center',
-                width: '100%',
-                height: '100%'
-              }}>
-                <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>🤖</span>
-                <span style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '500', 
-                  color: isDark ? '#d1d5db' : '#374151' 
-                }}>AI Hulpmiddelen</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Worksheets Section */}
-          <div style={{
-            backgroundColor: isDark ? '#1f2937' : 'white',
-            borderRadius: '12px',
-            border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
-          }}>
-            <div style={{ 
-              padding: '24px', 
-              borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb' 
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ 
-                  fontSize: '20px', 
-                  fontWeight: '600', 
-                  color: isDark ? 'white' : '#111827', 
-                  margin: 0 
-                }}>
-                  Werkbladen
-                </h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <Link href="/worksheets" style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '500', 
-                    color: isDark ? '#d1d5db' : '#374151', 
-                    background: 'none', 
-                    border: 'none', 
-                    cursor: 'pointer', 
-                    textDecoration: 'none' 
-                  }}>
-                    Alles bekijken
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div style={{ padding: '24px' }}>
-              {loading ? (
-                <p style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Werkbladen laden...</p>
-              ) : worksheets.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {worksheets.map((worksheet) => (
-                    <div key={worksheet.id} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      padding: '16px', 
-                      border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
-                      borderRadius: '8px', 
-                      backgroundColor: isDark ? '#111827' : '#f9fafb' 
-                    }}>
-                      <div>
-                        <h3 style={{ 
-                          fontWeight: '600', 
-                          color: isDark ? 'white' : '#111827', 
-                          margin: 0 
-                        }}>{worksheet.title}</h3>
-                        <p style={{ 
-                          color: isDark ? '#9ca3af' : '#6b7280', 
-                          marginTop: '4px', 
-                          margin: '4px 0 0 0', 
-                          fontSize: '14px' 
-                        }}>{worksheet.description || 'Geen beschrijving'}</p>
-                      </div>
-                      <Link href={`/worksheets/${worksheet.id}/edit`} passHref>
-                        <button style={{
-                          backgroundColor: '#2563eb',
-                          color: 'white',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          cursor: 'pointer'
-                        }}>
-                          Openen
-                        </button>
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                  <p style={{ 
-                    fontSize: '14px', 
-                    color: isDark ? '#9ca3af' : '#6b7280' 
-                  }}>Je hebt nog geen werkbladen aangemaakt.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      </footer>
     </div>
   );
 }
