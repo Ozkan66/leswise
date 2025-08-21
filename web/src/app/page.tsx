@@ -104,21 +104,22 @@ export default function TeacherHomepage() {
       {/* Fixed Sidebar */}
       <div style={{
         width: '256px',
-        backgroundColor: '#1f2937',
+        backgroundColor: isDark ? '#1f2937' : 'white',
         position: 'fixed',
         height: '100vh',
-        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
+        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        borderRight: isDark ? 'none' : '1px solid #e5e7eb'
       }}>
       
         {/* User Info */}
         <div style={{ 
           padding: '24px', 
-          borderBottom: '1px solid #374151' 
+          borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb'
         }}>
           <h2 style={{ 
             fontSize: '18px', 
             fontWeight: '600', 
-            color: 'white', 
+            color: isDark ? 'white' : '#111827', 
             margin: 0 
           }}>
             Welkom! {loading ? '...' : (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Gebruiker')}
@@ -155,7 +156,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -169,7 +170,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -183,7 +184,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -197,7 +198,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -211,7 +212,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -224,7 +225,7 @@ export default function TeacherHomepage() {
           </div>
           
           <div style={{ 
-            borderTop: '1px solid #374151', 
+            borderTop: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
             paddingTop: '24px', 
             marginTop: '32px' 
           }}>
@@ -232,7 +233,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -246,7 +247,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
@@ -260,7 +261,7 @@ export default function TeacherHomepage() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px 12px',
-              color: '#d1d5db',
+              color: isDark ? '#d1d5db' : '#4b5563',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '14px',
