@@ -94,6 +94,10 @@ a {
   z-index: 30;
 }
 
+.dark .plantyn-sidebar {
+  background-color: rgb(30 41 59);
+}
+
 .plantyn-primary {
   background-color: rgb(13 148 136);
   color: white;
@@ -104,6 +108,14 @@ a {
   background-color: rgb(15 118 110);
 }
 
+.dark .plantyn-primary {
+  background-color: rgb(20 184 166);
+}
+
+.dark .plantyn-primary:hover {
+  background-color: rgb(13 148 136);
+}
+
 .plantyn-secondary {
   background-color: rgb(249 115 22);
   color: white;
@@ -112,6 +124,14 @@ a {
 
 .plantyn-secondary:hover {
   background-color: rgb(234 88 12);
+}
+
+.dark .plantyn-secondary {
+  background-color: rgb(251 146 60);
+}
+
+.dark .plantyn-secondary:hover {
+  background-color: rgb(249 115 22);
 }
 
 .plantyn-card {
@@ -126,6 +146,16 @@ a {
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
+.dark .plantyn-card {
+  background-color: rgb(31 41 55);
+  border-color: rgb(75 85 99);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+}
+
+.dark .plantyn-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+}
+
 .plantyn-input {
   border: 1px solid rgb(209 213 219);
   border-radius: 0.5rem;
@@ -135,6 +165,17 @@ a {
   border-color: rgb(13 148 136);
   outline: 2px solid rgb(13 148 136);
   outline-offset: 2px;
+}
+
+.dark .plantyn-input {
+  background-color: rgb(31 41 55);
+  border-color: rgb(75 85 99);
+  color: rgb(243 244 246);
+}
+
+.dark .plantyn-input:focus {
+  border-color: rgb(20 184 166);
+  outline: 2px solid rgb(20 184 166);
 }
 
 /* Ensure proper spacing for fixed sidebar */
