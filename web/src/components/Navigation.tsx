@@ -29,6 +29,7 @@ export default function Navigation() {
       
       {user ? (
         <>
+          <Link href="/tools" style={{ marginRight: 12 }}>Tools</Link>
           <Link href="/groups" style={{ marginRight: 12 }}>Groups</Link>
           <Link href="/folders" style={{ marginRight: 12 }}>Folders</Link>
           <Link href="/worksheets" style={{ marginRight: 12 }}>Worksheets</Link>
