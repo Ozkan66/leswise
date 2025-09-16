@@ -201,6 +201,20 @@ export default function TeacherDashboard() {
               <span style={{ marginRight: '12px' }}>📩</span>
               Inzendingen
             </Link>
+            <Link href="/tools" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>🚀</span>
+              MicroSaaS Tools
+            </Link>
           </div>
           
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '32px' }}>

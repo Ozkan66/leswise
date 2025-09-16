@@ -36,6 +36,7 @@ export default function Navigation() {
           <Link href="/worksheet-submission" style={{ marginRight: 12 }}>Submissions</Link>
           <Link href="/student-submissions" style={{ marginRight: 12 }}>Mijn Werkbladen</Link>
           <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
+          <Link href="/tools" style={{ marginRight: 12 }}>🚀 Tools</Link>
           
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             <ThemeToggle />
