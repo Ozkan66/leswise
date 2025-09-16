@@ -131,6 +131,20 @@ export default function TeacherDashboard() {
               <span style={{ marginRight: '12px' }}>🏠</span>
               Home
             </Link>
+            <Link href="/tools" style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              color: '#374151',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px'
+            }}>
+              <span style={{ marginRight: '12px' }}>🛠️</span>
+              Productiviteitstools
+            </Link>
             <Link href="/groups" style={{
               display: 'flex',
               alignItems: 'center',
@@ -453,20 +467,22 @@ export default function TeacherDashboard() {
                   <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Werkbladen</span>
                 </button>
               </Link>
-              <button style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer',
-                textAlign: 'center',
-                width: '100%',
-                height: '100%'
-              }}>
-                <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>🤖</span>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>AI Hulpmiddelen</span>
-              </button>
+              <Link href="/tools" style={{ textDecoration: 'none' }}>
+                <button style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}>
+                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>🛠️</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Productiviteitstools</span>
+                </button>
+              </Link>
             </div>
           </div>
 
