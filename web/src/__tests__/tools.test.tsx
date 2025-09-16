@@ -1,4 +1,3 @@
-import { render, screen } from '@testing-library/react';
 import { microSaasTools, getCategoryTools, getAvailableTools, getToolById } from '../config/tools';
 
 // Mock Next.js router
@@ -8,9 +7,11 @@ jest.mock('next/navigation', () => ({
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ href, children, ...props }: { href: string; children: React.ReactNode }) => {
+  const LinkComponent = ({ href, children, ...props }: { href: string; children: React.ReactNode }) => {
     return <a href={href} {...props}>{children}</a>;
   };
+  LinkComponent.displayName = 'Link';
+  return LinkComponent;
 });
 
 describe('Tools Configuration', () => {
