@@ -13,11 +13,13 @@ jest.mock('next/navigation', () => ({
 
 // Mock Next.js Link
 jest.mock('next/link', () => {
-  return ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
+  const MockedLink = ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
     <a href={href} {...props}>
       {children}
     </a>
   );
+  MockedLink.displayName = 'MockedLink';
+  return MockedLink;
 });
 
 describe('ToolsDashboard', () => {
