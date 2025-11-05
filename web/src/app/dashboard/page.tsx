@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import TeacherDashboard from '../../components/TeacherDashboard';
+import PageLayout from '../../components/PageLayout';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -18,15 +19,11 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        backgroundColor: '#f9fafb'
-      }}>
-        <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading...</div>
-      </div>
+      <PageLayout showHeader={false}>
+        <div className="flex justify-center items-center min-h-96">
+          <div className="text-lg text-gray-600 dark:text-gray-400">Loading...</div>
+        </div>
+      </PageLayout>
     );
   }
 

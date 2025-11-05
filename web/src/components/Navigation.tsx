@@ -17,75 +17,94 @@ export default function Navigation() {
 
   if (loading) {
     return (
-      <nav style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}>
-        <span>Loading...</span>
+      <nav className="flex items-center gap-5 px-4 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <span className="text-gray-600 dark:text-gray-400">Loading...</span>
       </nav>
     );
   }
 
   return (
-    <nav style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}>
-      <Link href="/" style={{ marginRight: 12, fontWeight: 'bold' }}>Leswise</Link>
+    <nav className="flex items-center gap-5 px-4 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <Link 
+        href="/" 
+        className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors mr-3"
+      >
+        📚 Leswise
+      </Link>
       
       {user ? (
         <>
-          <Link href="/groups" style={{ marginRight: 12 }}>Groups</Link>
-          <Link href="/folders" style={{ marginRight: 12 }}>Folders</Link>
-          <Link href="/worksheets" style={{ marginRight: 12 }}>Worksheets</Link>
-          <Link href="/shared-worksheets" style={{ marginRight: 12 }}>Shared Worksheets</Link>
-          <Link href="/worksheet-submission" style={{ marginRight: 12 }}>Submissions</Link>
-          <Link href="/student-submissions" style={{ marginRight: 12 }}>Mijn Werkbladen</Link>
-          <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
+          <Link 
+            href="/groups" 
+            className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            Groups
+          </Link>
+          <Link 
+            href="/folders" 
+            className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            Folders
+          </Link>
+          <Link 
+            href="/worksheets" 
+            className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            Worksheets
+          </Link>
+          <Link 
+            href="/shared-worksheets" 
+            className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            Shared Worksheets
+          </Link>
+          <Link 
+            href="/worksheet-submission" 
+            className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            Submissions
+          </Link>
+          <Link 
+            href="/student-submissions" 
+            className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            Mijn Werkbladen
+          </Link>
+          <Link 
+            href="/teacher-submissions" 
+            className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            Teacher Submissions
+          </Link>
           
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
             <Link 
               href="/profile" 
-              style={{ 
-                color: '#666',
-                textDecoration: 'none' 
-              }}
+              className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               Welkom, {user.user_metadata?.first_name || user.email}
             </Link>
             <button
               onClick={handleSignOut}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#f0f0f0',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Uitloggen
             </button>
           </div>
         </>
       ) : (
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+        <div className="ml-auto flex items-center gap-3">
           <ThemeToggle />
           <Link 
             href="/login" 
-            style={{ 
-              padding: '6px 12px',
-              backgroundColor: '#0070f3',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '4px'
-            }}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Inloggen
           </Link>
           <Link 
             href="/register" 
-            style={{ 
-              padding: '6px 12px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '4px'
-            }}
+            className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
           >
             Registreren
           </Link>

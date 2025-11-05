@@ -1,9 +1,13 @@
 import UserProfile from '../../components/UserProfile';
+import PageLayout from '../../components/PageLayout';
 
 export default function ProfilePage() {
   return (
-    <div>
+    <PageLayout 
+      maxWidth="sm" 
+      showHeader={false}
+    >
       <UserProfile />
-    </div>
+    </PageLayout>
   );
 }
