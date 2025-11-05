@@ -1,9 +1,13 @@
 import RegisterForm from '../../components/RegisterForm';
+import PageLayout from '../../components/PageLayout';
 
 export default function RegisterPage() {
   return (
-    <div>
+    <PageLayout 
+      maxWidth="sm" 
+      showHeader={false}
+    >
       <RegisterForm />
-    </div>
+    </PageLayout>
   );
 }
