@@ -75,8 +75,8 @@ describe('ResetPasswordForm', () => {
     
     await waitFor(() => {
       expect(screen.getByText('Nieuw wachtwoord instellen')).toBeInTheDocument();
-      expect(screen.getByLabelText('Nieuw wachtwoord:')).toBeInTheDocument();
-      expect(screen.getByLabelText('Bevestig wachtwoord:')).toBeInTheDocument();
+      expect(screen.getByLabelText('Nieuw wachtwoord')).toBeInTheDocument();
+      expect(screen.getByLabelText('Bevestig wachtwoord')).toBeInTheDocument();
     });
   });
 
@@ -93,8 +93,8 @@ describe('ResetPasswordForm', () => {
       expect(screen.getByText('Nieuw wachtwoord instellen')).toBeInTheDocument();
     });
     
-    const passwordInput = screen.getByLabelText('Nieuw wachtwoord:');
-    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord:');
+    const passwordInput = screen.getByLabelText('Nieuw wachtwoord');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord');
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord opslaan' });
     
     // Test zwak wachtwoord
@@ -120,8 +120,8 @@ describe('ResetPasswordForm', () => {
       expect(screen.getByText('Nieuw wachtwoord instellen')).toBeInTheDocument();
     });
     
-    const passwordInput = screen.getByLabelText('Nieuw wachtwoord:');
-    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord:');
+    const passwordInput = screen.getByLabelText('Nieuw wachtwoord');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord');
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord opslaan' });
     
     fireEvent.change(passwordInput, { target: { value: 'NewPass123!' } });
@@ -154,8 +154,8 @@ describe('ResetPasswordForm', () => {
       expect(screen.getByText('Nieuw wachtwoord instellen')).toBeInTheDocument();
     });
     
-    const passwordInput = screen.getByLabelText('Nieuw wachtwoord:');
-    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord:');
+    const passwordInput = screen.getByLabelText('Nieuw wachtwoord');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord');
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord opslaan' });
     
     fireEvent.change(passwordInput, { target: { value: 'NewPass123!' } });
@@ -197,8 +197,8 @@ describe('ResetPasswordForm', () => {
       expect(screen.getByText('Nieuw wachtwoord instellen')).toBeInTheDocument();
     });
     
-    const passwordInput = screen.getByLabelText('Nieuw wachtwoord:');
-    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord:');
+    const passwordInput = screen.getByLabelText('Nieuw wachtwoord');
+    const confirmPasswordInput = screen.getByLabelText('Bevestig wachtwoord');
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord opslaan' });
     
     fireEvent.change(passwordInput, { target: { value: 'NewPass123!' } });

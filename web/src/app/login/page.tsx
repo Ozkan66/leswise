@@ -1,9 +1,13 @@
 import LoginForm from '../../components/LoginForm';
+import PageLayout from '../../components/PageLayout';
 
 export default function LoginPage() {
   return (
-    <div>
+    <PageLayout 
+      maxWidth="sm" 
+      showHeader={false}
+    >
       <LoginForm />
-    </div>
+    </PageLayout>
   );
 }

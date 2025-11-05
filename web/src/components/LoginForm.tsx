@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../utils/supabaseClient';
 import { logLoginSuccess, logLoginFailed } from '../utils/securityLogger';
 import Link from 'next/link';
+import Card from './Card';
+import Button from './Button';
+import Input from './Input';
+import Alert from './Alert';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -60,131 +64,89 @@ export default function LoginForm() {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-      <h1>Inloggen</h1>
-      
-      {error && (
-        <div style={{ 
-          padding: '10px', 
-          backgroundColor: '#fee', 
-          color: '#c00', 
-          borderRadius: '4px', 
-          marginBottom: '16px' 
-        }}>
-          {error}
-        </div>
-      )}
+    <div className="max-w-md mx-auto">
+      <Card>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Inloggen</h1>
+        
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="email">
-            E-mailadres:
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ 
-                width: '100%', 
-                padding: '8px', 
-                marginTop: '4px',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
-              }}
-            />
-          </label>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+          <Input
+            id="email"
+            type="email"
+            label="E-mailadres"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="je@email.com"
+          />
 
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="password">
-            Wachtwoord:
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ 
-                width: '100%', 
-                padding: '8px', 
-                marginTop: '4px',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
-              }}
-            />
-          </label>
+          <Input
+            id="password"
+            type="password"
+            label="Wachtwoord"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder="••••••••"
+          />
+
+          <Button
+            type="submit"
+            disabled={isLoading}
+            fullWidth
+            variant="primary"
+          >
+            {isLoading ? 'Inloggen...' : 'Inloggen'}
+          </Button>
+
+          <div className="text-center">
+            <Link 
+              href="/forgot-password" 
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Wachtwoord vergeten?
+            </Link>
+          </div>
+        </form>
+
+        <div className="text-center mb-4">
+          <span className="text-gray-600 dark:text-gray-400">Of log in met:</span>
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#0070f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.6 : 1
-          }}
-        >
-          {isLoading ? 'Inloggen...' : 'Inloggen'}
-        </button>
+        <div className="flex gap-3 mb-6">
+          <Button
+            onClick={() => handleOAuthSignIn('google')}
+            disabled={isLoading}
+            variant="secondary"
+            className="flex-1 bg-red-600 hover:bg-red-700"
+          >
+            Google
+          </Button>
+          <Button
+            onClick={() => handleOAuthSignIn('azure')}
+            disabled={isLoading}
+            variant="secondary"
+            className="flex-1 bg-sky-600 hover:bg-sky-700"
+          >
+            Microsoft
+          </Button>
+        </div>
 
-        <div style={{ textAlign: 'center', marginTop: '12px' }}>
-          <Link href="/forgot-password" style={{ color: '#0070f3', textDecoration: 'underline', fontSize: '14px' }}>
-            Wachtwoord vergeten?
+        <div className="text-center text-gray-600 dark:text-gray-400">
+          <span>Nog geen account? </span>
+          <Link 
+            href="/register" 
+            className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            Registreren
           </Link>
         </div>
-      </form>
-
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <span style={{ color: '#666' }}>Of log in met:</span>
-      </div>
-
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button
-          onClick={() => handleOAuthSignIn('google')}
-          disabled={isLoading}
-          style={{
-            flex: 1,
-            padding: '10px',
-            backgroundColor: '#db4437',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.6 : 1
-          }}
-        >
-          Google
-        </button>
-        <button
-          onClick={() => handleOAuthSignIn('azure')}
-          disabled={isLoading}
-          style={{
-            flex: 1,
-            padding: '10px',
-            backgroundColor: '#0078d4',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.6 : 1
-          }}
-        >
-          Microsoft
-        </button>
-      </div>
-
-      <div style={{ textAlign: 'center' }}>
-        <span>Nog geen account? </span>
-        <Link href="/register" style={{ color: '#0070f3', textDecoration: 'underline' }}>
-          Registreren
-        </Link>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,9 +1,13 @@
 import ResetPasswordForm from '../../components/ResetPasswordForm';
+import PageLayout from '../../components/PageLayout';
 
 export default function ResetPasswordPage() {
   return (
-    <div>
+    <PageLayout 
+      maxWidth="sm" 
+      showHeader={false}
+    >
       <ResetPasswordForm />
-    </div>
+    </PageLayout>
   );
 }
