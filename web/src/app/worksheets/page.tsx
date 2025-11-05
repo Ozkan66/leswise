@@ -11,6 +11,7 @@ import PageLayout from '../../components/PageLayout';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import Textarea from '../../components/Textarea';
 import Alert from '../../components/Alert';
 
 const WorksheetCard = ({ worksheet, onDelete }: { worksheet: Worksheet; onDelete: (id: string) => void; }) => (
@@ -244,20 +245,15 @@ export default function WorksheetsPage() {
               placeholder="e.g. Algebra Basics"
             />
 
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Description (optional)
-              </label>
-              <textarea
-                name="description"
-                id="description"
-                value={newWorksheet.description}
-                onChange={handleInputChange}
-                placeholder="A short summary of what this worksheet is about."
-                rows={3}
-                className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-0 transition-colors resize-vertical"
-              />
-            </div>
+            <Textarea
+              id="description"
+              name="description"
+              label="Description (optional)"
+              value={newWorksheet.description}
+              onChange={handleInputChange}
+              placeholder="A short summary of what this worksheet is about."
+              rows={3}
+            />
 
             <div className="flex gap-4 items-end flex-wrap">
               <div className="flex-1 min-w-[200px]">

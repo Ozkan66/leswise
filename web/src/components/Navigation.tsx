@@ -28,8 +28,9 @@ export default function Navigation() {
       <Link 
         href="/" 
         className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors mr-3"
+        aria-label="Leswise Home"
       >
-        📚 Leswise
+        <span aria-hidden="true">📚</span> Leswise
       </Link>
       
       {user ? (

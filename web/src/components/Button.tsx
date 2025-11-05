@@ -33,10 +33,20 @@ export default function Button({
   const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
   const widthClass = fullWidth ? 'w-full' : '';
   const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
+  
+  // Combine all classes for better readability
+  const buttonClasses = [
+    baseClasses,
+    variantClasses[variant],
+    sizeClasses[size],
+    widthClass,
+    disabledClass,
+    className
+  ].filter(Boolean).join(' ');
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${disabledClass} ${className}`}
+      className={buttonClasses}
       disabled={disabled}
       {...props}
     >
