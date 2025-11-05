@@ -3,6 +3,10 @@ import { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { logPasswordResetRequested } from '../utils/securityLogger';
 import Link from 'next/link';
+import Card from './Card';
+import Button from './Button';
+import Input from './Input';
+import Alert from './Alert';
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
@@ -36,94 +40,68 @@ export default function ForgotPasswordForm() {
 
   if (success) {
     return (
-      <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-        <h1>E-mail verzonden!</h1>
-        
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: '#efe', 
-          color: '#060', 
-          borderRadius: '6px', 
-          marginBottom: '24px' 
-        }}>
-          <p>We hebben een e-mail met een wachtwoord reset link naar <strong>{email}</strong> gestuurd.</p>
-          <p>Controleer je inbox en klik op de link om je wachtwoord te wijzigen.</p>
-        </div>
+      <div className="max-w-md mx-auto">
+        <Card>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">E-mail verzonden!</h1>
+          
+          <Alert variant="success" className="mb-6">
+            <p className="mb-2">We hebben een e-mail met een wachtwoord reset link naar <strong>{email}</strong> gestuurd.</p>
+            <p>Controleer je inbox en klik op de link om je wachtwoord te wijzigen.</p>
+          </Alert>
 
-        <div style={{ textAlign: 'center' }}>
-          <Link href="/login" style={{ color: '#0070f3', textDecoration: 'underline' }}>
-            Terug naar inloggen
-          </Link>
-        </div>
+          <div className="text-center">
+            <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Terug naar inloggen
+            </Link>
+          </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-      <h1>Wachtwoord vergeten?</h1>
-      
-      <p style={{ color: '#666', marginBottom: '24px' }}>
-        Vul je e-mailadres in en we sturen je een link om je wachtwoord te wijzigen.
-      </p>
+    <div className="max-w-md mx-auto">
+      <Card>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Wachtwoord vergeten?</h1>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          Vul je e-mailadres in en we sturen je een link om je wachtwoord te wijzigen.
+        </p>
 
-      {error && (
-        <div style={{ 
-          padding: '12px', 
-          backgroundColor: '#fee', 
-          color: '#c00', 
-          borderRadius: '6px', 
-          marginBottom: '16px' 
-        }}>
-          {error}
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            id="email"
+            type="email"
+            label="E-mailadres"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="je@email.com"
+          />
+
+          <Button
+            type="submit"
+            disabled={isLoading}
+            fullWidth
+            variant="primary"
+            className="mb-4"
+          >
+            {isLoading ? 'Verzenden...' : 'Reset link verzenden'}
+          </Button>
+        </form>
+
+        <div className="text-center mt-4">
+          <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
+            Terug naar inloggen
+          </Link>
         </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="email">
-            E-mailadres:
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ 
-                width: '100%', 
-                padding: '8px', 
-                marginTop: '4px',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
-              }}
-            />
-          </label>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: '#0070f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.6 : 1,
-            marginBottom: '16px'
-          }}
-        >
-          {isLoading ? 'Verzenden...' : 'Reset link verzenden'}
-        </button>
-      </form>
-
-      <div style={{ textAlign: 'center' }}>
-        <Link href="/login" style={{ color: '#0070f3', textDecoration: 'underline' }}>
-          Terug naar inloggen
-        </Link>
-      </div>
+      </Card>
     </div>
   );
 }

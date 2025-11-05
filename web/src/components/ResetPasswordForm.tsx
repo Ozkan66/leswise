@@ -4,6 +4,10 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../utils/supabaseClient';
 import { logPasswordResetCompleted } from '../utils/securityLogger';
 import Link from 'next/link';
+import Card from './Card';
+import Button from './Button';
+import Input from './Input';
+import Alert from './Alert';
 
 function ResetPasswordFormContent() {
   const [password, setPassword] = useState('');
@@ -96,8 +100,10 @@ function ResetPasswordFormContent() {
   // Loading state while checking session
   if (validSession === null) {
     return (
-      <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
-        <p>Laden...</p>
+      <div className="max-w-md mx-auto">
+        <Card className="text-center">
+          <p className="text-gray-600 dark:text-gray-400">Laden...</p>
+        </Card>
       </div>
     );
   }
@@ -105,32 +111,24 @@ function ResetPasswordFormContent() {
   // Invalid session - show error
   if (validSession === false) {
     return (
-      <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-        <h1>Ongeldige link</h1>
-        
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: '#fee', 
-          color: '#c00', 
-          borderRadius: '6px', 
-          marginBottom: '24px' 
-        }}>
-          <p>Deze wachtwoord reset link is ongeldig of verlopen.</p>
-          <p>Vraag een nieuwe reset link aan om je wachtwoord te wijzigen.</p>
-        </div>
+      <div className="max-w-md mx-auto">
+        <Card>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Ongeldige link</h1>
+          
+          <Alert variant="error" className="mb-6">
+            <p className="mb-2">Deze wachtwoord reset link is ongeldig of verlopen.</p>
+            <p>Vraag een nieuwe reset link aan om je wachtwoord te wijzigen.</p>
+          </Alert>
 
-        <div style={{ textAlign: 'center' }}>
-          <Link href="/forgot-password" style={{ 
-            color: '#0070f3', 
-            textDecoration: 'underline',
-            marginRight: '16px'
-          }}>
-            Nieuwe reset link aanvragen
-          </Link>
-          <Link href="/login" style={{ color: '#0070f3', textDecoration: 'underline' }}>
-            Terug naar inloggen
-          </Link>
-        </div>
+          <div className="text-center space-x-4">
+            <Link href="/forgot-password" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Nieuwe reset link aanvragen
+            </Link>
+            <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Terug naar inloggen
+            </Link>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -138,125 +136,93 @@ function ResetPasswordFormContent() {
   // Success state
   if (success) {
     return (
-      <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-        <h1>Wachtwoord gewijzigd!</h1>
-        
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: '#efe', 
-          color: '#060', 
-          borderRadius: '6px', 
-          marginBottom: '24px' 
-        }}>
-          <p>Je wachtwoord is succesvol gewijzigd.</p>
-          <p>Je wordt automatisch doorgestuurd naar de inlogpagina...</p>
-        </div>
+      <div className="max-w-md mx-auto">
+        <Card>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Wachtwoord gewijzigd!</h1>
+          
+          <Alert variant="success" className="mb-6">
+            <p className="mb-2">Je wachtwoord is succesvol gewijzigd.</p>
+            <p>Je wordt automatisch doorgestuurd naar de inlogpagina...</p>
+          </Alert>
 
-        <div style={{ textAlign: 'center' }}>
-          <Link href="/login" style={{ color: '#0070f3', textDecoration: 'underline' }}>
-            Direct naar inloggen
-          </Link>
-        </div>
+          <div className="text-center">
+            <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Direct naar inloggen
+            </Link>
+          </div>
+        </Card>
       </div>
     );
   }
 
   // Reset password form
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-      <h1>Nieuw wachtwoord instellen</h1>
-      
-      <p style={{ color: '#666', marginBottom: '24px' }}>
-        Voer je nieuwe wachtwoord in.
-      </p>
+    <div className="max-w-md mx-auto">
+      <Card>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Nieuw wachtwoord instellen</h1>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          Voer je nieuwe wachtwoord in.
+        </p>
 
-      {error && (
-        <div style={{ 
-          padding: '12px', 
-          backgroundColor: '#fee', 
-          color: '#c00', 
-          borderRadius: '6px', 
-          marginBottom: '16px' 
-        }}>
-          {error}
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            id="password"
+            type="password"
+            label="Nieuw wachtwoord"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            helperText="Minimaal 8 tekens, met hoofdletter, kleine letter en cijfer"
+            placeholder="••••••••"
+          />
+
+          <Input
+            id="confirmPassword"
+            type="password"
+            label="Bevestig wachtwoord"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            placeholder="••••••••"
+          />
+
+          <Button
+            type="submit"
+            disabled={isLoading}
+            fullWidth
+            variant="primary"
+            className="mb-4"
+          >
+            {isLoading ? 'Opslaan...' : 'Wachtwoord opslaan'}
+          </Button>
+        </form>
+
+        <div className="text-center mt-4">
+          <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
+            Terug naar inloggen
+          </Link>
         </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="password">
-            Nieuw wachtwoord:
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ 
-                width: '100%', 
-                padding: '8px', 
-                marginTop: '4px',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
-              }}
-            />
-          </label>
-          <small style={{ color: '#666', fontSize: '12px' }}>
-            Minimaal 8 tekens, met hoofdletter, kleine letter en cijfer
-          </small>
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="confirmPassword">
-            Bevestig wachtwoord:
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              style={{ 
-                width: '100%', 
-                padding: '8px', 
-                marginTop: '4px',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
-              }}
-            />
-          </label>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: '#0070f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.6 : 1,
-            marginBottom: '16px'
-          }}
-        >
-          {isLoading ? 'Opslaan...' : 'Wachtwoord opslaan'}
-        </button>
-      </form>
-
-      <div style={{ textAlign: 'center' }}>
-        <Link href="/login" style={{ color: '#0070f3', textDecoration: 'underline' }}>
-          Terug naar inloggen
-        </Link>
-      </div>
+      </Card>
     </div>
   );
 }
 
 export default function ResetPasswordForm() {
   return (
-    <Suspense fallback={<div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>Laden...</div>}>
+    <Suspense fallback={
+      <div className="max-w-md mx-auto">
+        <Card className="text-center">
+          <p className="text-gray-600 dark:text-gray-400">Laden...</p>
+        </Card>
+      </div>
+    }>
       <ResetPasswordFormContent />
     </Suspense>
   );
