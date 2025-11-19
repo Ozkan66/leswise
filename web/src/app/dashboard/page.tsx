@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import TeacherDashboard from '../../components/TeacherDashboard';
-import PageLayout from '../../components/PageLayout';
+import AuthenticatedLayout from '../../components/AuthenticatedLayout';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -19,11 +19,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <PageLayout showHeader={false}>
-        <div className="flex justify-center items-center min-h-96">
-          <div className="text-lg text-gray-600 dark:text-gray-400">Loading...</div>
-        </div>
-      </PageLayout>
+      <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="text-lg text-gray-600 dark:text-gray-400">Loading...</div>
+      </div>
     );
   }
 
@@ -31,7 +29,9 @@ export default function DashboardPage() {
     return null; // Will redirect to login
   }
 
-  // For now, show teacher dashboard for all users
-  // In the future, you could implement role-based routing here
-  return <TeacherDashboard />;
+  return (
+    <AuthenticatedLayout>
+      <TeacherDashboard />
+    </AuthenticatedLayout>
+  );
 }

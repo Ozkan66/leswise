@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import AuthenticatedLayout from '../../components/AuthenticatedLayout';
 
 export default function StudentDashboard() {
   const { user, loading } = useAuth();
@@ -17,14 +18,8 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        backgroundColor: '#f9fafb'
-      }}>
-        <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading...</div>
+      <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="text-lg text-gray-600 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -34,183 +29,82 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', padding: '40px 20px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#111827', marginBottom: '8px' }}>
-            Welkom, Student!
-          </h1>
-          <p style={{ fontSize: '18px', color: '#6b7280' }}>
-            Hier kun je jouw werkbladen bekijken en invullen
-          </p>
-        </header>
-
-        {/* Quick Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '24px',
-          marginBottom: '40px'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{
-                padding: '12px',
-                borderRadius: '50%',
-                backgroundColor: '#dbeafe'
-              }}>
-                <span style={{ fontSize: '20px' }}>📚</span>
-              </div>
-              <div style={{ marginLeft: '16px' }}>
-                <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
-                  Beschikbare Werkbladen
-                </p>
-                <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
-                  5
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{
-                padding: '12px',
-                borderRadius: '50%',
-                backgroundColor: '#dcfce7'
-              }}>
-                <span style={{ fontSize: '20px' }}>✅</span>
-              </div>
-              <div style={{ marginLeft: '16px' }}>
-                <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
-                  Ingeleverd
-                </p>
-                <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
-                  3
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{
-                padding: '12px',
-                borderRadius: '50%',
-                backgroundColor: '#fed7aa'
-              }}>
-                <span style={{ fontSize: '20px' }}>⏳</span>
-              </div>
-              <div style={{ marginLeft: '16px' }}>
-                <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
-                  Te Doen
-                </p>
-                <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
-                  2
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '20px',
-          marginBottom: '40px'
-        }}>
-          <a href="/student-submissions" style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-            textDecoration: 'none',
-            color: 'inherit',
-            display: 'block',
-            textAlign: 'center',
-            transition: 'all 0.3s ease'
-          }}>
-            <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>📋</span>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', margin: 0 }}>
-              Mijn Inzendingen
-            </h3>
-          </a>
-
-          <a href="#" style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-            textDecoration: 'none',
-            color: 'inherit',
-            display: 'block',
-            textAlign: 'center',
-            transition: 'all 0.3s ease'
-          }}>
-            <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>👤</span>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', margin: 0 }}>
-              Mijn Profiel
-            </h3>
-          </a>
-
-          <a href="#" style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-            textDecoration: 'none',
-            color: 'inherit',
-            display: 'block',
-            textAlign: 'center',
-            transition: 'all 0.3s ease'
-          }}>
-            <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>❓</span>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', margin: 0 }}>
-              Help
-            </h3>
-          </a>
-        </div>
-
-        {/* Recent Activity */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-          padding: '24px'
-        }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '20px' }}>
-            Recente Activiteit
-          </h2>
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <p style={{ fontSize: '14px', color: '#6b7280' }}>
-              Nog geen activiteit om te tonen.
+    <AuthenticatedLayout>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-10">
+        <div className="max-w-6xl mx-auto">
+          <header className="mb-10 text-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Welkom, Student!
+            </h1>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              Hier kun je jouw werkbladen bekijken en invullen
             </p>
+          </header>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                  <span className="text-2xl">📚</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Beschikbare Werkbladen
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                    5
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                  <span className="text-2xl">✅</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Ingeleverd
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                    3
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900">
+                  <span className="text-2xl">⏳</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Te Doen
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                    2
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-5">
+              Recente Activiteit
+            </h2>
+            <div className="text-center py-10">
+              <p className="text-gray-600 dark:text-gray-400">
+                Nog geen activiteit om te tonen.
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Worksheet, Submission, SubmissionElement, Task } from "../../types/database";
+import AuthenticatedLayout from "../../components/AuthenticatedLayout";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -159,7 +160,9 @@ export default function TeacherSubmissionsPage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [elements, setElements] = useState<Task[]>([]);
+  const [answers, setAnswers] = useState<SubmissionElement[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Fetch worksheets owned by the teacher
   useEffect(() => {
@@ -179,6 +182,7 @@ export default function TeacherSubmissionsPage() {
 
       if (error) setError(error.message);
       else setWorksheets(data || []);
+      setLoading(false);
     };
     fetchWorksheets();
   }, []);
@@ -360,7 +364,6 @@ export default function TeacherSubmissionsPage() {
   }, [selectedSubmission]);
 
   // Fetch answers for selected submission
-  const [answers, setAnswers] = useState<SubmissionElement[]>([]);
   useEffect(() => {
     setAnswers([]);
     if (!selectedSubmission) return;
@@ -486,298 +489,317 @@ export default function TeacherSubmissionsPage() {
     }
   }, [answers, elements]);
 
-  return (
-    <div style={{ maxWidth: 1200, margin: "2rem auto" }}>
-      <h2>Inzendingen Overzicht</h2>
-      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
-      {/* All submissions as flex cards */}
-      <div style={{ marginBottom: 24 }}>
-        <h3>Alle Inzendingen</h3>
-        {worksheets.length === 0 ? (
-          <div>Geen werkbladen gevonden.</div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch', margin: '0 -8px' }}>
-            {worksheets.map(worksheet => (
-              <WorksheetSubmissionsCards
-                key={worksheet.id}
-                worksheet={worksheet}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-      {/* Detail-view als apart paneel onder de kaarten */}
-      {selectedSubmission && (
-        <div style={{ border: "1px solid #666", padding: 24, marginTop: 24, background: '#fafbfc', borderRadius: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h4>Beoordeling: {worksheets.find(w => w.id === selectedSubmission.worksheet_id)?.title}</h4>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => {
-                  setSelectedSubmission(null);
-                  setAnswers([]);
-                  setElements([]);
-                }}
-                style={{
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                ← Terug naar overzicht
-              </button>
-              <button
-                onClick={async () => {
-                  setError(null);
-                  try {
-                    // Auto-score all answers
-                    const updatedAnswers = answers.map(answer => {
-                      const element = elements.find(el => el.id === answer.worksheet_element_id);
-                      if (element && answer.answer) {
-                        const autoScore = calculateAutoScore(element, answer.answer);
-                        return { ...answer, score: autoScore };
-                      }
-                      return answer;
-                    });
-
-                    setAnswers(updatedAnswers);
-                    alert('Automatische scoring toegepast!');
-                  } catch (err) {
-                    setError(`Error auto-scoring: ${(err as Error).message}`);
-                  }
-                }}
-                style={{
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                🤖 Auto-score
-              </button>
-              <button
-                onClick={async () => {
-                  setError(null);
-                  try {
-                    // Save all feedback and scores to database
-                    for (const answer of answers) {
-                      const { error } = await supabase
-                        .from('submission_elements')
-                        .update({
-                          feedback: answer.feedback || '',
-                          score: answer.score || 0
-                        })
-                        .eq('submission_id', selectedSubmission.id)
-                        .eq('worksheet_element_id', answer.worksheet_element_id);
-
-                      if (error) throw error;
-                    }
-
-                    // Update the submission with overall feedback
-                    const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
-                    const { error: submissionError } = await supabase
-                      .from('submissions')
-                      .update({
-                        feedback: 'Beoordeeld door docent',
-                        score: totalScore
-                      })
-                      .eq('id', selectedSubmission.id);
-
-                    if (submissionError) throw submissionError;
-
-                    alert('✅ Beoordeling opgeslagen in database!');
-                  } catch (err) {
-                    setError(`Error saving: ${(err as Error).message}`);
-                  }
-                }}
-                style={{
-                  backgroundColor: '#007acc',
-                  color: 'white',
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                💾 Opslaan in Database
-              </button>
-              <button
-                onClick={async () => {
-                  setError(null);
-                  try {
-                    // First save to database
-                    for (const answer of answers) {
-                      const { error } = await supabase
-                        .from('submission_elements')
-                        .update({
-                          feedback: answer.feedback || '',
-                          score: answer.score || 0
-                        })
-                        .eq('submission_id', selectedSubmission.id)
-                        .eq('worksheet_element_id', answer.worksheet_element_id);
-
-                      if (error) throw error;
-                    }
-
-                    // Update submission status
-                    const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
-                    const maxScore = elements.reduce((sum, el) => sum + ((el.content?.points as number) || 1), 0);
-                    const { error: submissionError } = await supabase
-                      .from('submissions')
-                      .update({
-                        feedback: `Beoordeeld: ${totalScore}/${maxScore} punten`,
-                        score: totalScore
-                      })
-                      .eq('id', selectedSubmission.id);
-
-                    if (submissionError) throw submissionError;
-
-                    // TODO: Send notification to student (email/in-app notification)
-                    alert('✅ Beoordeling verstuurd naar student!');
-
-                    // Refresh the page data
-                    window.location.reload();
-                  } catch (err) {
-                    setError(`Error sending feedback: ${(err as Error).message}`);
-                  }
-                }}
-                style={{
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                📤 Verstuur naar Student
-              </button>
-            </div>
-          </div>
-          {/* Totale score als percentage */}
-          {(() => {
-            // Map: elementId -> max_score
-            const elMaxScores: Record<string, number> = {};
-            elements.forEach(el => {
-              elMaxScores[el.id] = (el.content?.points as number) || 1;
-            });
-            // Only count answers for elements that exist
-            const scored = answers
-              .map(a => {
-                const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score) : null);
-                const max = a.worksheet_element_id ? (elMaxScores[a.worksheet_element_id] || 1) : 1;
-                return score !== null ? { score, max } : null;
-              })
-              .filter(Boolean) as { score: number; max: number }[];
-            const sum = scored.reduce((acc, s) => acc + (s.score || 0), 0);
-            const maxSum = scored.reduce((acc, s) => acc + (s.max || 1), 0);
-            return maxSum > 0 ? (
-              <div style={{ marginBottom: 16, fontWeight: 'bold', fontSize: 18 }}>
-                Totale score: {sum} / {maxSum} ({Math.round((sum / maxSum) * 100)}%)
-              </div>
-            ) : null;
-          })()}
-
-          {elements.map(el => {
-            const answerObj = answers.find(a => a.worksheet_element_id === el.id);
-
-            console.log('Element:', el);
-            console.log('Element content type:', typeof el.content);
-            console.log('Element content value:', el.content);
-
-            // Handle content as either string (old format) or object (new format)
-            let questionText = 'Question text not available';
-            try {
-              const contentObj = el.content as Record<string, any>;
-              console.log('Parsed content:', contentObj);
-              // Try different possible property names for the question text
-              questionText = (contentObj as { question?: string; text?: string })?.question
-                || (contentObj as { question?: string; text?: string })?.text
-                || 'Question text not available';
-            } catch (e) {
-              console.error('Error parsing content:', e);
-              questionText = 'Error parsing question content';
-            }
-
-            return (
-              <div key={el.id} style={{ marginBottom: 24, borderBottom: '1px solid #333', paddingBottom: 12 }}>
-                <b>{questionText}</b>
-                <div style={{ marginLeft: 16, marginBottom: 8 }}>
-                  <span style={{ color: '#ccc' }}>Antwoord:</span> {answerObj ? answerObj.answer : <i>Geen antwoord</i>}
-                </div>
-                <form
-                  onSubmit={async e => {
-                    e.preventDefault();
-                    const form = e.target as HTMLFormElement;
-                    const feedback = (form.elements.namedItem('feedback') as HTMLInputElement).value;
-                    const score = (form.elements.namedItem('score') as HTMLInputElement).value;
-
-                    setError(null);
-                    const { error } = await supabase
-                      .from('submission_elements')
-                      .update({ feedback, score: score ? parseInt(score) : null })
-                      .eq('submission_id', selectedSubmission.id)
-                      .eq('worksheet_element_id', el.id);
-
-                    if (error) setError(error.message);
-                    else {
-                      setAnswers(answers.map(a => a.worksheet_element_id === el.id ? { ...a, feedback, score: parseFloat(score) || 0 } : a));
-                    }
-                  }}
-                  style={{ marginTop: 8 }}
-                >
-                  <div style={{ marginBottom: 8 }}>
-                    <label>
-                      Feedback:<br />
-                      <textarea
-                        name="feedback"
-                        defaultValue={answerObj?.feedback || ''}
-                        rows={2}
-                        style={{ width: '100%', padding: 6, marginTop: 4 }}
-                        placeholder="Feedback voor deze vraag..."
-                      />
-                    </label>
-                  </div>
-                  <div style={{ marginBottom: 8 }}>
-                    <label>
-                      Score (0-{(el.content?.points as number) || 1}):
-                      <input
-                        name="score"
-                        type="number"
-                        min={0}
-                        max={(el.content?.points as number) || 1}
-                        step="0.1"
-                        defaultValue={answerObj?.score !== null && answerObj?.score !== undefined ? String(answerObj.score) : ''}
-                        style={{ width: 100, padding: 6, marginLeft: 8, marginTop: 4 }}
-                        placeholder={`Score (max ${(el.content?.points as number) || 1})`}
-                      />
-                      <span style={{ marginLeft: 8, color: '#888' }}>
-                        /{(el.content?.points as number) || 1} punten
-                      </span>
-                    </label>
-                  </div>
-                  <button type="submit" style={{ padding: '4px 18px', fontSize: 14 }}>Opslaan</button>
-                </form>
-                {answerObj?.feedback && (
-                  <div style={{ marginTop: 6, color: '#7f7' }}><b>Feedback:</b> {answerObj.feedback}</div>
-                )}
-                {typeof answerObj?.score !== 'undefined' && answerObj?.score !== null && (
-                  <div style={{ color: '#7af' }}><b>Score:</b> {answerObj.score}/100</div>
-                )}
-              </div>
-            );
-          })}
-
-          <button onClick={() => setSelectedSubmission(null)} style={{ marginTop: 16 }}>
-            Terug naar inzendingen
-          </button>
+  if (loading) {
+    return (
+      <AuthenticatedLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      )}
-    </div>
+      </AuthenticatedLayout>
+    );
+  }
+
+  return (
+    <AuthenticatedLayout>
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-7xl mx-auto">
+          <header className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Inzendingen</h1>
+            <p className="text-muted-foreground">
+              Bekijk en beoordeel inzendingen van je leerlingen per werkblad.
+            </p>
+          </header>
+
+          {worksheets.length === 0 ? (
+            <div className="text-center py-12 bg-card rounded-lg border border-border">
+              <p className="text-muted-foreground text-lg">Nog geen werkbladen gevonden.</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {worksheets.map((worksheet) => (
+                <WorksheetSubmissionsCards
+                  key={worksheet.id}
+                  worksheet={worksheet}
+                />
+              ))}
+            </div>
+          )}
+          {/* Detail-view als apart paneel onder de kaarten */}
+          {
+            selectedSubmission && (
+              <div style={{ border: "1px solid #666", padding: 24, marginTop: 24, background: '#fafbfc', borderRadius: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h4>Beoordeling: {worksheets.find(w => w.id === selectedSubmission.worksheet_id)?.title}</h4>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setSelectedSubmission(null);
+                        setAnswers([]);
+                        setElements([]);
+                      }}
+                      style={{
+                        backgroundColor: '#6c757d',
+                        color: 'white',
+                        padding: '8px 16px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ← Terug naar overzicht
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setError(null);
+                        try {
+                          // Auto-score all answers
+                          const updatedAnswers = answers.map(answer => {
+                            const element = elements.find(el => el.id === answer.worksheet_element_id);
+                            if (element && answer.answer) {
+                              const autoScore = calculateAutoScore(element, answer.answer);
+                              return { ...answer, score: autoScore };
+                            }
+                            return answer;
+                          });
+
+                          setAnswers(updatedAnswers);
+                          alert('Automatische scoring toegepast!');
+                        } catch (err) {
+                          setError(`Error auto-scoring: ${(err as Error).message}`);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        padding: '8px 16px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🤖 Auto-score
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setError(null);
+                        try {
+                          // Save all feedback and scores to database
+                          for (const answer of answers) {
+                            const { error } = await supabase
+                              .from('submission_elements')
+                              .update({
+                                feedback: answer.feedback || '',
+                                score: answer.score || 0
+                              })
+                              .eq('submission_id', selectedSubmission.id)
+                              .eq('worksheet_element_id', answer.worksheet_element_id);
+
+                            if (error) throw error;
+                          }
+
+                          // Update the submission with overall feedback
+                          const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
+                          const { error: submissionError } = await supabase
+                            .from('submissions')
+                            .update({
+                              feedback: 'Beoordeeld door docent',
+                              score: totalScore
+                            })
+                            .eq('id', selectedSubmission.id);
+
+                          if (submissionError) throw submissionError;
+
+                          alert('✅ Beoordeling opgeslagen in database!');
+                        } catch (err) {
+                          setError(`Error saving: ${(err as Error).message}`);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#007acc',
+                        color: 'white',
+                        padding: '8px 16px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      💾 Opslaan in Database
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setError(null);
+                        try {
+                          // First save to database
+                          for (const answer of answers) {
+                            const { error } = await supabase
+                              .from('submission_elements')
+                              .update({
+                                feedback: answer.feedback || '',
+                                score: answer.score || 0
+                              })
+                              .eq('submission_id', selectedSubmission.id)
+                              .eq('worksheet_element_id', answer.worksheet_element_id);
+
+                            if (error) throw error;
+                          }
+
+                          // Update submission status
+                          const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
+                          const maxScore = elements.reduce((sum, el) => sum + ((el.content?.points as number) || 1), 0);
+                          const { error: submissionError } = await supabase
+                            .from('submissions')
+                            .update({
+                              feedback: `Beoordeeld: ${totalScore}/${maxScore} punten`,
+                              score: totalScore
+                            })
+                            .eq('id', selectedSubmission.id);
+
+                          if (submissionError) throw submissionError;
+
+                          // TODO: Send notification to student (email/in-app notification)
+                          alert('✅ Beoordeling verstuurd naar student!');
+
+                          // Refresh the page data
+                          window.location.reload();
+                        } catch (err) {
+                          setError(`Error sending feedback: ${(err as Error).message}`);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        padding: '8px 16px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📤 Verstuur naar Student
+                    </button>
+                  </div>
+                </div>
+                {/* Totale score als percentage */}
+                {(() => {
+                  // Map: elementId -> max_score
+                  const elMaxScores: Record<string, number> = {};
+                  elements.forEach(el => {
+                    elMaxScores[el.id] = (el.content?.points as number) || 1;
+                  });
+                  // Only count answers for elements that exist
+                  const scored = answers
+                    .map(a => {
+                      const score = typeof a.score === 'number' ? a.score : (a.score ? parseInt(a.score) : null);
+                      const max = a.worksheet_element_id ? (elMaxScores[a.worksheet_element_id] || 1) : 1;
+                      return score !== null ? { score, max } : null;
+                    })
+                    .filter(Boolean) as { score: number; max: number }[];
+                  const sum = scored.reduce((acc, s) => acc + (s.score || 0), 0);
+                  const maxSum = scored.reduce((acc, s) => acc + (s.max || 1), 0);
+                  return maxSum > 0 ? (
+                    <div style={{ marginBottom: 16, fontWeight: 'bold', fontSize: 18 }}>
+                      Totale score: {sum} / {maxSum} ({Math.round((sum / maxSum) * 100)}%)
+                    </div>
+                  ) : null;
+                })()}
+
+                {elements.map(el => {
+                  const answerObj = answers.find(a => a.worksheet_element_id === el.id);
+
+                  console.log('Element:', el);
+                  console.log('Element content type:', typeof el.content);
+                  console.log('Element content value:', el.content);
+
+                  // Handle content as either string (old format) or object (new format)
+                  let questionText = 'Question text not available';
+                  try {
+                    const contentObj = el.content as Record<string, any>;
+                    console.log('Parsed content:', contentObj);
+                    // Try different possible property names for the question text
+                    questionText = (contentObj as { question?: string; text?: string })?.question
+                      || (contentObj as { question?: string; text?: string })?.text
+                      || 'Question text not available';
+                  } catch (e) {
+                    console.error('Error parsing content:', e);
+                    questionText = 'Error parsing question content';
+                  }
+
+                  return (
+                    <div key={el.id} style={{ marginBottom: 24, borderBottom: '1px solid #333', paddingBottom: 12 }}>
+                      <b>{questionText}</b>
+                      <div style={{ marginLeft: 16, marginBottom: 8 }}>
+                        <span style={{ color: '#ccc' }}>Antwoord:</span> {answerObj ? answerObj.answer : <i>Geen antwoord</i>}
+                      </div>
+                      <form
+                        onSubmit={async e => {
+                          e.preventDefault();
+                          const form = e.target as HTMLFormElement;
+                          const feedback = (form.elements.namedItem('feedback') as HTMLInputElement).value;
+                          const score = (form.elements.namedItem('score') as HTMLInputElement).value;
+
+                          setError(null);
+                          const { error } = await supabase
+                            .from('submission_elements')
+                            .update({ feedback, score: score ? parseInt(score) : null })
+                            .eq('submission_id', selectedSubmission.id)
+                            .eq('worksheet_element_id', el.id);
+
+                          if (error) setError(error.message);
+                          else {
+                            setAnswers(answers.map(a => a.worksheet_element_id === el.id ? { ...a, feedback, score: parseFloat(score) || 0 } : a));
+                          }
+                        }}
+                        style={{ marginTop: 8 }}
+                      >
+                        <div style={{ marginBottom: 8 }}>
+                          <label>
+                            Feedback:<br />
+                            <textarea
+                              name="feedback"
+                              defaultValue={answerObj?.feedback || ''}
+                              rows={2}
+                              style={{ width: '100%', padding: 6, marginTop: 4 }}
+                              placeholder="Feedback voor deze vraag..."
+                            />
+                          </label>
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <label>
+                            Score (0-{(el.content?.points as number) || 1}):
+                            <input
+                              name="score"
+                              type="number"
+                              min={0}
+                              max={(el.content?.points as number) || 1}
+                              step="0.1"
+                              defaultValue={answerObj?.score !== null && answerObj?.score !== undefined ? String(answerObj.score) : ''}
+                              style={{ width: 100, padding: 6, marginLeft: 8, marginTop: 4 }}
+                              placeholder={`Score (max ${(el.content?.points as number) || 1})`}
+                            />
+                            <span style={{ marginLeft: 8, color: '#888' }}>
+                              /{(el.content?.points as number) || 1} punten
+                            </span>
+                          </label>
+                        </div>
+                        <button type="submit" style={{ padding: '4px 18px', fontSize: 14 }}>Opslaan</button>
+                      </form>
+                      {answerObj?.feedback && (
+                        <div style={{ marginTop: 6, color: '#7f7' }}><b>Feedback:</b> {answerObj.feedback}</div>
+                      )}
+                      {typeof answerObj?.score !== 'undefined' && answerObj?.score !== null && (
+                        <div style={{ color: '#7af' }}><b>Score:</b> {answerObj.score}/100</div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <button onClick={() => setSelectedSubmission(null)} style={{ marginTop: 16 }}>
+                  Terug naar inzendingen
+                </button>
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </AuthenticatedLayout>
   );
 }

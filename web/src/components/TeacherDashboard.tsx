@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../utils/supabaseClient';
 import { Worksheet } from '../types/database';
-
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { FileText, Folder, Users, Inbox } from 'lucide-react';
 
 export default function TeacherDashboard() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
@@ -31,12 +33,13 @@ export default function TeacherDashboard() {
           .single();
 
         if (profileError) {
-          console.error('Error fetching profile:', profileError.message);
+          console.error('Error fetching profile:', profileError);
+          // Continue with null profile - don't block the rest of the dashboard
         } else {
           setProfile(userProfile);
         }
-        
-        // Fetch recent worksheets for the list
+
+        // Fetch recent worksheets
         const { data: recentWorksheets, error: worksheetsError } = await supabase
           .from('worksheets')
           .select('id, title, description')
@@ -51,14 +54,13 @@ export default function TeacherDashboard() {
           setWorksheets(recentWorksheets as Worksheet[]);
         }
 
-        // Fetch all worksheet IDs owned by the user for submission count
+        // Fetch stats
         const { data: ownedWorksheets } = await supabase
           .from('worksheets')
           .select('id')
           .eq('owner_id', user.id);
         const worksheetIdsOwnedByUser = ownedWorksheets?.map(w => w.id) || [];
 
-        // Fetch all stats in parallel
         const [
           worksheetsCount,
           foldersCount,
@@ -90,449 +92,102 @@ export default function TeacherDashboard() {
     fetchData();
   }, []);
 
+  const statsCards = [
+    { icon: FileText, label: "Werkbladen", value: stats.worksheets, href: "/worksheets", color: "text-teal-600" },
+    { icon: Folder, label: "Mappen", value: stats.folders, href: "/folders", color: "text-orange-600" },
+    { icon: Users, label: "Klassen", value: stats.groups, href: "/groups", color: "text-blue-600" },
+    { icon: Inbox, label: "Inzendingen", value: stats.submissions, href: "/teacher-submissions", color: "text-green-600" },
+  ];
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      {/* Fixed Sidebar */}
-      <div style={{ 
-        width: '256px', 
-        backgroundColor: 'white', 
-        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
-        position: 'fixed', 
-        height: '100vh', 
-        left: 0, 
-        top: 0,
-        zIndex: 10
-      }}>
-        {/* User Info */}
-        <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
-            Welkom! {loading ? '...' : (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Gebruiker')}
-          </h2>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', display: 'none' }}>
-            Plantyn Salesforce NL Institute SE
+    <div className="min-h-screen bg-background">
+      {/* Page Header */}
+      <div className="bg-card border-b border-border px-8 py-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">
+            Welkom terug, {loading ? '...' : (profile?.first_name || 'Gebruik er')}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Hier is een overzicht van je werkbladen en klassen
           </p>
-        </div>
-        
-        {/* Navigation */}
-        <div style={{ padding: '24px 12px' }}>
-          <div style={{ marginBottom: '8px' }}>
-            <Link href="/" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>🏠</span>
-              Home
-            </Link>
-            <Link href="/groups" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>👥</span>
-              Mijn klassen
-            </Link>
-            <Link href="/folders" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>📚</span>
-              Mappen Beheren
-            </Link>
-            <Link href="/worksheets" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>📝</span>
-              Mijn werkbladen
-            </Link>
-            <Link href="/shared-worksheets" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>🔗</span>
-              Gedeelde werkbladen
-            </Link>
-            <Link href="/teacher-submissions" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>📩</span>
-              Inzendingen
-            </Link>
-          </div>
-          
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '32px' }}>
-            <Link href="/profile" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>👤</span>
-              Mijn profiel
-            </Link>
-            <a href="#" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '4px'
-            }}>
-              <span style={{ marginRight: '12px' }}>❓</span>
-              Help
-            </a>
-            <a href="#" style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              color: '#374151',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              <span style={{ marginRight: '12px' }}>🚪</span>
-              Uitloggen
-            </a>
-          </div>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div style={{ marginLeft: '256px', flex: 1 }}>
-        {/* Top Header */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          borderBottom: '1px solid #e5e7eb',
-          padding: '24px 32px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827', margin: 0 }}>
-                Welkom terug, {loading ? '...' : (profile?.first_name || 'Gebruiker')}
-              </h1>
-              <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>
-                Hier is een overzicht van je werkbladen en klassen
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={{
-                backgroundColor: '#4b5563',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <span style={{ marginRight: '8px' }}>🔍</span>
-                Zoeken
-              </button>
-              <button style={{
-                backgroundColor: '#2563eb',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <span style={{ marginRight: '8px' }}>➕</span>
-                Nieuw werkblad
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Dashboard Content */}
-        <div style={{ padding: '32px' }}>
-          {/* Stats Cards */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-            gap: '24px', 
-            marginBottom: '32px' 
-          }}>
-            <Link href="/worksheets" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: '#ccfbf1'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>📝</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
-                      Werkbladen
-                    </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
-                      {loading ? '...' : stats.worksheets}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/folders" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: '#fed7aa'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>📁</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
-                      Mappen
-                    </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
-                      {loading ? '...' : stats.folders}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/groups" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: '#dbeafe'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>👥</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
-                      Klassen
-                    </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
-                      {loading ? '...' : stats.groups}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/teacher-submissions" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: '#dcfce7'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>📩</span>
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', margin: 0 }}>
-                      Inzendingen
-                    </p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '4px 0 0 0' }}>
-                      {loading ? '...' : stats.submissions}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Quick Actions */}
-          <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
-              Snel naar
-            </h2>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '16px' 
-            }}>
-              <Link href="/worksheets" style={{ textDecoration: 'none' }}>
-                <button style={{
-                  backgroundColor: 'white',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  border: '1px solid #e5e7eb',
-                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  width: '100%',
-                  height: '100%'
-                }}>
-                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>📝</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Werkbladen</span>
-                </button>
-              </Link>
-              <button style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-                cursor: 'pointer',
-                textAlign: 'center',
-                width: '100%',
-                height: '100%'
-              }}>
-                <span style={{ fontSize: '24px', display: 'block', marginBottom: '12px' }}>🤖</span>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>AI Hulpmiddelen</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Worksheets Section */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
-          }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', margin: 0 }}>
-                  Werkbladen
-                </h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <Link href="/worksheets" style={{
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'none'
-                  }}>
-                    Alles bekijken
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div style={{ padding: '24px' }}>
-              {loading ? (
-                <p>Werkbladen laden...</p>
-              ) : worksheets.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {worksheets.map((worksheet) => (
-                    <div key={worksheet.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-                      <div>
-                        <h3 style={{ fontWeight: '600', color: '#111827', margin: 0 }}>{worksheet.title}</h3>
-                        <p style={{ color: '#6b7280', margin: '4px 0 0 0', fontSize: '14px' }}>{worksheet.description || 'Geen beschrijving'}</p>
-                      </div>
-                      <Link href={`/worksheets/${worksheet.id}/edit`} passHref>
-                        <button style={{
-                          backgroundColor: '#2563eb',
-                          color: 'white',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          cursor: 'pointer'
-                        }}>
-                          Openen
-                        </button>
-                      </Link>
+      {/* Dashboard Content */}
+      <div className="p-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {statsCards.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Link key={stat.href} href={stat.href}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
+                    <Icon className={`h-4 w-4 ${stat.color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {loading ? '...' : stat.value}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '32px' }}>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Je hebt nog geen werkbladen aangemaakt.</p>
-                </div>
-              )}
-            </div>
-          </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
+
+        {/* Recent Worksheets */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Recente Werkbladen</CardTitle>
+                <CardDescription>Je meest recente werkbladen</CardDescription>
+              </div>
+              <Button asChild variant="outline">
+                <Link href="/worksheets">Alles bekijken</Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <p className="text-muted-foreground">Werkbladen laden...</p>
+            ) : worksheets.length > 0 ? (
+              <div className="space-y-4">
+                {worksheets.map((worksheet) => (
+                  <div
+                    key={worksheet.id}
+                    className="flex justify-between items-center p-4 border border-border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    <div>
+                      <h3 className="font-semibold text-foreground">
+                        {worksheet.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {worksheet.description || 'Geen beschrijving'}
+                      </p>
+                    </div>
+                    <Button asChild>
+                      <Link href={`/worksheets/${worksheet.id}/edit`}>
+                        Openen
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  Je hebt nog geen werkbladen aangemaakt.
+                </p>
+                <Button asChild>
+                  <Link href="/worksheets">Maak je eerste werkblad</Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

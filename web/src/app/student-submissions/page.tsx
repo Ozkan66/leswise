@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabaseClient";
 import { Worksheet, Submission } from "@/types/database";
 import { useUserRole } from "@/hooks/useUserRole";
+import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 
 export default function StudentSubmissionsPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function StudentSubmissionsPage() {
       const accessibleWorksheets: Worksheet[] = (sharedWorksheetsData || [])
         .flatMap((share: { worksheets?: Worksheet[] }) => share.worksheets ?? [])
         .filter((worksheet: Worksheet | null): worksheet is Worksheet => worksheet !== null);
-      
+
       setWorksheets(accessibleWorksheets);
 
       if (accessibleWorksheets.length > 0) {
@@ -115,11 +116,11 @@ export default function StudentSubmissionsPage() {
   const getSubmissionStatus = (worksheetId: string) => {
     const submission = submissions.find(s => s.worksheet_id === worksheetId);
     if (!submission) return { status: "Niet ingediend", color: "#f77", action: "submit" };
-    
+
     const elems = subDetails[worksheetId] || [];
     const hasFeedback = elems.some(e => e.feedback && e.feedback.trim() !== "");
     const hasScores = elems.some(e => typeof e.score === "number");
-    
+
     if (hasFeedback || hasScores) {
       const totalQuestions = elems.length;
       // Show number of questions graded
@@ -136,7 +137,7 @@ export default function StudentSubmissionsPage() {
         hasScores
       };
     }
-    
+
     return {
       label: "Ingediend (wacht op feedback)",
       color: "#7af",
@@ -160,73 +161,77 @@ export default function StudentSubmissionsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Mijn Toegewezen Werkbladen</h1>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'flex-start' }}>
-        {worksheets.map(ws => {
-          const status = getSubmissionStatus(ws.id);
-          const elems = subDetails[ws.id] || [];
-          const feedbackCount = elems.filter(e => e.feedback && e.feedback.trim() !== "").length;
-          return (
-            <div key={ws.id} style={{
-              flex: '1 1 320px',
-              minWidth: 280,
-              maxWidth: 400,
-              border: '1px solid #ddd',
-              borderRadius: 8,
-              padding: 20,
-              marginBottom: 16,
-              background: '#fff',
-              boxShadow: '0 2px 8px #0001'
-            }}>
-              <h2 className="text-xl font-semibold">{ws.title}</h2>
-              <p className="text-gray-600 mb-2">{ws.description}</p>
-              <div className="text-sm text-gray-500 mb-4">
-                <p>Status: <span className="font-semibold" style={{ color: status.color }}>{status.label}</span></p>
-                {status.action === 'view' && (status.hasFeedback || status.hasScores) && (
-                  <div>
-                    {status.hasScores && (
-                      <div style={{ color: "#7af", fontSize: "0.9em" }}>
-                        ✓ Beoordeeld
+    <AuthenticatedLayout>
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-foreground mb-4">Mijn Toegewezen Werkbladen</h1>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'flex-start' }}>
+            {worksheets.map(ws => {
+              const status = getSubmissionStatus(ws.id);
+              const elems = subDetails[ws.id] || [];
+              const feedbackCount = elems.filter(e => e.feedback && e.feedback.trim() !== "").length;
+              return (
+                <div key={ws.id} style={{
+                  flex: '1 1 320px',
+                  minWidth: 280,
+                  maxWidth: 400,
+                  border: '1px solid #ddd',
+                  borderRadius: 8,
+                  padding: 20,
+                  marginBottom: 16,
+                  background: '#fff',
+                  boxShadow: '0 2px 8px #0001'
+                }}>
+                  <h2 className="text-xl font-semibold">{ws.title}</h2>
+                  <p className="text-gray-600 mb-2">{ws.description}</p>
+                  <div className="text-sm text-gray-500 mb-4">
+                    <p>Status: <span className="font-semibold" style={{ color: status.color }}>{status.label}</span></p>
+                    {status.action === 'view' && (status.hasFeedback || status.hasScores) && (
+                      <div>
+                        {status.hasScores && (
+                          <div style={{ color: "#7af", fontSize: "0.9em" }}>
+                            ✓ Beoordeeld
+                          </div>
+                        )}
+                        {feedbackCount > 0 && (
+                          <div style={{ color: "#6f6", fontSize: "0.9em" }}>
+                            📝 {feedbackCount} feedback{feedbackCount !== 1 ? 's' : ''}
+                          </div>
+                        )}
                       </div>
                     )}
-                    {feedbackCount > 0 && (
-                      <div style={{ color: "#6f6", fontSize: "0.9em" }}>
-                        📝 {feedbackCount} feedback{feedbackCount !== 1 ? 's' : ''}
-                      </div>
+                    {status.action === 'view' && !status.hasFeedback && !status.hasScores && (
+                      <span style={{ color: "#888", fontSize: "0.9em" }}>Nog geen feedback</span>
+                    )}
+                    {status.action === 'submit' && (
+                      <span style={{ color: "#666", fontSize: "0.9em" }}>Niet ingediend</span>
                     )}
                   </div>
-                )}
-                {status.action === 'view' && !status.hasFeedback && !status.hasScores && (
-                  <span style={{ color: "#888", fontSize: "0.9em" }}>Nog geen feedback</span>
-                )}
-                {status.action === 'submit' && (
-                  <span style={{ color: "#666", fontSize: "0.9em" }}>Niet ingediend</span>
-                )}
-              </div>
-              <a 
-                href={`/worksheet-submission?worksheetId=${ws.id}`} 
-                style={{
-                  display: 'inline-block',
-                  padding: '8px 16px',
-                  borderRadius: 6,
-                  fontWeight: 600,
-                  background: status.action === 'submit' ? '#ef4444' : '#2563eb',
-                  color: '#fff',
-                  textDecoration: 'none',
-                  transition: 'background 0.2s',
-                  marginTop: 8
-                }}
-              >
-                {status.action === 'submit' ? 'Werkblad maken' : 'Bekijk inzending'}
-              </a>
-            </div>
-          );
-        })}
+                  <a
+                    href={`/worksheet-submission?worksheetId=${ws.id}`}
+                    style={{
+                      display: 'inline-block',
+                      padding: '8px 16px',
+                      borderRadius: 6,
+                      fontWeight: 600,
+                      background: status.action === 'submit' ? '#ef4444' : '#2563eb',
+                      color: '#fff',
+                      textDecoration: 'none',
+                      transition: 'background 0.2s',
+                      marginTop: 8
+                    }}
+                  >
+                    {status.action === 'submit' ? 'Werkblad maken' : 'Bekijk inzending'}
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+          {worksheets.length === 0 && !loading && (
+            <p className="text-muted-foreground">Geen toegewezen werkbladen gevonden. Vraag je docent om werkbladen met je te delen.</p>
+          )}
+        </div>
       </div>
-      {worksheets.length === 0 && !loading && (
-        <p>Geen toegewezen werkbladen gevonden. Vraag je docent om werkbladen met je te delen.</p>
-      )}
-    </div>
+    </AuthenticatedLayout>
   );
 }

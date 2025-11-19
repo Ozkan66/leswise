@@ -22,7 +22,7 @@ describe('GroupCreateForm', () => {
 
   test('should use owner_id instead of created_by when creating a group', async () => {
     // Mock user authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: { id: 'test-user-id' } },
       error: null
     });
@@ -38,7 +38,7 @@ describe('GroupCreateForm', () => {
     });
 
     // Also mock the second call for group members
-    mockSupabase.from.mockImplementation((table) => {
+    (mockSupabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'groups') {
         return {
           insert: mockInsert
@@ -81,7 +81,7 @@ describe('GroupCreateForm', () => {
 
   test('should handle authentication failure', async () => {
     // Mock no user
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: null },
       error: null
     });

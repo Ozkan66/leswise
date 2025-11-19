@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
     // Allow production builds to complete even if there are TypeScript errors
     ignoreBuildErrors: process.env.NEXT_IGNORE_TS_ERRORS === 'true',
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

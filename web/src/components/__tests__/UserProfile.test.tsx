@@ -3,11 +3,11 @@ import '@testing-library/jest-dom';
 import UserProfile from '../UserProfile';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
-import { 
-  fetchUserProfile, 
-  upsertUserProfile, 
-  convertFormDataToDbFormat, 
-  convertDbFormatToFormData 
+import {
+  fetchUserProfile,
+  upsertUserProfile,
+  convertFormDataToDbFormat,
+  convertDbFormatToFormData
 } from '../../utils/userProfileDb';
 
 // Mock the useAuth hook
@@ -117,7 +117,7 @@ describe('UserProfile', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseAuth.mockReturnValue({
+    (mockUseAuth as unknown as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
       signUp: jest.fn(),
@@ -135,12 +135,12 @@ describe('UserProfile', () => {
 
   it('toont profielpagina voor ingelogde gebruiker', async () => {
     render(<UserProfile />);
-    
+
     // Wait for async data loading to complete
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     expect(screen.getByRole('heading', { name: 'Mijn Profiel' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Doe')).toBeInTheDocument();
     expect(screen.getByDisplayValue('test@example.com')).toBeInTheDocument();
@@ -148,32 +148,32 @@ describe('UserProfile', () => {
 
   it('toont rol selectie met huidige rol geselecteerd', async () => {
     render(<UserProfile />);
-    
+
     // Wait for form to load
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     const studentRadio = screen.getByLabelText('Leerling');
     const teacherRadio = screen.getByLabelText('Docent');
-    
+
     expect(studentRadio).toBeChecked();
     expect(teacherRadio).not.toBeChecked();
   });
 
   it('toont student-specifieke velden wanneer rol student is', async () => {
     render(<UserProfile />);
-    
+
     // Wait for form to load
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     expect(screen.getByText('Leerling Informatie')).toBeInTheDocument();
     expect(screen.getByLabelText('Geboortejaar:')).toBeInTheDocument();
     expect(screen.getByLabelText('Type opleiding:')).toBeInTheDocument();
     expect(screen.getByDisplayValue('2000')).toBeInTheDocument();
-    
+
     // Check if the select has the correct value selected
     const educationSelect = screen.getByLabelText('Type opleiding:') as HTMLSelectElement;
     expect(educationSelect.value).toBe('havo');
@@ -204,7 +204,7 @@ describe('UserProfile', () => {
       subjects: 'Wiskunde, Natuurkunde',
     };
 
-    mockUseAuth.mockReturnValue({
+    (mockUseAuth as unknown as jest.Mock).mockReturnValue({
       user: teacherUser,
       loading: false,
       signUp: jest.fn(),
@@ -218,12 +218,12 @@ describe('UserProfile', () => {
     (convertDbFormatToFormData as jest.Mock).mockReturnValue(teacherFormData);
 
     render(<UserProfile />);
-    
+
     // Wait for form to load
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     expect(screen.getByText('Docent Informatie')).toBeInTheDocument();
     expect(screen.getByLabelText('Instelling:')).toBeInTheDocument();
     expect(screen.getByLabelText('Vakken:')).toBeInTheDocument();
@@ -233,24 +233,24 @@ describe('UserProfile', () => {
 
   it('werkt profiel bij wanneer formulier wordt ingediend', async () => {
     render(<UserProfile />);
-    
+
     // Wait for form to load
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     // Wijzig voornaam
     const firstNameInput = screen.getByLabelText('Voornaam:');
     fireEvent.change(firstNameInput, { target: { value: 'Johan' } });
-    
+
     // Dien formulier in
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(upsertUserProfile).toHaveBeenCalled();
     });
-    
+
     // Check that convertFormDataToDbFormat was called with the updated data
     expect(convertFormDataToDbFormat).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -270,10 +270,10 @@ describe('UserProfile', () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Profiel succesvol bijgewerkt!')).toBeInTheDocument();
     });
@@ -281,25 +281,25 @@ describe('UserProfile', () => {
 
   it('toont foutbericht bij mislukte update', async () => {
     render(<UserProfile />);
-    
+
     // Wait for form to load
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     // Override the mock for this test to simulate error
     (upsertUserProfile as jest.Mock).mockRejectedValue(new Error('Update failed'));
-    
+
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Update failed')).toBeInTheDocument();
     });
   });
 
   it('toont login bericht voor niet-ingelogde gebruiker', () => {
-    mockUseAuth.mockReturnValue({
+    (mockUseAuth as unknown as jest.Mock).mockReturnValue({
       user: null,
       loading: false,
       signUp: jest.fn(),
@@ -309,16 +309,16 @@ describe('UserProfile', () => {
     });
 
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Je moet ingelogd zijn om je profiel te bekijken.')).toBeInTheDocument();
   });
 
   it('toont bestandsupload veld voor profielfoto', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Profielfoto')).toBeInTheDocument();
     expect(screen.getByText('Maximaal 5MB, JPG/PNG/GIF formaten toegestaan')).toBeInTheDocument();
-    
+
     const fileInput = document.querySelector('input[type="file"]');
     expect(fileInput).toBeInTheDocument();
     expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/jpg,image/png,image/gif');
@@ -326,27 +326,27 @@ describe('UserProfile', () => {
 
   it('toont privacy informatie', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Privacy & Gegevensverwerking')).toBeInTheDocument();
     expect(screen.getByText(/je gegevens worden veilig opgeslagen/i)).toBeInTheDocument();
   });
 
   it('schakelt tussen student en docent velden', async () => {
     render(<UserProfile />);
-    
+
     // Wait for form to load
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     // Start als student
     expect(screen.getByText('Leerling Informatie')).toBeInTheDocument();
     expect(screen.queryByText('Docent Informatie')).not.toBeInTheDocument();
-    
+
     // Schakel naar docent
     const teacherRadio = screen.getByLabelText('Docent');
     fireEvent.click(teacherRadio);
-    
+
     expect(screen.getByText('Docent Informatie')).toBeInTheDocument();
     expect(screen.queryByText('Leerling Informatie')).not.toBeInTheDocument();
   });
@@ -354,17 +354,17 @@ describe('UserProfile', () => {
   // Password change tests
   it('toont wachtwoord wijzig knop', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Wachtwoord')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Wachtwoord wijzigen' })).toBeInTheDocument();
   });
 
   it('toont wachtwoord formulier wanneer wijzig knop wordt geklikt', () => {
     render(<UserProfile />);
-    
+
     const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(changePasswordButton);
-    
+
     expect(screen.getByLabelText('Huidig wachtwoord:')).toBeInTheDocument();
     expect(screen.getByLabelText('Nieuw wachtwoord:')).toBeInTheDocument();
     expect(screen.getByLabelText('Bevestig nieuw wachtwoord:')).toBeInTheDocument();
@@ -373,22 +373,22 @@ describe('UserProfile', () => {
 
   it('valideert wachtwoord sterkte', async () => {
     render(<UserProfile />);
-    
+
     const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(changePasswordButton);
-    
+
     const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
     const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
     const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
-    
+
     // Zwak wachtwoord testen
     fireEvent.change(currentPasswordInput, { target: { value: 'current123' } });
     fireEvent.change(newPasswordInput, { target: { value: 'weak' } });
     fireEvent.change(confirmPasswordInput, { target: { value: 'weak' } });
-    
+
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Wachtwoord moet minimaal 8 karakters lang zijn')).toBeInTheDocument();
     });
@@ -396,21 +396,21 @@ describe('UserProfile', () => {
 
   it('valideert wachtwoord bevestiging', async () => {
     render(<UserProfile />);
-    
+
     const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(changePasswordButton);
-    
+
     const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
     const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
     const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
-    
+
     fireEvent.change(currentPasswordInput, { target: { value: 'current123' } });
     fireEvent.change(newPasswordInput, { target: { value: 'NewPass123!' } });
     fireEvent.change(confirmPasswordInput, { target: { value: 'DifferentPass123!' } });
-    
+
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Nieuwe wachtwoorden komen niet overeen')).toBeInTheDocument();
     });
@@ -419,26 +419,26 @@ describe('UserProfile', () => {
   it('wijzigt wachtwoord succesvol', async () => {
     const mockSignIn = jest.fn().mockResolvedValue({ error: null });
     const mockUpdateUser = jest.fn().mockResolvedValue({ error: null });
-    
-    (supabase.auth.signInWithPassword as jest.Mock) = mockSignIn;
-    (supabase.auth.updateUser as jest.Mock) = mockUpdateUser;
-    
+
+    (supabase.auth.signInWithPassword as jest.Mock).mockImplementation(mockSignIn);
+    (supabase.auth.updateUser as jest.Mock).mockImplementation(mockUpdateUser);
+
     render(<UserProfile />);
-    
+
     const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(changePasswordButton);
-    
+
     const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
     const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
     const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
-    
+
     fireEvent.change(currentPasswordInput, { target: { value: 'current123' } });
     fireEvent.change(newPasswordInput, { target: { value: 'NewPass123!' } });
     fireEvent.change(confirmPasswordInput, { target: { value: 'NewPass123!' } });
-    
+
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith({
         email: 'test@example.com',
@@ -452,28 +452,28 @@ describe('UserProfile', () => {
   });
 
   it('toont fout bij onjuist huidig wachtwoord', async () => {
-    const mockSignIn = jest.fn().mockResolvedValue({ 
-      error: { message: 'Invalid credentials' } 
+    const mockSignIn = jest.fn().mockResolvedValue({
+      error: { message: 'Invalid credentials' }
     });
-    
-    (supabase.auth.signInWithPassword as jest.Mock) = mockSignIn;
-    
+
+    (supabase.auth.signInWithPassword as jest.Mock).mockImplementation(mockSignIn);
+
     render(<UserProfile />);
-    
+
     const changePasswordButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(changePasswordButton);
-    
+
     const currentPasswordInput = screen.getByLabelText('Huidig wachtwoord:');
     const newPasswordInput = screen.getByLabelText('Nieuw wachtwoord:');
     const confirmPasswordInput = screen.getByLabelText('Bevestig nieuw wachtwoord:');
-    
+
     fireEvent.change(currentPasswordInput, { target: { value: 'wrongpassword' } });
     fireEvent.change(newPasswordInput, { target: { value: 'NewPass123!' } });
     fireEvent.change(confirmPasswordInput, { target: { value: 'NewPass123!' } });
-    
+
     const submitButton = screen.getByRole('button', { name: 'Wachtwoord wijzigen' });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Huidig wachtwoord is onjuist')).toBeInTheDocument();
     });
@@ -482,7 +482,7 @@ describe('UserProfile', () => {
   // 2FA tests
   it('toont 2FA sectie met status', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Two-Factor Authentication (2FA)')).toBeInTheDocument();
     expect(screen.getByText(/Status:/)).toBeInTheDocument();
     expect(screen.getByText('Uitgeschakeld')).toBeInTheDocument();
@@ -491,10 +491,10 @@ describe('UserProfile', () => {
 
   it('toont 2FA instellingen wanneer knop wordt geklikt', () => {
     render(<UserProfile />);
-    
+
     const enable2FAButton = screen.getByRole('button', { name: '2FA inschakelen' });
     fireEvent.click(enable2FAButton);
-    
+
     expect(screen.getByText('🚧 Functie in ontwikkeling')).toBeInTheDocument();
     expect(screen.getByText(/TOTP authenticator apps/)).toBeInTheDocument();
     expect(screen.getByText(/E-mail verificatie codes/)).toBeInTheDocument();
@@ -520,7 +520,7 @@ describe('UserProfile', () => {
       twoFactorEnabled: true,
     };
 
-    mockUseAuth.mockReturnValue({
+    (mockUseAuth as unknown as jest.Mock).mockReturnValue({
       user: userWith2FA,
       loading: false,
       signUp: jest.fn(),
@@ -534,12 +534,12 @@ describe('UserProfile', () => {
     (convertDbFormatToFormData as jest.Mock).mockReturnValue(formDataWith2FA);
 
     render(<UserProfile />);
-    
+
     // Wait for form to load
     await waitFor(() => {
       expect(screen.getByDisplayValue('Jan')).toBeInTheDocument();
     });
-    
+
     expect(screen.getByText('Ingeschakeld')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '2FA uitschakelen' })).toBeInTheDocument();
   });
@@ -547,7 +547,7 @@ describe('UserProfile', () => {
   // Epic 1.4 - Personal Preferences Tests
   it('toont persoonlijke voorkeuren sectie', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Persoonlijke Voorkeuren')).toBeInTheDocument();
     expect(screen.getByLabelText('Taal:')).toBeInTheDocument();
     expect(screen.getByText('Notificatie-instellingen')).toBeInTheDocument();
@@ -555,12 +555,12 @@ describe('UserProfile', () => {
 
   it('toont taal selectie met juiste opties', () => {
     render(<UserProfile />);
-    
+
     const languageSelect = screen.getByLabelText('Taal:');
     expect(languageSelect).toBeInTheDocument();
-    
+
     const options = screen.getAllByRole('option');
-    const languageOptions = options.filter(option => 
+    const languageOptions = options.filter(option =>
       ['Nederlands', 'English', 'Polski', 'Português', 'Svenska'].includes((option as HTMLOptionElement).text)
     );
     expect(languageOptions).toHaveLength(5);
@@ -568,7 +568,7 @@ describe('UserProfile', () => {
 
   it('toont notificatie instellingen met alle opties', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByLabelText(/E-mail notificaties ontvangen/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Herinneringen voor werkbladen/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Inzending notificaties/)).toBeInTheDocument();
@@ -577,26 +577,26 @@ describe('UserProfile', () => {
 
   it('kan taal wijzigen', async () => {
     render(<UserProfile />);
-    
+
     const languageSelect = screen.getByLabelText('Taal:');
     fireEvent.change(languageSelect, { target: { value: 'en' } });
-    
+
     expect(languageSelect).toHaveValue('en');
   });
 
   it('kan notificatie instellingen wijzigen', async () => {
     render(<UserProfile />);
-    
+
     const emailNotificationCheckbox = screen.getByLabelText(/E-mail notificaties ontvangen/);
     fireEvent.click(emailNotificationCheckbox);
-    
+
     expect(emailNotificationCheckbox).not.toBeChecked();
   });
 
   // Epic 1.4 - Privacy Settings Tests
   it('toont privacy-instellingen sectie', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Privacy-instellingen')).toBeInTheDocument();
     expect(screen.getByText('AVG/GDPR Compliance')).toBeInTheDocument();
     expect(screen.getByText(/Privacy Bescherming/)).toBeInTheDocument();
@@ -604,12 +604,12 @@ describe('UserProfile', () => {
 
   it('toont profiel zichtbaarheid opties', () => {
     render(<UserProfile />);
-    
+
     const visibilitySelect = screen.getByLabelText('Profiel zichtbaarheid:');
     expect(visibilitySelect).toBeInTheDocument();
-    
+
     const options = screen.getAllByRole('option');
-    const visibilityOptions = options.filter(option => 
+    const visibilityOptions = options.filter(option =>
       ['Privé (alleen jij)', 'Institutioneel (binnen je school/organisatie)', 'Openbaar (iedereen)'].includes((option as HTMLOptionElement).text)
     );
     expect(visibilityOptions).toHaveLength(3);
@@ -617,7 +617,7 @@ describe('UserProfile', () => {
 
   it('toont privacy toestemmingen', () => {
     render(<UserProfile />);
-    
+
     expect(screen.getByText('Toestemmingen voor gegevensverwerking')).toBeInTheDocument();
     expect(screen.getByLabelText(/Verwerking van persoonlijke gegevens/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Analytics en prestatie analyse/)).toBeInTheDocument();
@@ -626,58 +626,58 @@ describe('UserProfile', () => {
 
   it('kan privacy instellingen wijzigen', async () => {
     render(<UserProfile />);
-    
+
     const visibilitySelect = screen.getByLabelText('Profiel zichtbaarheid:');
     fireEvent.change(visibilitySelect, { target: { value: 'private' } });
-    
+
     expect(visibilitySelect).toHaveValue('private');
   });
 
   it('kan privacy toestemmingen wijzigen', async () => {
     render(<UserProfile />);
-    
+
     const marketingCheckbox = screen.getByLabelText(/Marketing communicatie/);
     fireEvent.click(marketingCheckbox);
-    
+
     expect(marketingCheckbox).toBeChecked();
   });
 
   it('toont privacybeleid link', () => {
     render(<UserProfile />);
-    
+
     const privacyLink = screen.getByRole('button', { name: /Lees ons privacybeleid/ });
     expect(privacyLink).toBeInTheDocument();
   });
 
   it('slaat persoonlijke voorkeuren en privacy instellingen op bij formulier indiening', async () => {
     render(<UserProfile />);
-    
+
     // Wait for the form to load
     await waitFor(() => {
       expect(screen.getByLabelText('Taal:')).toBeInTheDocument();
     });
-    
+
     // Wijzig taal
     const languageSelect = screen.getByLabelText('Taal:');
     fireEvent.change(languageSelect, { target: { value: 'en' } });
-    
+
     // Wijzig notificatie instelling
     const emailNotificationCheckbox = screen.getByLabelText(/E-mail notificaties ontvangen/);
     fireEvent.click(emailNotificationCheckbox);
-    
+
     // Wijzig privacy instelling
     const visibilitySelect = screen.getByLabelText('Profiel zichtbaarheid:');
     fireEvent.change(visibilitySelect, { target: { value: 'private' } });
-    
+
     // Dien formulier in
     const submitButton = screen.getByRole('button', { name: 'Profiel Opslaan' });
     fireEvent.click(submitButton);
-    
+
     // Wait for the form submission
     await waitFor(() => {
       expect(upsertUserProfile).toHaveBeenCalled();
     });
-    
+
     // Check that convertFormDataToDbFormat was called with the updated preferences
     expect(convertFormDataToDbFormat).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -11,14 +11,14 @@ const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 // Test component to use the auth context
 function TestComponent() {
   const { signInWithProvider } = useAuth();
-  
+
   const handleGoogleSignIn = async () => {
     const result = await signInWithProvider('google');
     if (result.error) {
       console.error('OAuth Error:', result.error);
     }
   };
-  
+
   return (
     <div>
       <button onClick={handleGoogleSignIn}>Sign in with Google</button>
@@ -29,20 +29,20 @@ function TestComponent() {
 describe('AuthContext OAuth', () => {
   beforeEach(() => {
     // Mock auth state
-    mockSupabase.auth.getSession.mockResolvedValue({
+    (mockSupabase.auth.getSession as jest.Mock).mockResolvedValue({
       data: { session: null },
       error: null
     });
-    
-    mockSupabase.auth.onAuthStateChange.mockReturnValue({
+
+    (mockSupabase.auth.onAuthStateChange as jest.Mock).mockReturnValue({
       data: { subscription: { unsubscribe: jest.fn() } }
     });
-    
+
     jest.clearAllMocks();
   });
 
   it('should handle Google OAuth provider correctly', async () => {
-    mockSupabase.auth.signInWithOAuth.mockResolvedValue({
+    (mockSupabase.auth.signInWithOAuth as jest.Mock).mockResolvedValue({
       data: { provider: 'google', url: 'https://accounts.google.com/oauth' },
       error: null
     });
@@ -77,7 +77,7 @@ describe('AuthContext OAuth', () => {
       error_code: 'validation_failed'
     };
 
-    mockSupabase.auth.signInWithOAuth.mockResolvedValue({
+    (mockSupabase.auth.signInWithOAuth as jest.Mock).mockResolvedValue({
       data: { provider: null, url: null },
       error: providerError
     });
@@ -88,8 +88,8 @@ describe('AuthContext OAuth', () => {
 
     const result = await signInWithProvider('google');
 
-    expect(result.error.message).toBe('Google inloggen is momenteel niet beschikbaar. Probeer het later opnieuw of gebruik je e-mailadres om in te loggen.');
-    expect(result.error.originalMessage).toBe('Unsupported provider: provider is not enabled');
+    expect(result.error?.message).toBe('Google inloggen is momenteel niet beschikbaar. Probeer het later opnieuw of gebruik je e-mailadres om in te loggen.');
+    expect((result.error as any)?.originalMessage).toBe('Unsupported provider: provider is not enabled');
   });
 
   it('should validate provider parameter', async () => {
@@ -107,7 +107,7 @@ describe('AuthContext OAuth', () => {
     });
 
     await waitFor(() => {
-      const call = mockSupabase.auth.signInWithOAuth.mock.calls[0];
+      const call = (mockSupabase.auth.signInWithOAuth as jest.Mock).mock.calls[0];
       expect(call[0].provider).toBe('google');
       expect(typeof call[0].provider).toBe('string');
     });

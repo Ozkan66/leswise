@@ -5,88 +5,50 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabaseClient';
 import { Worksheet, Folder } from '../../types/database';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Folder as FolderIcon, Sparkles } from 'lucide-react';
 import { AIGenerator } from '../../components/AIGenerator';
 import { NotificationModal } from '../../components/NotificationModal';
+import AuthenticatedLayout from '../../components/AuthenticatedLayout';
+import { cn } from '../../lib/utils';
 
 const WorksheetCard = ({ worksheet, onDelete }: { worksheet: Worksheet; onDelete: (id: string) => void; }) => (
-  <div style={{
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '24px',
-    border: '1px solid #e5e7eb',
-    boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
-  }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-      <div style={{ flex: 1 }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>
+  <div className="bg-card rounded-xl p-6 border border-border shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex justify-between items-start mb-5">
+      <div className="flex-1">
+        <h3 className="text-lg font-semibold text-foreground mb-2">
           {worksheet.title}
         </h3>
-        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-          {worksheet.description || 'No description'}
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {worksheet.description || 'Geen beschrijving'}
         </p>
       </div>
-      <span style={{
-        padding: '0.25rem 0.75rem',
-        fontSize: '0.75rem',
-        fontWeight: '600',
-        borderRadius: '9999px',
-        backgroundColor: worksheet.status === 'published' ? '#d1fae5' : '#fef3c7',
-        color: worksheet.status === 'published' ? '#065f46' : '#92400e'
-      }}>
-        {worksheet.status}
+      <span className={cn(
+        "px-3 py-1 text-xs font-semibold rounded-full",
+        worksheet.status === 'published'
+          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+      )}>
+        {worksheet.status === 'published' ? 'Gepubliceerd' : 'Concept'}
       </span>
     </div>
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-      <Link href={`/worksheets/${worksheet.id}/preview`} style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 16px',
-        backgroundColor: 'transparent',
-        color: '#374151',
-        border: '1px solid #d1d5db',
-        borderRadius: '6px',
-        fontSize: '14px',
-        fontWeight: '500',
-        textDecoration: 'none',
-        cursor: 'pointer',
-        transition: 'all 0.2s'
-      }}>
+    <div className="flex justify-end gap-2">
+      <Link
+        href={`/worksheets/${worksheet.id}/preview`}
+        className="inline-flex items-center justify-center px-4 py-2 bg-transparent text-foreground border border-input rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+      >
         Preview
       </Link>
-      <Link href={`/worksheets/${worksheet.id}/edit`} style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 16px',
-        backgroundColor: '#2563eb',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        fontSize: '14px',
-        fontWeight: '500',
-        textDecoration: 'none',
-        cursor: 'pointer',
-        transition: 'all 0.2s'
-      }}>
-        Edit
+      <Link
+        href={`/worksheets/${worksheet.id}/edit`}
+        className="inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+      >
+        Bewerken
       </Link>
-      <button onClick={() => onDelete(worksheet.id)} style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 12px',
-        backgroundColor: '#dc2626',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        fontSize: '14px',
-        fontWeight: '500',
-        cursor: 'pointer',
-        transition: 'all 0.2s'
-      }}>
-        <Trash2 style={{ height: '1rem', width: '1rem' }} />
+      <button
+        onClick={() => onDelete(worksheet.id)}
+        className="inline-flex items-center justify-center px-3 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90 transition-colors"
+      >
+        <Trash2 className="h-4 w-4" />
       </button>
     </div>
   </div>
@@ -116,7 +78,7 @@ export default function WorksheetsPage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      setError('You must be logged in to view this page.');
+      setError('Je moet ingelogd zijn om deze pagina te bekijken.');
       setLoading(false);
       return;
     }
@@ -134,7 +96,7 @@ export default function WorksheetsPage() {
 
     if (worksheetsError || foldersError) {
       console.error('Error fetching data:', worksheetsError || foldersError);
-      setError('Failed to load your data. Please try again.');
+      setError('Kon gegevens niet laden. Probeer het opnieuw.');
     } else {
       setWorksheets(worksheetsData || []);
       setFolders(foldersData || []);
@@ -173,7 +135,7 @@ export default function WorksheetsPage() {
       .single();
 
     if (error) {
-      setError('Could not create the worksheet.');
+      setError('Kon werkblad niet aanmaken.');
       console.error(error);
     } else if (data) {
       router.push(`/worksheets/${data.id}/edit`);
@@ -188,8 +150,8 @@ export default function WorksheetsPage() {
     const { data, error } = await supabase
       .from('worksheets')
       .insert([{
-        title: 'AI Generated Worksheet',
-        description: 'Worksheet created with AI assistance',
+        title: 'AI Gegenereerd Werkblad',
+        description: 'Werkblad gemaakt met AI assistentie',
         folder_id: null,
         owner_id: user.id,
         status: 'draft',
@@ -198,7 +160,7 @@ export default function WorksheetsPage() {
       .single();
 
     if (error) {
-      setError('Could not create the worksheet.');
+      setError('Kon werkblad niet aanmaken.');
       console.error(error);
     } else if (data) {
       setAiWorksheetId(data.id);
@@ -232,18 +194,18 @@ export default function WorksheetsPage() {
   };
 
   const handleDeleteWorksheet = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this worksheet? This action cannot be undone.')) {
+    if (window.confirm('Weet je zeker dat je dit werkblad wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) {
       // First, delete associated tasks
       const { error: tasksError } = await supabase.from('tasks').delete().eq('worksheet_id', id);
       if (tasksError) {
-        setError('Could not delete the tasks for the worksheet.');
+        setError('Kon taken van werkblad niet verwijderen.');
         console.error(tasksError);
         return;
       }
 
       const { error: worksheetError } = await supabase.from('worksheets').delete().eq('id', id);
       if (worksheetError) {
-        setError('Could not delete the worksheet.');
+        setError('Kon werkblad niet verwijderen.');
         console.error(worksheetError);
       } else {
         setWorksheets(worksheets.filter(ws => ws.id !== id));
@@ -252,219 +214,129 @@ export default function WorksheetsPage() {
   };
 
   if (loading) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading your worksheets...</div>;
+    return (
+      <AuthenticatedLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </AuthenticatedLayout>
+    );
   }
 
   if (error) {
-    return <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>{error}</div>;
+    return (
+      <AuthenticatedLayout>
+        <div className="p-8 text-center text-destructive">{error}</div>
+      </AuthenticatedLayout>
+    );
   }
 
   return (
-    <div style={{ backgroundColor: '#f9fafb', minHeight: '100vh' }}>
-      <header style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{
-          maxWidth: '1280px',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '1.5rem 1rem'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>My Worksheets</h1>
+    <AuthenticatedLayout>
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-7xl mx-auto">
+          <header className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Mijn Werkbladen</h1>
+              <p className="text-muted-foreground">Beheer en maak nieuwe werkbladen voor je klassen.</p>
+            </div>
             <button
               onClick={handleCreateWithAI}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '8px 16px',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
+              className="inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
             >
-              Create with AI ✨
+              <Sparkles className="mr-2 h-4 w-4" />
+              Maak met AI ✨
             </button>
-          </div>
-        </div>
-      </header>
+          </header>
 
-      <main style={{
-        maxWidth: '1280px',
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        padding: '2rem 1rem'
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-          marginBottom: '2rem'
-        }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: '0 0 24px 0' }}>
-            Create New Worksheet
-          </h2>
-          <form onSubmit={handleCreateWorksheet} style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.5rem'
-          }}>
-            <div>
-              <label htmlFor="title" style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>Title</label>
-              <input
-                type="text"
-                name="title"
-                id="title"
-                value={newWorksheet.title}
-                onChange={handleInputChange}
-                required
-                placeholder="e.g. Algebra Basics"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: 'white',
-                  outline: 'none',
-                  transition: 'border-color 0.2s'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-              />
-            </div>
-            <div>
-              <label htmlFor="description" style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>Description (optional)</label>
-              <textarea
-                name="description"
-                id="description"
-                value={newWorksheet.description}
-                onChange={handleInputChange}
-                placeholder="A short summary of what this worksheet is about."
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: 'white',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                  resize: 'vertical',
-                  fontFamily: 'inherit'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-              />
-            </div>
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              alignItems: 'flex-end',
-              flexWrap: 'wrap'
-            }}>
-              <div style={{ flex: '1', minWidth: '200px' }}>
-                <label htmlFor="folder_id" style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>Folder</label>
-                <select
-                  onChange={(e) => handleFolderChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: 'white',
-                    outline: 'none',
-                    transition: 'border-color 0.2s',
-                    cursor: 'pointer'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-                >
-                  <option value="">Select a folder</option>
-                  <option value="none">No folder</option>
-                  {folders.map(folder => (
-                    <option key={folder.id} value={folder.id}>{folder.name}</option>
-                  ))}
-                </select>
+          <div className="bg-card rounded-xl p-6 border border-border shadow-sm mb-8">
+            <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+              <PlusCircle className="h-5 w-5 text-primary" />
+              Nieuw Werkblad Maken
+            </h2>
+            <form onSubmit={handleCreateWorksheet} className="space-y-6">
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-foreground mb-2">Titel</label>
+                <input
+                  type="text"
+                  name="title"
+                  id="title"
+                  value={newWorksheet.title}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="bijv. Algebra Basis"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                />
               </div>
-              <button type="submit" style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '8px 16px',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap'
-              }}
-                onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#1d4ed8'}
-                onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = '#2563eb'}
-              >
-                <PlusCircle style={{ marginRight: '0.5rem', height: '1rem', width: '1rem' }} />
-                Create & Edit Worksheet
-              </button>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">Beschrijving (optioneel)</label>
+                <textarea
+                  name="description"
+                  id="description"
+                  value={newWorksheet.description}
+                  onChange={handleInputChange}
+                  placeholder="Een korte samenvatting van waar dit werkblad over gaat."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-y"
+                />
+              </div>
+              <div className="flex flex-wrap gap-4 items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <label htmlFor="folder_id" className="block text-sm font-medium text-foreground mb-2">Map</label>
+                  <select
+                    onChange={(e) => handleFolderChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  >
+                    <option value="">Selecteer een map</option>
+                    <option value="none">Geen map</option>
+                    {folders.map(folder => (
+                      <option key={folder.id} value={folder.id}>{folder.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center px-6 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap h-[38px]"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Werkblad Maken & Bewerken
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {worksheets.map(ws => (
+              <WorksheetCard key={ws.id} worksheet={ws} onDelete={handleDeleteWorksheet} />
+            ))}
+          </div>
+
+          {worksheets.length === 0 && !loading && (
+            <div className="text-center py-12 bg-card rounded-xl border border-border border-dashed">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium text-foreground mb-1">Nog geen werkbladen</h3>
+              <p className="text-muted-foreground">Maak je eerste werkblad hierboven aan of gebruik de AI generator.</p>
             </div>
-          </form>
+          )}
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '1.5rem'
-        }}>
-          {worksheets.map(ws => (
-            <WorksheetCard key={ws.id} worksheet={ws} onDelete={handleDeleteWorksheet} />
-          ))}
-        </div>
-      </main>
+        {showAIGenerator && aiWorksheetId && (
+          <AIGenerator
+            worksheetId={aiWorksheetId}
+            onTasksGenerated={handleAITasksGenerated}
+            onClose={handleCloseAIGenerator}
+            onShowNotification={showNotification}
+          />
+        )}
 
-      {showAIGenerator && aiWorksheetId && (
-        <AIGenerator
-          worksheetId={aiWorksheetId}
-          onTasksGenerated={handleAITasksGenerated}
-          onClose={handleCloseAIGenerator}
-          onShowNotification={showNotification}
+        {/* Notification Modal */}
+        <NotificationModal
+          show={notification.show}
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification({ show: false, message: '', type: 'success' })}
         />
-      )}
-
-      {/* Notification Modal */}
-      <NotificationModal
-        show={notification.show}
-        message={notification.message}
-        type={notification.type}
-        onClose={() => setNotification({ show: false, message: '', type: 'success' })}
-      />
-    </div>
+      </div>
+    </AuthenticatedLayout>
   );
 }

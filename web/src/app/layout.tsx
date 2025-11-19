@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
-import Navigation from "../components/Navigation";
 import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
@@ -24,7 +23,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <Navigation />
             {children}
           </AuthProvider>
         </ThemeProvider>

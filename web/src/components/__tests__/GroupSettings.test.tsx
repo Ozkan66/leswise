@@ -38,7 +38,7 @@ describe('GroupSettings', () => {
       })
     });
 
-    mockSupabase.from.mockReturnValue({
+    (mockSupabase.from as jest.Mock).mockReturnValue({
       select: mockSelect
     });
 
@@ -59,11 +59,11 @@ describe('GroupSettings', () => {
     });
 
     expect(screen.getByDisplayValue('Test Description')).toBeInTheDocument();
-    
+
     // Check that the community option is selected in the dropdown
     const typeSelect = screen.getByLabelText('Group Type *');
     expect(typeSelect).toHaveValue('community');
-    
+
     expect(screen.getByText('ABC123')).toBeInTheDocument();
   });
 
@@ -92,7 +92,7 @@ describe('GroupSettings', () => {
       })
     });
 
-    mockSupabase.from.mockImplementation((table) => {
+    (mockSupabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'groups') {
         return {
           select: mockSelect,
@@ -160,7 +160,7 @@ describe('GroupSettings', () => {
       })
     });
 
-    mockSupabase.from.mockImplementation((table) => {
+    (mockSupabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'groups') {
         return {
           select: mockSelect,
@@ -216,7 +216,7 @@ describe('GroupSettings', () => {
       })
     });
 
-    mockSupabase.from.mockReturnValue({
+    (mockSupabase.from as jest.Mock).mockReturnValue({
       select: mockSelect
     });
 
@@ -251,7 +251,7 @@ describe('GroupSettings', () => {
       })
     });
 
-    mockSupabase.from.mockReturnValue({
+    (mockSupabase.from as jest.Mock).mockReturnValue({
       select: mockSelect
     });
 

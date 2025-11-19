@@ -22,7 +22,7 @@ describe('JoinGroupForm', () => {
 
   test('should join a community group immediately', async () => {
     // Mock user authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: { id: 'test-user-id' } },
       error: null
     });
@@ -55,7 +55,7 @@ describe('JoinGroupForm', () => {
       error: null
     });
 
-    mockSupabase.from.mockImplementation((table) => {
+    (mockSupabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'groups') {
         return { select: mockGroupSelect };
       } else if (table === 'group_members') {
@@ -93,7 +93,7 @@ describe('JoinGroupForm', () => {
 
   test('should create pending request for klas group', async () => {
     // Mock user authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: { id: 'test-user-id' } },
       error: null
     });
@@ -126,7 +126,7 @@ describe('JoinGroupForm', () => {
       error: null
     });
 
-    mockSupabase.from.mockImplementation((table) => {
+    (mockSupabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'groups') {
         return { select: mockGroupSelect };
       } else if (table === 'group_members') {
@@ -164,7 +164,7 @@ describe('JoinGroupForm', () => {
 
   test('should handle invalid jumper code', async () => {
     // Mock user authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: { id: 'test-user-id' } },
       error: null
     });
@@ -179,7 +179,7 @@ describe('JoinGroupForm', () => {
       })
     });
 
-    mockSupabase.from.mockImplementation((table) => {
+    (mockSupabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'groups') {
         return { select: mockGroupSelect };
       }
@@ -203,7 +203,7 @@ describe('JoinGroupForm', () => {
 
   test('should handle already member scenario', async () => {
     // Mock user authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: { id: 'test-user-id' } },
       error: null
     });
@@ -230,7 +230,7 @@ describe('JoinGroupForm', () => {
       })
     });
 
-    mockSupabase.from.mockImplementation((table) => {
+    (mockSupabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'groups') {
         return { select: mockGroupSelect };
       } else if (table === 'group_members') {
@@ -256,7 +256,7 @@ describe('JoinGroupForm', () => {
 
   test('should handle not logged in scenario', async () => {
     // Mock no user
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: null },
       error: null
     });

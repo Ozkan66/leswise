@@ -12,7 +12,7 @@ describe('WorksheetCreateForm', () => {
 
   beforeEach(() => {
     // Mock successful auth user
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: {
         user: {
           id: 'user-123',
@@ -34,7 +34,7 @@ describe('WorksheetCreateForm', () => {
     });
 
     // Mock folders and worksheets queries  
-    mockSupabase.from.mockReturnValue({
+    (mockSupabase.from as jest.Mock).mockReturnValue({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockResolvedValue({
           data: [
@@ -47,14 +47,14 @@ describe('WorksheetCreateForm', () => {
         data: null,
         error: null
       })
-    });
+    } as any);
 
     jest.clearAllMocks();
   });
 
   it('renders the worksheet creation form', async () => {
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
-    
+
     expect(screen.getByPlaceholderText('Worksheet title')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Brief description (optional)')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Instructions for students (optional)')).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe('WorksheetCreateForm', () => {
 
   it('creates a worksheet successfully', async () => {
     // Mock successful worksheet creation
-    mockSupabase.from.mockReturnValue({
+    (mockSupabase.from as jest.Mock).mockReturnValue({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockResolvedValue({
           data: [{ id: 'folder-1', name: 'Test Folder' }],
@@ -74,10 +74,10 @@ describe('WorksheetCreateForm', () => {
         data: [{ id: 'worksheet-123', title: 'Test Worksheet' }],
         error: null
       })
-    });
+    } as any);
 
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
-    
+
     // Fill in the form
     fireEvent.change(screen.getByPlaceholderText('Worksheet title'), {
       target: { value: 'Test Worksheet' }
@@ -85,10 +85,10 @@ describe('WorksheetCreateForm', () => {
     fireEvent.change(screen.getByPlaceholderText('Brief description (optional)'), {
       target: { value: 'Test Description' }
     });
-    
+
     // Submit the form
     fireEvent.click(screen.getByRole('button', { name: 'Create Worksheet' }));
-    
+
     await waitFor(() => {
       expect(mockOnWorksheetCreated).toHaveBeenCalled();
     });
@@ -96,10 +96,10 @@ describe('WorksheetCreateForm', () => {
 
   it('shows error when title is empty', async () => {
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
-    
+
     // Try to submit without title
     fireEvent.click(screen.getByRole('button', { name: 'Create Worksheet' }));
-    
+
     // The form should show validation error (title is required)
     const titleInput = screen.getByPlaceholderText('Worksheet title');
     expect(titleInput).toBeInvalid();
@@ -107,7 +107,7 @@ describe('WorksheetCreateForm', () => {
 
   it('shows error when worksheet creation fails', async () => {
     // Mock failed worksheet creation
-    mockSupabase.from.mockReturnValue({
+    (mockSupabase.from as jest.Mock).mockReturnValue({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockResolvedValue({
           data: [],
@@ -118,18 +118,18 @@ describe('WorksheetCreateForm', () => {
         data: null,
         error: { message: 'Failed to create worksheet' }
       })
-    });
+    } as any);
 
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
-    
+
     // Fill in the form
     fireEvent.change(screen.getByPlaceholderText('Worksheet title'), {
       target: { value: 'Test Worksheet' }
     });
-    
+
     // Submit the form
     fireEvent.click(screen.getByRole('button', { name: 'Create Worksheet' }));
-    
+
     await waitFor(() => {
       expect(screen.getByText('Failed to create worksheet')).toBeInTheDocument();
     });
@@ -137,21 +137,21 @@ describe('WorksheetCreateForm', () => {
 
   it('shows error when user is not logged in', async () => {
     // Mock no user
-    mockSupabase.auth.getUser.mockResolvedValue({
+    (mockSupabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: null },
       error: null
     });
 
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
-    
+
     // Fill in the form
     fireEvent.change(screen.getByPlaceholderText('Worksheet title'), {
       target: { value: 'Test Worksheet' }
     });
-    
+
     // Submit the form
     fireEvent.click(screen.getByRole('button', { name: 'Create Worksheet' }));
-    
+
     await waitFor(() => {
       expect(screen.getByText('Not logged in')).toBeInTheDocument();
     });
@@ -159,7 +159,7 @@ describe('WorksheetCreateForm', () => {
 
   it('allows selecting a folder for the worksheet', async () => {
     render(<WorksheetCreateForm onWorksheetCreated={mockOnWorksheetCreated} />);
-    
+
     await waitFor(() => {
       const selects = screen.getAllByRole('combobox');
       expect(selects).toHaveLength(2); // Folder and Status selects

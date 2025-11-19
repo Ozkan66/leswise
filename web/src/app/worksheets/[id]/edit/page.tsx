@@ -10,6 +10,8 @@ import { CreateTaskForm } from '@/components/CreateTaskForm';
 import { AdvancedTaskForm } from '@/components/AdvancedTaskForm';
 import { AIGenerator } from '../../../../components/AIGenerator';
 import { NotificationModal } from '../../../../components/NotificationModal';
+import AuthenticatedLayout from '../../../../components/AuthenticatedLayout';
+import { cn } from '@/lib/utils';
 
 // Custom tabs component with inline styles
 const CustomTabs = ({
@@ -45,48 +47,23 @@ const CustomTabs = ({
     ];
 
     return (
-        <div style={{ width: '100%' }}>
+        <div className="w-full">
             {/* Tab Headers */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                backgroundColor: '#e5e7eb',
-                borderRadius: '8px',
-                padding: '4px'
-            }}>
+            <div className="grid grid-cols-4 bg-muted rounded-lg p-1">
                 {tabs.map(tab => {
                     const Icon = tab.icon;
                     return (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '8px 16px',
-                                backgroundColor: activeTab === tab.id ? 'white' : 'transparent',
-                                color: activeTab === tab.id ? '#111827' : '#6b7280',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                boxShadow: activeTab === tab.id ? '0 1px 2px 0 rgb(0 0 0 / 0.05)' : 'none'
-                            }}
-                            onMouseOver={(e) => {
-                                if (activeTab !== tab.id) {
-                                    (e.target as HTMLElement).style.backgroundColor = '#d1d5db';
-                                }
-                            }}
-                            onMouseOut={(e) => {
-                                if (activeTab !== tab.id) {
-                                    (e.target as HTMLElement).style.backgroundColor = 'transparent';
-                                }
-                            }}
+                            className={cn(
+                                "flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-all",
+                                activeTab === tab.id
+                                    ? "bg-background text-foreground shadow-sm"
+                                    : "text-muted-foreground hover:bg-muted-foreground/10"
+                            )}
                         >
-                            <Icon style={{ marginRight: '8px', height: '1rem', width: '1rem' }} />
+                            <Icon className="mr-2 h-4 w-4" />
                             {tab.label}
                         </button>
                     );
@@ -94,12 +71,7 @@ const CustomTabs = ({
             </div>
 
             {/* Tab Content */}
-            <div style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                marginTop: '16px'
-            }}>
+            <div className="bg-card rounded-lg border border-border mt-4 shadow-sm">
                 {activeTab === 'editor' && (
                     <EditorTab
                         worksheet={worksheet}
@@ -112,7 +84,8 @@ const CustomTabs = ({
                         worksheet={worksheet}
                         onStatusChange={onStatusChange}
                     />
-                )}                {activeTab === 'add-tasks' && (
+                )}
+                {activeTab === 'add-tasks' && (
                     <AddTasksTab
                         worksheetId={worksheetId}
                         tasks={tasks}
@@ -139,67 +112,36 @@ const EditorTab = ({
     onTitleChange: (title: string) => void;
     onDescriptionChange: (description: string) => void;
 }) => (
-    <div style={{ padding: '24px' }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>Worksheet Editor</h3>
-        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '8px' }}>
-            Here you can edit the main content and structure of your worksheet.
-        </p>
-        <div style={{ marginTop: '24px' }}>
-            <label htmlFor="worksheet-title" style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-            }}>Title</label>
-            <input
-                id="worksheet-title"
-                value={worksheet?.title || ''}
-                onChange={(e) => onTitleChange(e.target.value)}
-                placeholder="Enter worksheet title"
-                style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: 'white',
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-            />
+    <div className="p-6 space-y-6">
+        <div>
+            <h3 className="text-lg font-semibold text-foreground">Worksheet Editor</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+                Here you can edit the main content and structure of your worksheet.
+            </p>
         </div>
-        <div style={{ marginTop: '16px' }}>
-            <label htmlFor="worksheet-description" style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-            }}>Description</label>
-            <textarea
-                id="worksheet-description"
-                value={worksheet?.description || ''}
-                onChange={(e) => onDescriptionChange(e.target.value)}
-                placeholder="Enter worksheet description"
-                rows={4}
-                style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: 'white',
-                    outline: 'none',
-                    transition: 'border-color 0.2s',
-                    resize: 'vertical',
-                    fontFamily: 'inherit'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-            />
+
+        <div className="space-y-4">
+            <div>
+                <label htmlFor="worksheet-title" className="block text-sm font-medium text-foreground mb-2">Title</label>
+                <input
+                    id="worksheet-title"
+                    value={worksheet?.title || ''}
+                    onChange={(e) => onTitleChange(e.target.value)}
+                    placeholder="Enter worksheet title"
+                    className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                />
+            </div>
+            <div>
+                <label htmlFor="worksheet-description" className="block text-sm font-medium text-foreground mb-2">Description</label>
+                <textarea
+                    id="worksheet-description"
+                    value={worksheet?.description || ''}
+                    onChange={(e) => onDescriptionChange(e.target.value)}
+                    placeholder="Enter worksheet description"
+                    rows={4}
+                    className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-y"
+                />
+            </div>
         </div>
     </div>
 );
@@ -211,61 +153,33 @@ const SettingsTab = ({
     worksheet: Worksheet | null;
     onStatusChange: (status: string) => void;
 }) => (
-    <div style={{ padding: '24px' }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>Settings</h3>
-        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '8px' }}>
-            Configure worksheet settings, like status and folder.
-        </p>
-        <div style={{ marginTop: '24px' }}>
-            <label htmlFor="worksheet-status" style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-            }}>Status</label>
+    <div className="p-6 space-y-6">
+        <div>
+            <h3 className="text-lg font-semibold text-foreground">Settings</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+                Configure worksheet settings, like status and folder.
+            </p>
+        </div>
+
+        <div>
+            <label htmlFor="worksheet-status" className="block text-sm font-medium text-foreground mb-2">Status</label>
             <select
                 id="worksheet-status"
                 value={worksheet?.status || 'draft'}
                 onChange={(e) => onStatusChange(e.target.value)}
-                style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: 'white',
-                    outline: 'none',
-                    transition: 'border-color 0.2s',
-                    cursor: 'pointer'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all cursor-pointer"
             >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
             </select>
         </div>
-        <div style={{
-            marginTop: '24px',
-            padding: '16px',
-            backgroundColor: '#f9fafb',
-            borderRadius: '8px'
-        }}>
-            <h4 style={{
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                margin: 0
-            }}>Worksheet Information</h4>
-            <div style={{
-                marginTop: '8px',
-                fontSize: '0.875rem',
-                color: '#6b7280'
-            }}>
-                <p style={{ margin: '4px 0' }}><strong>Created:</strong> {worksheet?.created_at ? new Date(worksheet.created_at).toLocaleDateString() : 'Unknown'}</p>
-                <p style={{ margin: '4px 0' }}><strong>Last updated:</strong> {worksheet?.updated_at ? new Date(worksheet.updated_at).toLocaleDateString() : 'Unknown'}</p>
-                <p style={{ margin: '4px 0' }}><strong>ID:</strong> {worksheet?.id}</p>
+
+        <div className="mt-6 p-4 bg-muted rounded-lg">
+            <h4 className="text-sm font-medium text-foreground m-0">Worksheet Information</h4>
+            <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                <p><strong>Created:</strong> {worksheet?.created_at ? new Date(worksheet.created_at).toLocaleDateString() : 'Unknown'}</p>
+                <p><strong>Last updated:</strong> {worksheet?.updated_at ? new Date(worksheet.updated_at).toLocaleDateString() : 'Unknown'}</p>
+                <p><strong>ID:</strong> {worksheet?.id}</p>
             </div>
         </div>
     </div>
@@ -358,106 +272,48 @@ const AddTasksTab = ({
     };
 
     return (
-        <div style={{ padding: '24px' }}>
+        <div className="p-6 space-y-8">
             {/* Quick Add Task Button */}
-            <div style={{
-                marginBottom: '2rem',
-                padding: '1.5rem',
-                backgroundColor: '#f8fafc',
-                border: '2px dashed #cbd5e1',
-                borderRadius: '8px',
-                textAlign: 'center'
-            }}>
-                <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: '600',
-                    color: '#111827',
-                    marginBottom: '0.5rem'
-                }}>
+            <div className="p-6 bg-muted/30 border-2 border-dashed border-border rounded-lg text-center">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                     Choose how you want to add tasks
                 </h3>
-                <p style={{
-                    color: '#6b7280',
-                    marginBottom: '1rem',
-                    fontSize: '0.875rem'
-                }}>
+                <p className="text-sm text-muted-foreground mb-4">
                     Use the visual selector for a better experience, or the quick form below
                 </p>
-                <Link
-                    href={`/worksheets/add-task?worksheet=${worksheetId}`}
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '12px 24px',
-                        backgroundColor: '#2563eb',
-                        color: 'white',
-                        textDecoration: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        transition: 'all 0.2s',
-                        marginRight: '1rem'
-                    }}
-                    onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#1d4ed8'}
-                    onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = '#2563eb'}
-                >
-                    <PlusCircle style={{ marginRight: '8px', height: '1rem', width: '1rem' }} />
-                    Choose Task Type
-                </Link>
-                <button
-                    onClick={() => setShowAIGenerator(true)}
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '12px 24px',
-                        backgroundColor: '#059669',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#047857'}
-                    onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = '#059669'}
-                >
-                    🤖 Generate with AI
-                </button>
-                <span style={{ color: '#9ca3af' }}>or use quick form below</span>
+                <div className="flex flex-wrap justify-center gap-4">
+                    <Link
+                        href={`/worksheets/add-task?worksheet=${worksheetId}`}
+                        className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Choose Task Type
+                    </Link>
+                    <button
+                        onClick={() => setShowAIGenerator(true)}
+                        className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
+                    >
+                        🤖 Generate with AI
+                    </button>
+                </div>
+                <div className="mt-4 text-sm text-muted-foreground">or use quick form below</div>
             </div>
 
             {/* Show Advanced Form Button */}
             {!showAdvancedForm && !newTaskType && (
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <div className="text-center">
                     <button
                         onClick={() => setShowAdvancedForm(true)}
-                        style={{
-                            padding: '12px 24px',
-                            backgroundColor: '#6366f1',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#4f46e5'}
-                        onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = '#6366f1'}
+                        className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
                     >
                         ✏️ Create Detailed Task
                     </button>
                 </div>
             )}
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '2rem'
-            }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>Quick Add Task</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-4">Quick Add Task</h3>
                     <CreateTaskForm
                         worksheetId={worksheetId}
                         onTaskCreated={onTaskAdded}
@@ -467,105 +323,58 @@ const AddTasksTab = ({
                     />
                 </div>
                 <div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>Current Tasks ({tasks.length})</h3>
-                    {tasks.length > 0 ? tasks.map(task => (
-                        <div key={task.id} style={{
-                            padding: '16px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            backgroundColor: '#f9fafb',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '16px'
-                        }}>
-                            <div style={{ flex: 1 }}>
-                                <p style={{ fontWeight: '600', margin: 0, color: '#111827' }}>
-                                    {(task.order_index || 0) + 1}. {
-                                        task.title ||
-                                        ((task.content as Record<string, unknown>)?.title as string) ||
-                                        ((task.content as Record<string, unknown>)?.question as string) ||
-                                        'Untitled Task'
-                                    }
-                                </p>
-                                <p style={{
-                                    fontSize: '0.875rem',
-                                    color: '#6b7280',
-                                    textTransform: 'capitalize',
-                                    margin: '4px 0 0 0'
-                                }}>{task.task_type?.replace(/[-_]/g, ' ') || 'Task'}</p>
-                                {((task.content as Record<string, unknown>)?.description as string) && (
-                                    <p style={{
-                                        fontSize: '0.75rem',
-                                        color: '#9ca3af',
-                                        margin: '2px 0 0 0',
-                                        fontStyle: 'italic'
-                                    }}>
-                                        {String((task.content as Record<string, unknown>).description).substring(0, 100)}
-                                        {String((task.content as Record<string, unknown>).description).length > 100 ? '...' : ''}
+                    <h3 className="text-lg font-semibold text-foreground mb-4">Current Tasks ({tasks.length})</h3>
+                    <div className="space-y-4">
+                        {tasks.length > 0 ? tasks.map(task => (
+                            <div key={task.id} className="p-4 border border-border rounded-lg bg-card flex justify-between items-center shadow-sm">
+                                <div className="flex-1 min-w-0 mr-4">
+                                    <p className="font-semibold text-foreground truncate">
+                                        {(task.order_index || 0) + 1}. {
+                                            task.title ||
+                                            ((task.content as Record<string, unknown>)?.title as string) ||
+                                            ((task.content as Record<string, unknown>)?.question as string) ||
+                                            'Untitled Task'
+                                        }
                                     </p>
-                                )}
+                                    <p className="text-sm text-muted-foreground capitalize mt-1">
+                                        {task.task_type?.replace(/[-_]/g, ' ') || 'Task'}
+                                    </p>
+                                    {((task.content as Record<string, unknown>)?.description as string) && (
+                                        <p className="text-xs text-muted-foreground mt-1 italic truncate">
+                                            {String((task.content as Record<string, unknown>).description)}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex gap-2 shrink-0">
+                                    <button
+                                        onClick={() => handleEditTask(task)}
+                                        className="p-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                                        title="Edit task"
+                                    >
+                                        <Edit3 className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleDelete(task.id);
+                                        }}
+                                        className="p-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
+                                        title="Delete task"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    onClick={() => handleEditTask(task)}
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: '8px',
-                                        backgroundColor: '#2563eb',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#1d4ed8'}
-                                    onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = '#2563eb'}
-                                >
-                                    <Edit3 style={{ height: '1rem', width: '1rem' }} />
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleDelete(task.id);
-                                    }}
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: '8px',
-                                        backgroundColor: '#dc2626',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#b91c1c'}
-                                    onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = '#dc2626'}
-                                >
-                                    <Trash2 style={{ height: '1rem', width: '1rem' }} />
-                                </button>
+                        )) : (
+                            <div className="text-center text-muted-foreground p-8 border-2 border-dashed border-border rounded-lg bg-muted/30">
+                                <p className="text-sm">No tasks added yet.</p>
+                                <p className="text-xs mt-2 text-muted-foreground">
+                                    Click &quot;Choose Task Type&quot; above to add your first task.
+                                </p>
                             </div>
-                        </div>
-                    )) : (
-                        <div style={{
-                            textAlign: 'center',
-                            color: '#6b7280',
-                            padding: '2rem',
-                            border: '2px dashed #e5e7eb',
-                            borderRadius: '8px',
-                            backgroundColor: '#f9fafb'
-                        }}>
-                            <p style={{ margin: 0, fontSize: '0.875rem' }}>No tasks added yet.</p>
-                            <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
-                                Click &quot;Choose Task Type&quot; above to add your first task.
-                            </p>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -603,73 +412,24 @@ const AddTasksTab = ({
 
             {/* Delete Confirmation Modal */}
             {deleteConfirmation.show && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000
-                }}>
-                    <div style={{
-                        backgroundColor: 'white',
-                        borderRadius: '8px',
-                        padding: '2rem',
-                        maxWidth: '400px',
-                        width: '90%',
-                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
-                    }}>
-                        <h3 style={{
-                            fontSize: '1.25rem',
-                            fontWeight: '600',
-                            color: '#111827',
-                            marginBottom: '1rem'
-                        }}>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                    <div className="bg-background rounded-lg p-8 max-w-md w-[90%] shadow-xl border border-border">
+                        <h3 className="text-xl font-semibold text-foreground mb-4">
                             Delete Task
                         </h3>
-                        <p style={{
-                            fontSize: '0.875rem',
-                            color: '#6b7280',
-                            marginBottom: '1.5rem'
-                        }}>
+                        <p className="text-sm text-muted-foreground mb-6">
                             Are you sure you want to delete this task? This action cannot be undone.
                         </p>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            gap: '0.75rem'
-                        }}>
+                        <div className="flex justify-end gap-3">
                             <button
                                 onClick={cancelDelete}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '6px',
-                                    backgroundColor: 'white',
-                                    color: 'white',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer'
-                                }}
+                                className="px-4 py-2 border border-input rounded-md bg-background text-foreground text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmDelete}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    backgroundColor: '#dc2626',
-                                    color: 'white',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer'
-                                }}
+                                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90 transition-colors"
                             >
                                 Delete
                             </button>
@@ -690,20 +450,13 @@ const AddTasksTab = ({
 };
 
 const ResultsTab = () => (
-    <div style={{ padding: '24px' }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>Results & Submissions</h3>
-        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '8px' }}>
+    <div className="p-6">
+        <h3 className="text-lg font-semibold text-foreground">Results & Submissions</h3>
+        <p className="text-sm text-muted-foreground mt-2">
             View student submissions and analytics for this worksheet.
         </p>
-        <div style={{
-            marginTop: '24px',
-            textAlign: 'center',
-            color: '#6b7280',
-            padding: '2rem',
-            border: '2px dashed #e5e7eb',
-            borderRadius: '8px'
-        }}>
-            <p style={{ margin: 0 }}>Results will be shown here once students complete the worksheet.</p>
+        <div className="mt-6 text-center text-muted-foreground p-8 border-2 border-dashed border-border rounded-lg bg-muted/30">
+            <p className="m-0">Results will be shown here once students complete the worksheet.</p>
         </div>
     </div>
 );
@@ -842,148 +595,93 @@ export default function EditWorksheetPage() {
     };
 
     if (loading) {
-        return <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+        return (
+            <AuthenticatedLayout>
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+            </AuthenticatedLayout>
+        );
     }
 
     if (error) {
-        return <div style={{ padding: '2rem', color: '#ef4444', textAlign: 'center', height: '100vh' }}>{error}</div>;
+        return (
+            <AuthenticatedLayout>
+                <div className="p-8 text-center text-destructive h-screen flex items-center justify-center">{error}</div>
+            </AuthenticatedLayout>
+        );
     }
 
     if (!worksheet) {
-        return <div style={{ padding: '2rem', textAlign: 'center', height: '100vh' }}>Worksheet not found.</div>;
+        return (
+            <AuthenticatedLayout>
+                <div className="p-8 text-center h-screen flex items-center justify-center">Worksheet not found.</div>
+            </AuthenticatedLayout>
+        );
     }
 
     return (
-        <div style={{ backgroundColor: '#f9fafb', minHeight: '100vh' }}>
-            <header style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-                <div style={{
-                    maxWidth: '1280px',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    padding: '0 1rem'
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '1rem 0'
-                    }}>
-                        <button
-                            onClick={() => router.push('/worksheets')}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                padding: '8px 16px',
-                                backgroundColor: 'transparent',
-                                color: '#374151',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#f3f4f6'}
-                            onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                        >
-                            <ArrowLeft style={{ marginRight: '8px', height: '1rem', width: '1rem' }} />
-                            Back to Worksheets
-                        </button>
-                        <h1 style={{
-                            fontSize: '1.25rem',
-                            fontWeight: '600',
-                            color: '#1f2937',
-                            display: 'flex',
-                            alignItems: 'center',
-                            margin: 0
-                        }} title={worksheet.title}>
-                            {worksheet.title}
-                            {hasUnsavedChanges && (
-                                <span style={{
-                                    marginLeft: '8px',
-                                    padding: '4px 8px',
-                                    fontSize: '0.75rem',
-                                    backgroundColor: '#fef3c7',
-                                    color: '#92400e',
-                                    borderRadius: '9999px'
-                                }}>
-                                    Unsaved changes
-                                </span>
-                            )}
-                        </h1>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Link href={`/worksheets/${worksheet.id}/preview`} style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '8px 16px',
-                                backgroundColor: 'transparent',
-                                color: '#374151',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                textDecoration: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}>
-                                Preview
-                            </Link>
+        <AuthenticatedLayout>
+            <div className="min-h-screen bg-background">
+                <header className="bg-card border-b border-border sticky top-0 z-10">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between items-center h-16">
                             <button
-                                onClick={handleSaveChanges}
-                                disabled={!hasUnsavedChanges || saving}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: '8px 16px',
-                                    backgroundColor: hasUnsavedChanges ? '#2563eb' : '#9ca3af',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    cursor: hasUnsavedChanges && !saving ? 'pointer' : 'not-allowed',
-                                    transition: 'all 0.2s',
-                                    opacity: (!hasUnsavedChanges || saving) ? 0.6 : 1
-                                }}
-                                onMouseOver={(e) => {
-                                    if (hasUnsavedChanges && !saving) {
-                                        (e.target as HTMLElement).style.backgroundColor = '#1d4ed8';
-                                    }
-                                }}
-                                onMouseOut={(e) => {
-                                    if (hasUnsavedChanges && !saving) {
-                                        (e.target as HTMLElement).style.backgroundColor = '#2563eb';
-                                    }
-                                }}
+                                onClick={() => router.push('/worksheets')}
+                                className="inline-flex items-center px-4 py-2 bg-transparent text-foreground border border-input rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
                             >
-                                {saving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Back to Worksheets
                             </button>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl font-semibold text-foreground flex items-center" title={worksheet.title}>
+                                    {worksheet.title}
+                                </h1>
+                                {hasUnsavedChanges && (
+                                    <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">
+                                        Unsaved changes
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    href={`/worksheets/${worksheet.id}/preview`}
+                                    className="inline-flex items-center justify-center px-4 py-2 bg-transparent text-foreground border border-input rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                                >
+                                    Preview
+                                </Link>
+                                <button
+                                    onClick={handleSaveChanges}
+                                    disabled={!hasUnsavedChanges || saving}
+                                    className={cn(
+                                        "inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                                        hasUnsavedChanges
+                                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                            : "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                                    )}
+                                >
+                                    {saving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </header>
+                </header>
 
-            <main style={{
-                maxWidth: '1280px',
-                marginLeft: 'auto',
-                marginRight: 'auto',
-                padding: '2rem 1rem'
-            }}>
-                <CustomTabs
-                    worksheet={worksheet}
-                    worksheetId={id}
-                    tasks={tasks}
-                    onTitleChange={handleTitleChange}
-                    onDescriptionChange={handleDescriptionChange}
-                    onStatusChange={handleStatusChange}
-                    onTaskAdded={handleTaskAdded}
-                    onTaskDeleted={handleTaskDeleted}
-                    initialTab={initialTab}
-                    newTaskType={newTaskType}
-                />
-            </main>
-        </div>
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <CustomTabs
+                        worksheet={worksheet}
+                        worksheetId={id}
+                        tasks={tasks}
+                        onTitleChange={handleTitleChange}
+                        onDescriptionChange={handleDescriptionChange}
+                        onStatusChange={handleStatusChange}
+                        onTaskAdded={handleTaskAdded}
+                        onTaskDeleted={handleTaskDeleted}
+                        initialTab={initialTab}
+                        newTaskType={newTaskType}
+                    />
+                </main>
+            </div>
+        </AuthenticatedLayout>
     );
 }
