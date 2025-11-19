@@ -6,7 +6,7 @@ import { supabase } from '../../../utils/supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
 import Link from 'next/link';
 
-type TaskType = "text" | "multiple_choice" | "single_choice" | "short_answer" | "essay" | "matching" | "ordering" | "fill_gaps";
+type TaskType = "information" | "multiple_choice" | "single_choice" | "short_answer" | "essay" | "matching" | "ordering" | "fill_gaps";
 
 interface TaskTypeInfo {
   type: TaskType;
@@ -17,7 +17,7 @@ interface TaskTypeInfo {
 
 const taskTypes: TaskTypeInfo[] = [
   {
-    type: "text",
+    type: "information",
     label: "Text/Information",
     description: "Add instructional text, explanations, or information blocks",
     icon: "📝"
@@ -68,8 +68,8 @@ const taskTypes: TaskTypeInfo[] = [
 
 export default function AddTaskPage() {
   return (
-    <Suspense fallback={<div style={{ 
-      minHeight: '100vh', 
+    <Suspense fallback={<div style={{
+      minHeight: '100vh',
       backgroundColor: '#f8fafc',
       display: 'flex',
       alignItems: 'center',
@@ -87,7 +87,7 @@ function AddTaskPageContent() {
   const [worksheetTitle, setWorksheetTitle] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -129,15 +129,15 @@ function AddTaskPageContent() {
 
   const handleTypeSelection = (type: TaskType) => {
     if (!worksheetId) return;
-    
+
     // Navigate to task creation form with the selected type
     router.push(`/worksheets/${worksheetId}/edit?tab=add-tasks&newTask=${type}`);
   };
 
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
+      <div style={{
+        minHeight: '100vh',
         backgroundColor: '#f8fafc',
         display: 'flex',
         alignItems: 'center',
@@ -152,14 +152,14 @@ function AddTaskPageContent() {
 
   if (error) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
+      <div style={{
+        minHeight: '100vh',
         backgroundColor: '#f8fafc',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ 
+        <div style={{
           maxWidth: '400px',
           padding: '2rem',
           backgroundColor: 'white',
@@ -190,12 +190,12 @@ function AddTaskPageContent() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
       {/* Header */}
-      <header style={{ 
-        backgroundColor: 'white', 
+      <header style={{
+        backgroundColor: 'white',
         borderBottom: '1px solid #e5e7eb',
-        padding: '1rem 1.5rem' 
+        padding: '1rem 1.5rem'
       }}>
-        <div style={{ 
+        <div style={{
           maxWidth: '1200px',
           margin: '0 auto',
           display: 'flex',
@@ -219,17 +219,17 @@ function AddTaskPageContent() {
               ← Back
             </Link>
             <div>
-              <h1 style={{ 
-                fontSize: '1.5rem', 
-                fontWeight: 'bold', 
+              <h1 style={{
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
                 color: '#111827',
                 margin: 0
               }}>
                 Add New Task
               </h1>
               {worksheetTitle && (
-                <p style={{ 
-                  color: '#6b7280', 
+                <p style={{
+                  color: '#6b7280',
                   fontSize: '0.875rem',
                   margin: '0.25rem 0 0 0'
                 }}>
@@ -242,13 +242,13 @@ function AddTaskPageContent() {
       </header>
 
       {/* Main Content */}
-      <main style={{ 
+      <main style={{
         maxWidth: '1200px',
         margin: '0 auto',
         padding: '2rem 1.5rem'
       }}>
         <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ 
+          <h2 style={{
             fontSize: '1.25rem',
             fontWeight: '600',
             color: '#111827',
@@ -297,7 +297,7 @@ function AddTaskPageContent() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                <div style={{ 
+                <div style={{
                   fontSize: '2rem',
                   flexShrink: 0
                 }}>

@@ -349,6 +349,14 @@ const AddTasksTab = ({
         }, 1500);
     };
 
+    const showNotification = (message: string, type: 'success' | 'error') => {
+        setNotification({
+            show: true,
+            message,
+            type
+        });
+    };
+
     return (
         <div style={{ padding: '24px' }}>
             {/* Quick Add Task Button */}
@@ -455,6 +463,7 @@ const AddTasksTab = ({
                         onTaskCreated={onTaskAdded}
                         existingTasksCount={tasks.length}
                         initialTaskType={newTaskType}
+                        onShowNotification={showNotification}
                     />
                 </div>
                 <div>
@@ -588,6 +597,7 @@ const AddTasksTab = ({
                     worksheetId={worksheetId}
                     onTasksGenerated={handleAITasksGenerated}
                     onClose={() => setShowAIGenerator(false)}
+                    onShowNotification={showNotification}
                 />
             )}
 
@@ -640,7 +650,7 @@ const AddTasksTab = ({
                                     border: '1px solid #d1d5db',
                                     borderRadius: '6px',
                                     backgroundColor: 'white',
-                                    color: '#374151',
+                                    color: 'white',
                                     fontSize: '14px',
                                     fontWeight: '500',
                                     cursor: 'pointer'
@@ -668,7 +678,7 @@ const AddTasksTab = ({
                 </div>
             )}
 
-            {/* Notification Modal for success/error messages */}
+            {/* Notification Modal */}
             <NotificationModal
                 show={notification.show}
                 message={notification.message}

@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { Task } from '../types/database';
-import { NotificationModal } from './NotificationModal';
 
 interface CreateTaskFormProps {
   worksheetId: string;
@@ -13,15 +12,10 @@ interface CreateTaskFormProps {
   initialTaskType?: string | null;
 }
 
-export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount, initialTaskType }: CreateTaskFormProps) => {
+export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount, initialTaskType, onShowNotification }: CreateTaskFormProps & { onShowNotification: (message: string, type: 'success' | 'error') => void }) => {
   const [title, setTitle] = useState('');
   const [taskType, setTaskType] = useState('open-question');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notification, setNotification] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
-    show: false,
-    message: '',
-    type: 'success'
-  });
 
   // Set initial task type if provided
   useEffect(() => {
@@ -72,24 +66,14 @@ export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount,
 
     if (error) {
       console.error('Error creating task:', error);
-      setNotification({
-        show: true,
-        message: `Failed to create task: ${error.message}`,
-        type: 'error'
-      });
+      onShowNotification(`Failed to create task: ${error.message}`, 'error');
     } else if (data) {
       console.log('Task created successfully:', data);
       // Call onTaskCreated first to update state
       onTaskCreated(data);
       setTitle(''); // Reset form
-      // Then show notification after state update
-      setTimeout(() => {
-        setNotification({
-          show: true,
-          message: 'New task added successfully.',
-          type: 'success'
-        });
-      }, 100);
+      // Show notification via parent
+      onShowNotification('New task added successfully.', 'success');
     }
 
     setIsSubmitting(false);
@@ -200,13 +184,6 @@ export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount,
           {isSubmitting ? 'Adding...' : 'Add Task'}
         </button>
       </div>
-
-      <NotificationModal
-        show={notification.show}
-        message={notification.message}
-        type={notification.type}
-        onClose={() => setNotification({ show: false, message: '', type: 'success' })}
-      />
     </form>
   );
 };

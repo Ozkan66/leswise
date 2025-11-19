@@ -9,9 +9,10 @@ interface AIGeneratorProps {
   worksheetId: string;
   onTasksGenerated: (tasks: Task[]) => void;
   onClose: () => void;
+  onShowNotification: (message: string, type: 'success' | 'error') => void;
 }
 
-export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGeneratorProps) => {
+export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose, onShowNotification }: AIGeneratorProps) => {
   const [gradeLevel, setGradeLevel] = useState('');
   const [subject, setSubject] = useState('');
   const [topic, setTopic] = useState('');
@@ -28,11 +29,6 @@ export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGenera
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string>('');
-  const [notification, setNotification] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
-    show: false,
-    message: '',
-    type: 'success'
-  });
 
   const handleQuestionTypeChange = (type: string, value: number) => {
     setQuestionTypes(prev => ({
@@ -96,14 +92,8 @@ export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGenera
         onTasksGenerated(result.tasks);
         // Close modal first
         onClose();
-        // Then show notification after modal is closed
-        setTimeout(() => {
-          setNotification({
-            show: true,
-            message: `Successfully generated ${result.tasks.length} tasks!`,
-            type: 'success'
-          });
-        }, 100);
+        // Show notification via parent
+        onShowNotification(`Successfully generated ${result.tasks.length} tasks!`, 'success');
       } else {
         throw new Error(result.message || result.error || 'Unknown error occurred');
       }
@@ -395,12 +385,7 @@ export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGenera
         </div>
       </div>
 
-      <NotificationModal
-        show={notification.show}
-        message={notification.message}
-        type={notification.type}
-        onClose={() => setNotification({ show: false, message: '', type: 'success' })}
-      />
+
     </div>
   );
 };

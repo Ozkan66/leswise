@@ -261,6 +261,81 @@ const TaskRenderer = ({ task, index }: { task: Task; index: number }) => {
                     </div>
                 );
 
+            case 'ordering':
+                const items = content?.items as string[] || [];
+                const correctOrder = content?.correctOrder as number[] || [];
+
+                if (items.length === 0) {
+                    return (
+                        <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
+                            <p style={{ color: '#dc2626', fontStyle: 'italic' }}>
+                                No items found for this ordering task.
+                            </p>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div style={{ marginTop: '1rem' }}>
+                        <div style={{
+                            padding: '1rem',
+                            backgroundColor: '#f0f9ff',
+                            borderRadius: '8px',
+                            border: '1px solid #bae6fd',
+                            marginBottom: '1rem'
+                        }}>
+                            <p style={{ fontSize: '0.875rem', color: '#0369a1', marginBottom: '0.5rem' }}>
+                                <strong>Task:</strong> Drag and drop the items below into the correct order.
+                            </p>
+                            {correctOrder.length > 0 && (
+                                <p style={{ fontSize: '0.75rem', color: '#0c4a6e', fontStyle: 'italic' }}>
+                                    Correct order: {correctOrder.map((idx, pos) => `${pos + 1}. ${items[idx]}`).join(' → ')}
+                                </p>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {items.map((item, idx) => (
+                                <div key={idx} style={{
+                                    padding: '0.75rem',
+                                    backgroundColor: '#f9fafb',
+                                    borderRadius: '4px',
+                                    border: '1px solid #d1d5db',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    cursor: 'move'
+                                }}>
+                                    <span style={{ marginRight: '0.75rem', fontSize: '1.25rem', color: '#9ca3af' }}>⋮⋮</span>
+                                    <span>{idx + 1}. {item}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+
+            case 'information':
+                const informationText = content?.question as string || content?.text as string || '';
+
+                return (
+                    <div style={{ marginTop: '1rem' }}>
+                        <div style={{
+                            padding: '1.5rem',
+                            backgroundColor: '#f0fdf4',
+                            borderRadius: '8px',
+                            border: '1px solid #86efac',
+                            lineHeight: '1.6'
+                        }}>
+                            <div style={{ color: '#15803d', fontSize: '1rem' }}>
+                                {informationText || <em style={{ color: '#9ca3af' }}>No information text provided.</em>}
+                            </div>
+                        </div>
+                        <div style={{ marginTop: '0.5rem' }}>
+                            <p style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
+                                ℹ️ This is an informational block - no answer required.
+                            </p>
+                        </div>
+                    </div>
+                );
+
             case 'open-question':
             default:
                 return (

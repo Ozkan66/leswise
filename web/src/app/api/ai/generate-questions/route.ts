@@ -102,20 +102,23 @@ Voor multiple_choice: { "question": "vraag tekst", "options": ["optie1", "optie2
 Voor single_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswer": 1 } (slechts 1 correct antwoord, index nummer)
 Voor short_answer: { "question": "vraag tekst", "expectedAnswers": ["antwoord1", "antwoord2"] }
 Voor essay: { "question": "vraag of opdracht tekst" }
+Voor information: { "question": "informatieve tekst of instructies" } (voor tekstblokken zonder antwoord vereist)
 Voor matching: { "question": "instructie tekst", "leftItems": ["item1", "item2", "item3"], "rightItems": ["match1", "match2", "match3"], "correctMatches": [0, 1, 2] } (correctMatches geeft per leftItem de index van het rightItem)
 Voor ordering: { "question": "instructie tekst", "items": ["item1", "item2", "item3", "item4"], "correctOrder": [2, 0, 3, 1] } (correctOrder geeft de juiste volgorde van indices)
 Voor fill_gaps: { "question": "context vraag", "textWithGaps": "tekst met [gap] markers" }
-Voor open-question: { "question": "open vraag tekst" } (voor open vragen waar studenten uitgebreid kunnen antwoorden)
+Voor open_question: { "question": "open vraag tekst" } (voor open vragen waar studenten uitgebreid kunnen antwoorden)
 
 BELANGRIJK VOOR MATCHING:
-- leftItems en rightItems moeten even lang zijn
-- correctMatches array geeft voor elke leftItem (in volgorde) de index van het bijbehorende rightItem
+- leftItems en rightItems moeten EXACT even lang zijn (bijv. beide 3 items)
+- correctMatches is een array die voor ELKE leftItem (op volgorde) aangeeft welke rightItem index erbij hoort
 - Voorbeeld: leftItems: ["1/2", "1/4", "3/4"], rightItems: ["0.75", "0.5", "0.25"], correctMatches: [1, 2, 0]
-  Betekent: 1/2 matches met rightItems[1] (0.5), 1/4 matches met rightItems[2] (0.25), 3/4 matches met rightItems[0] (0.75)
+  Dit betekent: leftItems[0] ("1/2") hoort bij rightItems[1] ("0.5"), leftItems[1] ("1/4") bij rightItems[2] ("0.25"), leftItems[2] ("3/4") bij rightItems[0] ("0.75")
 
 BELANGRIJK VOOR ORDERING:
-- items bevat de items in willekeurige volgorde
-- correctOrder geeft de juiste volgorde als indices (bijv [2, 0, 1, 3] betekent: item met index 2 eerst, dan index 0, dan index 1, dan index 3)
+- items bevat items die in de VERKEERDE volgorde staan
+- correctOrder is een array van indices die de JUISTE volgorde aangeeft
+- Voorbeeld: items: ["Installeren", "Testen", "Ontwerpen", "Bouwen"], correctOrder: [2, 0, 3, 1]
+  Dit betekent: eerst items[2] ("Ontwerpen"), dan items[0] ("Installeren"), dan items[3] ("Bouwen"), dan items[1] ("Testen")
 
 BELANGRIJK: Return een valid JSON object: { "questions": [...] }
 
