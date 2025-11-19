@@ -397,12 +397,12 @@ export default function TeacherSubmissionsPage() {
     }
 
     // Single Choice (one correct answer, answer is index as string)
-    if (element.task_type === 'single-choice' && typeof content.correctAnswers?.[0] !== 'undefined') {
+    if (element.task_type === 'single_choice' && typeof content.correctAnswers?.[0] !== 'undefined') {
       return String(content.correctAnswers[0]) === String(answer) ? maxScore : 0;
     }
 
     // Short Answer (case-insensitive, trims)
-    if (element.task_type === 'short-answer' && typeof content.correctAnswer === 'string') {
+    if (element.task_type === 'short_answer' && typeof content.correctAnswer === 'string') {
       return content.correctAnswer.trim().toLowerCase() === answer.trim().toLowerCase() ? maxScore : 0;
     }
 
@@ -435,7 +435,7 @@ export default function TeacherSubmissionsPage() {
     }
 
     // Fill the Gaps (answer is JSON.stringify(array of gap answers))
-    if (element.task_type === 'fill-gaps' && Array.isArray(content.gapAnswers)) {
+    if (element.task_type === 'fill_gaps' && Array.isArray(content.gapAnswers)) {
       try {
         const given = JSON.parse(answer);
         if (Array.isArray(given) && given.length === content.gapAnswers.length && given.every((val: string, i: number) => val.trim().toLowerCase() === String(content.gapAnswers[i]).trim().toLowerCase())) {
