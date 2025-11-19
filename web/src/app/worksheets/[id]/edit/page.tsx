@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../utils/supabaseClient';
-import { Worksheet, WorksheetElement } from '../../../../types/database';
+import { Worksheet, Task } from '../../../../types/database';
 import { ArrowLeft, Settings, PlusCircle, BarChart2, Trash2, Edit3 } from 'lucide-react';
 import { CreateTaskForm } from '@/components/CreateTaskForm';
 import { AdvancedTaskForm } from '@/components/AdvancedTaskForm';
 import { AIGenerator } from '../../../../components/AIGenerator';
+import { NotificationModal } from '../../../../components/NotificationModal';
 
 // Custom tabs component with inline styles
 const CustomTabs = ({
@@ -25,11 +26,11 @@ const CustomTabs = ({
 }: {
     worksheet: Worksheet | null;
     worksheetId: string;
-    tasks: WorksheetElement[];
+    tasks: Task[];
     onTitleChange: (title: string) => void;
     onDescriptionChange: (description: string) => void;
     onStatusChange: (status: string) => void;
-    onTaskAdded: (task: WorksheetElement) => void;
+    onTaskAdded: (task: Task) => void;
     onTaskDeleted: (taskId: string) => void;
     initialTab?: string;
     newTaskType?: string | null;
@@ -100,19 +101,19 @@ const CustomTabs = ({
                 marginTop: '16px'
             }}>
                 {activeTab === 'editor' && (
-                    <EditorTab 
-                        worksheet={worksheet} 
+                    <EditorTab
+                        worksheet={worksheet}
                         onTitleChange={onTitleChange}
                         onDescriptionChange={onDescriptionChange}
                     />
                 )}
                 {activeTab === 'settings' && (
-                    <SettingsTab 
-                        worksheet={worksheet} 
+                    <SettingsTab
+                        worksheet={worksheet}
                         onStatusChange={onStatusChange}
                     />
                 )}                {activeTab === 'add-tasks' && (
-                    <AddTasksTab 
+                    <AddTasksTab
                         worksheetId={worksheetId}
                         tasks={tasks}
                         onTaskAdded={onTaskAdded}
@@ -129,11 +130,11 @@ const CustomTabs = ({
 };
 
 // Functional components for tab content
-const EditorTab = ({ 
-    worksheet, 
-    onTitleChange, 
-    onDescriptionChange 
-}: { 
+const EditorTab = ({
+    worksheet,
+    onTitleChange,
+    onDescriptionChange
+}: {
     worksheet: Worksheet | null;
     onTitleChange: (title: string) => void;
     onDescriptionChange: (description: string) => void;
@@ -152,8 +153,8 @@ const EditorTab = ({
                 marginBottom: '4px'
             }}>Title</label>
             <input
-                id="worksheet-title" 
-                value={worksheet?.title || ''} 
+                id="worksheet-title"
+                value={worksheet?.title || ''}
                 onChange={(e) => onTitleChange(e.target.value)}
                 placeholder="Enter worksheet title"
                 style={{
@@ -179,8 +180,8 @@ const EditorTab = ({
                 marginBottom: '4px'
             }}>Description</label>
             <textarea
-                id="worksheet-description" 
-                value={worksheet?.description || ''} 
+                id="worksheet-description"
+                value={worksheet?.description || ''}
                 onChange={(e) => onDescriptionChange(e.target.value)}
                 placeholder="Enter worksheet description"
                 rows={4}
@@ -203,10 +204,10 @@ const EditorTab = ({
     </div>
 );
 
-const SettingsTab = ({ 
-    worksheet, 
-    onStatusChange, 
-}: { 
+const SettingsTab = ({
+    worksheet,
+    onStatusChange,
+}: {
     worksheet: Worksheet | null;
     onStatusChange: (status: string) => void;
 }) => (
@@ -223,9 +224,9 @@ const SettingsTab = ({
                 color: '#374151',
                 marginBottom: '4px'
             }}>Status</label>
-            <select 
-                id="worksheet-status" 
-                value={worksheet?.status || 'draft'} 
+            <select
+                id="worksheet-status"
+                value={worksheet?.status || 'draft'}
                 onChange={(e) => onStatusChange(e.target.value)}
                 style={{
                     width: '100%',
@@ -270,60 +271,96 @@ const SettingsTab = ({
     </div>
 );
 
-const AddTasksTab = ({ 
-    worksheetId, 
-    tasks, 
-    onTaskAdded, 
+const AddTasksTab = ({
+    worksheetId,
+    tasks,
+    onTaskAdded,
     onTaskDeleted,
-    newTaskType = null 
+    newTaskType = null
 }: {
     worksheetId: string,
-    tasks: WorksheetElement[],
-    onTaskAdded: (task: WorksheetElement) => void,
+    tasks: Task[],
+    onTaskAdded: (task: Task) => void,
     onTaskDeleted: (taskId: string) => void,
     newTaskType?: string | null
 }) => {
     const [showAIGenerator, setShowAIGenerator] = useState(false);
     const [showAdvancedForm, setShowAdvancedForm] = useState(!!newTaskType);
-    const [editingTask, setEditingTask] = useState<WorksheetElement | null>(null);
+    const [editingTask, setEditingTask] = useState<Task | null>(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; taskId: string | null }>({
+        show: false,
+        taskId: null
+    });
+    const [notification, setNotification] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
+        show: false,
+        message: '',
+        type: 'success'
+    });
 
     const handleDelete = async (taskId: string) => {
-        if (!window.confirm("Are you sure you want to delete this task?")) return;
+        // Show custom confirmation modal instead of window.confirm
+        setDeleteConfirmation({ show: true, taskId });
+    };
 
-        const { error } = await supabase.from('worksheet_elements').delete().eq('id', taskId);
+    const confirmDelete = async () => {
+        if (!deleteConfirmation.taskId) return;
+
+        const { error } = await supabase.from('tasks').delete().eq('id', deleteConfirmation.taskId);
 
         if (error) {
             alert("Could not delete the task.");
             console.error(error);
         } else {
-            alert("Task deleted successfully!");
-            onTaskDeleted(taskId);
+            // Call onTaskDeleted first to update state
+            onTaskDeleted(deleteConfirmation.taskId);
+            // Close confirmation modal
+            setDeleteConfirmation({ show: false, taskId: null });
+            // Then show notification after state update
+            setTimeout(() => {
+                setNotification({
+                    show: true,
+                    message: 'Task deleted successfully!',
+                    type: 'success'
+                });
+            }, 100);
         }
     };
 
-    const handleAITasksGenerated = (generatedTasks: WorksheetElement[]) => {
+    const cancelDelete = () => {
+        setDeleteConfirmation({ show: false, taskId: null });
+    };
+
+    const handleAITasksGenerated = (generatedTasks: Task[]) => {
         // Add all generated tasks
         generatedTasks.forEach(task => onTaskAdded(task));
     };
 
-    const handleEditTask = (task: WorksheetElement) => {
+    const handleEditTask = (task: Task) => {
         setEditingTask(task);
         setShowAdvancedForm(false); // Hide new task form if open
     };
 
-    const handleUpdateTask = async (updatedTask: WorksheetElement) => {
+    const handleUpdateTask = async (updatedTask: Task) => {
         // Update the task in the parent state
-        onTaskAdded(updatedTask); // This will trigger a re-render
         setEditingTask(null);
-        // Since we don't have direct access to update the tasks array here,
-        // we'll need to refresh the page or implement a proper update callback
-        window.location.reload();
+        // Use setTimeout to allow UI to update smoothly
+        setTimeout(() => {
+            onTaskAdded(updatedTask); // This will trigger a re-render
+        }, 1500);
+    };
+
+    const showNotification = (message: string, type: 'success' | 'error') => {
+        setNotification({
+            show: true,
+            message,
+            type
+        });
     };
 
     return (
         <div style={{ padding: '24px' }}>
             {/* Quick Add Task Button */}
-            <div style={{ 
+            <div style={{
                 marginBottom: '2rem',
                 padding: '1.5rem',
                 backgroundColor: '#f8fafc',
@@ -331,15 +368,15 @@ const AddTasksTab = ({
                 borderRadius: '8px',
                 textAlign: 'center'
             }}>
-                <h3 style={{ 
-                    fontSize: '1.125rem', 
-                    fontWeight: '600', 
+                <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
                     color: '#111827',
                     marginBottom: '0.5rem'
                 }}>
                     Choose how you want to add tasks
                 </h3>
-                <p style={{ 
+                <p style={{
                     color: '#6b7280',
                     marginBottom: '1rem',
                     fontSize: '0.875rem'
@@ -389,7 +426,7 @@ const AddTasksTab = ({
                 </button>
                 <span style={{ color: '#9ca3af' }}>or use quick form below</span>
             </div>
-            
+
             {/* Show Advanced Form Button */}
             {!showAdvancedForm && !newTaskType && (
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -413,7 +450,7 @@ const AddTasksTab = ({
                     </button>
                 </div>
             )}
-            
+
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
@@ -421,15 +458,16 @@ const AddTasksTab = ({
             }}>
                 <div>
                     <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>Quick Add Task</h3>
-                    <CreateTaskForm 
-                        worksheetId={worksheetId} 
-                        onTaskCreated={onTaskAdded} 
+                    <CreateTaskForm
+                        worksheetId={worksheetId}
+                        onTaskCreated={onTaskAdded}
                         existingTasksCount={tasks.length}
                         initialTaskType={newTaskType}
+                        onShowNotification={showNotification}
                     />
                 </div>
                 <div>
-                     <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>Current Tasks ({tasks.length})</h3>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>Current Tasks ({tasks.length})</h3>
                     {tasks.length > 0 ? tasks.map(task => (
                         <div key={task.id} style={{
                             padding: '16px',
@@ -443,10 +481,11 @@ const AddTasksTab = ({
                         }}>
                             <div style={{ flex: 1 }}>
                                 <p style={{ fontWeight: '600', margin: 0, color: '#111827' }}>
-                                    {(task.position || 0) + 1}. {
-                                        String((task.content as Record<string, unknown>)?.title || 
-                                        (task.content as Record<string, unknown>)?.question || 
-                                        'Untitled Task')
+                                    {(task.order_index || 0) + 1}. {
+                                        task.title ||
+                                        ((task.content as Record<string, unknown>)?.title as string) ||
+                                        ((task.content as Record<string, unknown>)?.question as string) ||
+                                        'Untitled Task'
                                     }
                                 </p>
                                 <p style={{
@@ -454,7 +493,7 @@ const AddTasksTab = ({
                                     color: '#6b7280',
                                     textTransform: 'capitalize',
                                     margin: '4px 0 0 0'
-                                }}>{task.type?.replace(/[-_]/g, ' ') || 'Task'}</p>
+                                }}>{task.task_type?.replace(/[-_]/g, ' ') || 'Task'}</p>
                                 {((task.content as Record<string, unknown>)?.description as string) && (
                                     <p style={{
                                         fontSize: '0.75rem',
@@ -468,7 +507,7 @@ const AddTasksTab = ({
                                 )}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <button 
+                                <button
                                     onClick={() => handleEditTask(task)}
                                     style={{
                                         display: 'inline-flex',
@@ -487,8 +526,12 @@ const AddTasksTab = ({
                                 >
                                     <Edit3 style={{ height: '1rem', width: '1rem' }} />
                                 </button>
-                                <button 
-                                    onClick={() => handleDelete(task.id)}
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleDelete(task.id);
+                                    }}
                                     style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -525,7 +568,7 @@ const AddTasksTab = ({
                     )}
                 </div>
             </div>
-            
+
             {/* Advanced Task Form - Create or Edit Mode */}
             {(showAdvancedForm || newTaskType || editingTask) && (
                 <AdvancedTaskForm
@@ -547,15 +590,101 @@ const AddTasksTab = ({
                     }}
                 />
             )}
-            
+
             {/* AI Generator Modal */}
             {showAIGenerator && (
                 <AIGenerator
                     worksheetId={worksheetId}
                     onTasksGenerated={handleAITasksGenerated}
                     onClose={() => setShowAIGenerator(false)}
+                    onShowNotification={showNotification}
                 />
             )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmation.show && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        padding: '2rem',
+                        maxWidth: '400px',
+                        width: '90%',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
+                    }}>
+                        <h3 style={{
+                            fontSize: '1.25rem',
+                            fontWeight: '600',
+                            color: '#111827',
+                            marginBottom: '1rem'
+                        }}>
+                            Delete Task
+                        </h3>
+                        <p style={{
+                            fontSize: '0.875rem',
+                            color: '#6b7280',
+                            marginBottom: '1.5rem'
+                        }}>
+                            Are you sure you want to delete this task? This action cannot be undone.
+                        </p>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '0.75rem'
+                        }}>
+                            <button
+                                onClick={cancelDelete}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '6px',
+                                    backgroundColor: 'white',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    backgroundColor: '#dc2626',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Notification Modal */}
+            <NotificationModal
+                show={notification.show}
+                message={notification.message}
+                type={notification.type}
+                onClose={() => setNotification({ show: false, message: '', type: 'success' })}
+            />
         </div>
     );
 };
@@ -586,7 +715,7 @@ export default function EditWorksheetPage() {
     const id = params.id as string;
     const router = useRouter();
     const [worksheet, setWorksheet] = useState<Worksheet | null>(null);
-    const [tasks, setTasks] = useState<WorksheetElement[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -602,7 +731,7 @@ export default function EditWorksheetPage() {
     const fetchWorksheetData = useCallback(async () => {
         if (!id) return;
         setLoading(true);
-        
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             setError('You must be logged in to edit worksheets.');
@@ -627,12 +756,12 @@ export default function EditWorksheetPage() {
             setOriginalWorksheet(worksheetData);
         }
 
-        // Fetch worksheet elements (tasks)
+        // Fetch tasks
         const { data: tasksData, error: tasksError } = await supabase
-            .from('worksheet_elements')
+            .from('tasks')
             .select('*')
             .eq('worksheet_id', id)
-            .order('position', { ascending: true });
+            .order('order_index', { ascending: true });
 
         if (tasksError) {
             console.error("Error fetching worksheet elements:", tasksError);
@@ -652,20 +781,20 @@ export default function EditWorksheetPage() {
     // Check for unsaved changes
     useEffect(() => {
         if (!originalWorksheet || !worksheet) return;
-        
-        const hasChanges = 
+
+        const hasChanges =
             originalWorksheet.title !== worksheet.title ||
             originalWorksheet.description !== worksheet.description ||
             originalWorksheet.status !== worksheet.status;
-            
+
         setHasUnsavedChanges(hasChanges);
     }, [worksheet, originalWorksheet]);
 
     const handleSaveChanges = async () => {
         if (!worksheet || !hasUnsavedChanges) return;
-        
+
         setSaving(true);
-        
+
         const { error } = await supabase
             .from('worksheets')
             .update({
@@ -685,7 +814,7 @@ export default function EditWorksheetPage() {
             setHasUnsavedChanges(false);
             alert("Worksheet saved successfully!");
         }
-        
+
         setSaving(false);
     };
 
@@ -704,8 +833,8 @@ export default function EditWorksheetPage() {
         setWorksheet({ ...worksheet, status: status as 'draft' | 'published' });
     };
 
-    const handleTaskAdded = (newTask: WorksheetElement) => {
-        setTasks(currentTasks => [...currentTasks, newTask].sort((a, b) => (a.position || 0) - (b.position || 0)));
+    const handleTaskAdded = (newTask: Task) => {
+        setTasks(currentTasks => [...currentTasks, newTask].sort((a, b) => (a.order_index || 0) - (b.order_index || 0)));
     };
 
     const handleTaskDeleted = (taskId: string) => {
@@ -727,19 +856,19 @@ export default function EditWorksheetPage() {
     return (
         <div style={{ backgroundColor: '#f9fafb', minHeight: '100vh' }}>
             <header style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-                <div style={{ 
-                    maxWidth: '1280px', 
-                    marginLeft: 'auto', 
-                    marginRight: 'auto', 
+                <div style={{
+                    maxWidth: '1280px',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
                     padding: '0 1rem'
                 }}>
-                    <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '1rem 0' 
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1rem 0'
                     }}>
-                         <button 
+                        <button
                             onClick={() => router.push('/worksheets')}
                             style={{
                                 display: 'inline-flex',
@@ -760,27 +889,27 @@ export default function EditWorksheetPage() {
                             <ArrowLeft style={{ marginRight: '8px', height: '1rem', width: '1rem' }} />
                             Back to Worksheets
                         </button>
-                        <h1 style={{ 
-                            fontSize: '1.25rem', 
-                            fontWeight: '600', 
-                            color: '#1f2937', 
-                            display: 'flex', 
+                        <h1 style={{
+                            fontSize: '1.25rem',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            display: 'flex',
                             alignItems: 'center',
                             margin: 0
                         }} title={worksheet.title}>
-                           {worksheet.title}
-                           {hasUnsavedChanges && (
-                               <span style={{
-                                   marginLeft: '8px',
-                                   padding: '4px 8px',
-                                   fontSize: '0.75rem',
-                                   backgroundColor: '#fef3c7',
-                                   color: '#92400e',
-                                   borderRadius: '9999px'
-                               }}>
-                                   Unsaved changes
-                               </span>
-                           )}
+                            {worksheet.title}
+                            {hasUnsavedChanges && (
+                                <span style={{
+                                    marginLeft: '8px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    backgroundColor: '#fef3c7',
+                                    color: '#92400e',
+                                    borderRadius: '9999px'
+                                }}>
+                                    Unsaved changes
+                                </span>
+                            )}
                         </h1>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Link href={`/worksheets/${worksheet.id}/preview`} style={{
@@ -798,9 +927,9 @@ export default function EditWorksheetPage() {
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                             }}>
-                               Preview
+                                Preview
                             </Link>
-                            <button 
+                            <button
                                 onClick={handleSaveChanges}
                                 disabled={!hasUnsavedChanges || saving}
                                 style={{
@@ -836,13 +965,13 @@ export default function EditWorksheetPage() {
                 </div>
             </header>
 
-            <main style={{ 
-                maxWidth: '1280px', 
-                marginLeft: 'auto', 
-                marginRight: 'auto', 
+            <main style={{
+                maxWidth: '1280px',
+                marginLeft: 'auto',
+                marginRight: 'auto',
                 padding: '2rem 1rem'
             }}>
-                <CustomTabs 
+                <CustomTabs
                     worksheet={worksheet}
                     worksheetId={id}
                     tasks={tasks}

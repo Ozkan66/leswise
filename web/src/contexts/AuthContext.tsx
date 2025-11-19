@@ -79,15 +79,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: process.env.NODE_ENV === 'development'
+          ? 'http://localhost:3000/'
+          : `${window.location.origin}/`,
       },
     });
-    
+
     // Provide more user-friendly error messages for common OAuth issues
     if (error) {
       // Log configuration hints for developers
       logOAuthConfigurationHint(provider === 'google' ? 'Google' : 'Microsoft', error);
-      
+
       if (error.message?.includes('provider is not enabled')) {
         return {
           error: {
@@ -98,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
     }
-    
+
     return { error };
   };
 
@@ -107,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       await logLogout(user.id);
     }
-    
+
     const { error } = await supabase.auth.signOut();
     return { error };
   };

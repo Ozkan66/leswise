@@ -3,16 +3,16 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { WorksheetElement } from '../types/database';
+import { Task } from '../types/database';
 
 interface CreateTaskFormProps {
   worksheetId: string;
-  onTaskCreated: (newTask: WorksheetElement) => void;
+  onTaskCreated: (newTask: Task) => void;
   existingTasksCount: number;
   initialTaskType?: string | null;
 }
 
-export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount, initialTaskType }: CreateTaskFormProps) => {
+export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount, initialTaskType, onShowNotification }: CreateTaskFormProps & { onShowNotification: (message: string, type: 'success' | 'error') => void }) => {
   const [title, setTitle] = useState('');
   const [taskType, setTaskType] = useState('open-question');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,7 +31,7 @@ export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount,
         'ordering': 'ordering',
         'fill_gaps': 'fill-gaps'
       };
-      
+
       const mappedType = taskTypeMap[initialTaskType] || 'open-question';
       setTaskType(mappedType);
       console.log('Setting initial task type:', initialTaskType, '→', mappedType);
@@ -41,36 +41,39 @@ export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !taskType) {
-        alert("Please fill in all fields.");
-        return;
+      alert("Please fill in all fields.");
+      return;
     }
 
     setIsSubmitting(true);
     console.log('Creating task:', { worksheetId, title, taskType, orderIndex: existingTasksCount });
 
     const { data, error } = await supabase
-      .from('worksheet_elements')
+      .from('tasks')
       .insert([{
         worksheet_id: worksheetId,
-        content: { 
+        title: title,
+        content: {
           title: title,
           question: title, // For backwards compatibility
           type: taskType
         }, // Structure content as JSONB object
-        type: taskType, // Keep type field for easy filtering
-        position: existingTasksCount, // WorksheetElement uses 'position' field
+        task_type: taskType, // Keep type field for easy filtering
+        order_index: existingTasksCount, // Task uses 'order_index' field
       }])
       .select()
       .single();
 
     if (error) {
       console.error('Error creating task:', error);
-      alert(`Failed to create task: ${error.message}`);
+      onShowNotification(`Failed to create task: ${error.message}`, 'error');
     } else if (data) {
       console.log('Task created successfully:', data);
-      alert("New task added successfully.");
+      // Call onTaskCreated first to update state
       onTaskCreated(data);
       setTitle(''); // Reset form
+      // Show notification via parent
+      onShowNotification('New task added successfully.', 'success');
     }
 
     setIsSubmitting(false);
@@ -79,14 +82,14 @@ export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount,
   return (
     <form onSubmit={handleSubmit} style={{ padding: '8px' }}>
       <div style={{ marginBottom: '16px' }}>
-        <label 
-          htmlFor="task-title" 
-          style={{ 
-            display: 'block', 
-            fontSize: '14px', 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: '4px' 
+        <label
+          htmlFor="task-title"
+          style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '4px'
           }}
         >
           Task Title
@@ -110,16 +113,16 @@ export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount,
           onBlur={(e) => (e.target as HTMLInputElement).style.borderColor = '#d1d5db'}
         />
       </div>
-      
+
       <div style={{ marginBottom: '16px' }}>
-        <label 
-          htmlFor="task-type" 
-          style={{ 
-            display: 'block', 
-            fontSize: '14px', 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: '4px' 
+        <label
+          htmlFor="task-type"
+          style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '4px'
           }}
         >
           Task Type
@@ -142,17 +145,19 @@ export const CreateTaskForm = ({ worksheetId, onTaskCreated, existingTasksCount,
         >
           <option value="open-question">Open Question</option>
           <option value="multiple-choice">Multiple Choice</option>
-          <option value="single-choice">Single Choice</option>
+          <option value="single_choice">Single Choice</option>
+          <option value="short_answer">Short Answer</option>
+          <option value="essay">Essay</option>
           <option value="information">Information/Text</option>
           <option value="matching">Matching</option>
           <option value="ordering">Ordering</option>
-          <option value="fill-gaps">Fill in the Gaps</option>
+          <option value="fill_gaps">Fill in the Gaps</option>
         </select>
       </div>
-      
+
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={isSubmitting}
           style={{
             padding: '8px 16px',

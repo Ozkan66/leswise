@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { WorksheetElement } from '../types/database';
+import { Task } from '../types/database';
 
 interface AdvancedTaskFormProps {
   worksheetId: string;
-  onTaskCreated: (newTask: WorksheetElement) => void;
+  onTaskCreated: (newTask: Task) => void;
   existingTasksCount: number;
   initialTaskType?: string | null;
   onCancel?: () => void;
-  editingTask?: WorksheetElement | null; // Add edit mode support
+  editingTask?: Task | null; // Add edit mode support
 }
 
 interface MultipleChoiceOption {
@@ -19,22 +19,22 @@ interface MultipleChoiceOption {
   isCorrect: boolean;
 }
 
-export const AdvancedTaskForm = ({ 
-  worksheetId, 
-  onTaskCreated, 
-  existingTasksCount, 
+export const AdvancedTaskForm = ({
+  worksheetId,
+  onTaskCreated,
+  existingTasksCount,
   initialTaskType,
   onCancel,
-  editingTask 
+  editingTask
 }: AdvancedTaskFormProps) => {
   const isEditMode = !!editingTask;
   const editContent = editingTask?.content as Record<string, unknown> | undefined;
-  
+
   // Determine initial task type: prefer editingTask type in edit mode, otherwise use initialTaskType
-  const initialType = isEditMode ? 
-    (editingTask?.type || 'open-question') : 
+  const initialType = isEditMode ?
+    (editingTask?.task_type || 'open-question') :
     (initialTaskType || 'open-question');
-  
+
   const [taskType, setTaskType] = useState(initialType);
   const [title, setTitle] = useState(
     String(editContent?.title || editContent?.question || '')
@@ -43,14 +43,14 @@ export const AdvancedTaskForm = ({
     String(editContent?.description || '')
   );
   const [points, setPoints] = useState(
-    editingTask?.max_score || 1
+    (editContent?.points as number) || 1
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update taskType when editingTask changes
   useEffect(() => {
     if (editingTask) {
-      const newTaskType = editingTask.type || 'open-question';
+      const newTaskType = editingTask.task_type || 'open-question';
       setTaskType(newTaskType);
     } else if (initialTaskType) {
       setTaskType(initialTaskType);
@@ -63,7 +63,7 @@ export const AdvancedTaskForm = ({
       return (editContent.options as string[]).map((text: string, index: number) => ({
         id: String(index + 1),
         text,
-        isCorrect: Array.isArray(editContent.correctAnswers) 
+        isCorrect: Array.isArray(editContent.correctAnswers)
           ? (editContent.correctAnswers as number[]).includes(index)
           : false
       }));
@@ -83,7 +83,7 @@ export const AdvancedTaskForm = ({
 
   // Matching specific state
   const [leftItems, setLeftItems] = useState<string[]>(
-    Array.isArray(editContent?.leftItems) 
+    Array.isArray(editContent?.leftItems)
       ? editContent.leftItems as string[]
       : ['', '']
   );
@@ -124,7 +124,7 @@ export const AdvancedTaskForm = ({
   };
 
   const toggleCorrectOption = (id: string) => {
-    setOptions(options.map(opt => 
+    setOptions(options.map(opt =>
       opt.id === id ? { ...opt, isCorrect: !opt.isCorrect } : opt
     ));
   };
@@ -233,11 +233,11 @@ export const AdvancedTaskForm = ({
       if (isEditMode && editingTask) {
         // Update existing task
         const { data, error } = await supabase
-          .from('worksheet_elements')
+          .from('tasks')
           .update({
             content: taskContent,
-            type: taskType,
-            max_score: points
+            task_type: taskType,
+            title: title
           })
           .eq('id', editingTask.id)
           .select()
@@ -255,13 +255,13 @@ export const AdvancedTaskForm = ({
       } else {
         // Create new task
         const { data, error } = await supabase
-          .from('worksheet_elements')
+          .from('tasks')
           .insert([{
             worksheet_id: worksheetId,
             content: taskContent,
-            type: taskType,
-            position: existingTasksCount,
-            max_score: points
+            task_type: taskType,
+            order_index: existingTasksCount,
+            title: title
           }])
           .select()
           .single();

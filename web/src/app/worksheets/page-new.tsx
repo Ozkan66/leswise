@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabaseClient';
 import { Worksheet, Folder } from '../../types/database';
 import { AIGenerator } from '../../components/AIGenerator';
+import { NotificationModal } from '../../components/NotificationModal';
 
 // --- Helper Components ---
 
 const ActionButton = ({ href, onClick, children }: { href?: string; onClick?: () => void; children: React.ReactNode }) => {
   if (onClick) {
     return (
-      <button 
+      <button
         onClick={onClick}
         className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
       >
@@ -20,7 +21,7 @@ const ActionButton = ({ href, onClick, children }: { href?: string; onClick?: ()
       </button>
     );
   }
-  
+
   return (
     <Link href={href!} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
       {children}
@@ -35,9 +36,8 @@ const WorksheetCard = ({ worksheet }: { worksheet: Worksheet }) => (
         <h3 className="text-lg font-bold text-gray-800">{worksheet.title}</h3>
         <p className="text-sm text-gray-500 mt-1">{worksheet.description || 'No description'}</p>
       </div>
-      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-        worksheet.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-      }`}>
+      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${worksheet.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
         {worksheet.status}
       </span>
     </div>
@@ -66,6 +66,11 @@ export default function WorksheetsPageNew() {
   const [error, setError] = useState<string | null>(null);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [aiWorksheetId, setAiWorksheetId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -172,7 +177,7 @@ export default function WorksheetsPageNew() {
     fetchInitialData();
     setShowAIGenerator(false);
     setAiWorksheetId(null);
-    
+
     // Navigate to edit page to see the generated tasks
     if (aiWorksheetId) {
       router.push(`/worksheets/${aiWorksheetId}/edit`);
@@ -182,6 +187,14 @@ export default function WorksheetsPageNew() {
   const handleCloseAIGenerator = () => {
     setShowAIGenerator(false);
     setAiWorksheetId(null);
+  };
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({
+      show: true,
+      message,
+      type
+    });
   };
 
   if (loading) {
@@ -259,8 +272,17 @@ export default function WorksheetsPageNew() {
           worksheetId={aiWorksheetId}
           onTasksGenerated={handleAITasksGenerated}
           onClose={handleCloseAIGenerator}
+          onShowNotification={showNotification}
         />
       )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        show={notification.show}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ show: false, message: '', type: 'success' })}
+      />
     </div>
   );
 }
