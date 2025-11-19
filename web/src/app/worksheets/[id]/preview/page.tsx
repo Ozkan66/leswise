@@ -4,21 +4,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../utils/supabaseClient';
-import { Worksheet, WorksheetElement } from '../../../../types/database';
+import { Worksheet, Task } from '../../../../types/database';
 import { ArrowLeft, Printer, Edit } from 'lucide-react';
 
 // This component will render a single task based on its type with proper previews
-const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }) => {
+const TaskRenderer = ({ task, index }: { task: Task; index: number }) => {
     const content = task.content as Record<string, unknown>;
     const title = String(content?.title || content?.question || 'Untitled Task');
-    
+
     const renderTaskContent = () => {
-        switch (task.type) {
+        switch (task.task_type) {
             case 'multiple-choice':
-            case 'multiple_choice':
                 const mcOptions = content?.options as string[] || [];
                 const correctAnswers = content?.correctAnswers as number[] || [];
-                
+
                 if (mcOptions.length === 0) {
                     return (
                         <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
@@ -28,7 +27,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                         </div>
                     );
                 }
-                
+
                 return (
                     <div style={{ marginTop: '1rem' }}>
                         {mcOptions.map((option, idx) => (
@@ -40,7 +39,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                                 border: correctAnswers.includes(idx) ? '1px solid #16a34a' : '1px solid #e5e7eb'
                             }}>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                    <input 
+                                    <input
                                         type="checkbox"
                                         disabled
                                         checked={correctAnswers.includes(idx)}
@@ -58,11 +57,10 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                     </div>
                 );
 
-            case 'single-choice':
             case 'single_choice':
                 const scOptions = content?.options as string[] || [];
                 const correctAnswer = content?.correctAnswer as number;
-                
+
                 if (scOptions.length === 0) {
                     return (
                         <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
@@ -72,7 +70,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                         </div>
                     );
                 }
-                
+
                 return (
                     <div style={{ marginTop: '1rem' }}>
                         {scOptions.map((option, idx) => (
@@ -84,7 +82,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                                 border: correctAnswer === idx ? '1px solid #16a34a' : '1px solid #e5e7eb'
                             }}>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                    <input 
+                                    <input
                                         type="radio"
                                         disabled
                                         checked={correctAnswer === idx}
@@ -103,7 +101,6 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                     </div>
                 );
 
-            case 'short-answer':
             case 'short_answer':
                 const expectedAnswers = content?.expectedAnswers as string[] || [];
                 return (
@@ -154,12 +151,10 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                 );
 
             case 'matching':
-            case 'matching-pairs':
-            case 'matching_pairs':
                 const leftItems = content?.leftItems as string[] || [];
                 const rightItems = content?.rightItems as string[] || [];
                 const correctMatches = content?.correctMatches as number[] || [];
-                
+
                 if (leftItems.length === 0 && rightItems.length === 0) {
                     return (
                         <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
@@ -169,7 +164,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                         </div>
                     );
                 }
-                
+
                 return (
                     <div style={{ marginTop: '1rem' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -223,10 +218,9 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                     </div>
                 );
 
-            case 'fill-gaps':
             case 'fill_gaps':
                 const textWithGaps = content?.textWithGaps as string || '';
-                
+
                 if (!textWithGaps) {
                     return (
                         <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
@@ -236,7 +230,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                         </div>
                     );
                 }
-                
+
                 // Replace [gap] markers with visible gap placeholders
                 const renderTextWithGaps = () => {
                     let gapNumber = 1;
@@ -246,7 +240,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                         return placeholder;
                     });
                 };
-                
+
                 return (
                     <div style={{ marginTop: '1rem' }}>
                         <div style={{
@@ -285,9 +279,9 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                         }}>
                             <div style={{ paddingTop: '0.5rem' }}>
                                 [Open question - students can provide detailed written answers here]
-                                {task.type && task.type !== 'open-question' && (
+                                {task.task_type && task.task_type !== 'open-question' && (
                                     <div style={{ marginTop: '0.5rem', color: '#dc2626', fontSize: '0.75rem' }}>
-                                        Warning: Unknown task type &quot;{task.type}&quot; - falling back to open question display
+                                        Warning: Unknown task type &quot;{task.task_type}&quot; - falling back to open question display
                                     </div>
                                 )}
                             </div>
@@ -296,7 +290,7 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                 );
         }
     };
-    
+
     return (
         <div style={{
             padding: '1.5rem',
@@ -345,15 +339,15 @@ const TaskRenderer = ({ task, index }: { task: WorksheetElement; index: number }
                     fontWeight: '500',
                     textTransform: 'capitalize'
                 }}>
-                    {task.type?.replace(/[-_]/g, ' ') || 'Task'}
+                    {task.task_type?.replace(/[-_]/g, ' ') || 'Task'}
                 </span>
-                {task.max_score && (
+                {(content?.points as number) && (
                     <span style={{
                         marginLeft: '0.5rem',
                         fontSize: '0.75rem',
                         color: '#6b7280'
                     }}>
-                        ({task.max_score} {task.max_score === 1 ? 'point' : 'points'})
+                        ({content.points as number} {(content.points as number) === 1 ? 'point' : 'points'})
                     </span>
                 )}
             </div>
@@ -367,7 +361,7 @@ export default function PreviewWorksheetPage() {
     const id = params.id as string;
     const router = useRouter();
     const [worksheet, setWorksheet] = useState<Worksheet | null>(null);
-    const [tasks, setTasks] = useState<WorksheetElement[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -390,12 +384,12 @@ export default function PreviewWorksheetPage() {
                 setWorksheet(worksheetData);
             }
 
-            // Fetch worksheet elements (tasks) from the correct table
+            // Fetch tasks from the correct table
             const { data: tasksData, error: tasksError } = await supabase
-                .from('worksheet_elements')
+                .from('tasks')
                 .select('*')
                 .eq('worksheet_id', id)
-                .order('position', { ascending: true });
+                .order('order_index', { ascending: true });
 
             if (tasksError) {
                 console.error("Error fetching worksheet elements:", tasksError);

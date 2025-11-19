@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { WorksheetElement } from '../types/database';
+import { Task } from '../types/database';
+import { NotificationModal } from './NotificationModal';
 
 interface AIGeneratorProps {
   worksheetId: string;
-  onTasksGenerated: (tasks: WorksheetElement[]) => void;
+  onTasksGenerated: (tasks: Task[]) => void;
   onClose: () => void;
 }
 
@@ -18,10 +19,20 @@ export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGenera
     multiple_choice: 0,
     single_choice: 0,
     short_answer: 0,
-    essay: 0
+    essay: 0,
+    matching: 0,
+    ordering: 0,
+    fill_gaps: 0,
+    'open-question': 0,
+    information: 0
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string>('');
+  const [notification, setNotification] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
 
   const handleQuestionTypeChange = (type: string, value: number) => {
     setQuestionTypes(prev => ({
@@ -83,8 +94,16 @@ export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGenera
       const result = await response.json();
       if (result.success && result.tasks) {
         onTasksGenerated(result.tasks);
-        alert(`Successfully generated ${result.tasks.length} tasks!`);
+        // Close modal first
         onClose();
+        // Then show notification after modal is closed
+        setTimeout(() => {
+          setNotification({
+            show: true,
+            message: `Successfully generated ${result.tasks.length} tasks!`,
+            type: 'success'
+          });
+        }, 100);
       } else {
         throw new Error(result.message || result.error || 'Unknown error occurred');
       }
@@ -262,7 +281,7 @@ export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGenera
           }}>
             Question Types (Total: {getTotalQuestions()}/10)
           </label>
-          
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
@@ -375,6 +394,13 @@ export const AIGenerator = ({ worksheetId, onTasksGenerated, onClose }: AIGenera
           </button>
         </div>
       </div>
+
+      <NotificationModal
+        show={notification.show}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ show: false, message: '', type: 'success' })}
+      />
     </div>
   );
 };

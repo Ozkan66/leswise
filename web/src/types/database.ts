@@ -56,7 +56,7 @@ export interface Task {
   title: string;
   task_type: 'open-question' | 'multiple-choice' | 'information' | 'text' | 'single_choice' | 'short_answer' | 'essay' | 'matching' | 'ordering' | 'fill_gaps';
   order_index: number;
-  content?: string; // For storing question details, options, etc.
+  content?: Record<string, any>; // For storing question details, options, etc.
   created_at?: string;
   updated_at?: string;
 }

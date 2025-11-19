@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     // Set the session
     const token = authHeader.split(' ')[1];
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
+
     if (userError || !user) {
       return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
     }
@@ -53,29 +53,32 @@ export async function POST(request: Request) {
     const tasks = [
       {
         worksheet_id: worksheet.id,
-        type: 'multiple_choice',
+        task_type: 'multiple-choice',
+        title: 'Wat is 5 + 3?',
         content: {
           question: 'Wat is 5 + 3?',
           options: ['6', '7', '8', '9'],
-          correct_answer: 2
+          correctAnswers: [2], // index of correct answer
+          points: 1,
+          allowMultiple: false
         },
-        position: 1,
-        max_score: 1
+        order_index: 1
       },
       {
         worksheet_id: worksheet.id,
-        type: 'open_question',
+        task_type: 'open-question',
+        title: 'Beschrijf in één zin wat je van wiskunde vindt.',
         content: {
           question: 'Beschrijf in één zin wat je van wiskunde vindt.',
-          expected_answer: 'Persoonlijke mening over wiskunde'
+          expected_answer: 'Persoonlijke mening over wiskunde',
+          points: 2
         },
-        position: 2,
-        max_score: 2
+        order_index: 2
       }
     ];
 
     const { data: elements, error: elementsError } = await supabase
-      .from('worksheet_elements')
+      .from('tasks')
       .insert(tasks)
       .select();
 
@@ -91,10 +94,10 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (studentsError || !students?.length) {
-      return NextResponse.json({ 
-        worksheet, 
-        elements, 
-        message: 'Worksheet created but no students found to share with' 
+      return NextResponse.json({
+        worksheet,
+        elements,
+        message: 'Worksheet created but no students found to share with'
       });
     }
 

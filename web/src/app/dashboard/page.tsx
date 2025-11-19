@@ -44,7 +44,7 @@ export default function TeacherHomepage() {
         } else {
           setProfile(userProfile);
         }
-        
+
         // Fetch recent worksheets for the list
         const { data: recentWorksheets, error: worksheetsError } = await supabase
           .from('worksheets')
@@ -104,13 +104,13 @@ export default function TeacherHomepage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
       {/* Fixed Sidebar */}
-      <div style={{ 
-        width: '256px', 
-        backgroundColor: 'white', 
-        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
-        position: 'fixed', 
-        height: '100vh', 
-        left: 0, 
+      <div style={{
+        width: '256px',
+        backgroundColor: 'white',
+        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+        position: 'fixed',
+        height: '100vh',
+        left: 0,
         top: 0,
         zIndex: 10
       }}>
@@ -123,7 +123,7 @@ export default function TeacherHomepage() {
             Plantyn Salesforce NL Institute SE
           </p>
         </div>
-        
+
         {/* Navigation */}
         <div style={{ padding: '24px 12px' }}>
           <div style={{ marginBottom: '8px' }}>
@@ -212,8 +212,9 @@ export default function TeacherHomepage() {
               <span style={{ marginRight: '12px' }}>📩</span>
               Inzendingen
             </Link>
+
           </div>
-          
+
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '32px' }}>
             <Link href="/profile" style={{
               display: 'flex',
@@ -263,8 +264,8 @@ export default function TeacherHomepage() {
       {/* Main Content Area */}
       <div style={{ marginLeft: '256px', flex: 1 }}>
         {/* Top Header */}
-        <div style={{ 
-          backgroundColor: 'white', 
+        <div style={{
+          backgroundColor: 'white',
           borderBottom: '1px solid #e5e7eb',
           padding: '24px 32px'
         }}>
@@ -315,11 +316,11 @@ export default function TeacherHomepage() {
         {/* Dashboard Content */}
         <div style={{ padding: '32px' }}>
           {/* Stats Cards */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-            gap: '24px', 
-            marginBottom: '32px' 
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '24px',
+            marginBottom: '32px'
           }}>
             <Link href="/worksheets" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
@@ -440,10 +441,10 @@ export default function TeacherHomepage() {
             <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
               Snel naar
             </h2>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '16px' 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '16px'
             }}>
               <Link href="/worksheets" style={{ textDecoration: 'none' }}>
                 <button style={{

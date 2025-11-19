@@ -23,7 +23,7 @@ interface AIGeneratedQuestion {
 // Mock question generator for testing when OpenAI API key is not available
 function generateMockQuestions(questionTypes: QuestionTypeRequest, subject: string, topic: string): AIGeneratedQuestion[] {
   const questions: AIGeneratedQuestion[] = [];
-  
+
   const mockTemplates = {
     multiple_choice: {
       title: `Multiple Choice: ${topic} in ${subject}`,
@@ -76,7 +76,7 @@ async function generateQuestionsWithAI(
   questionTypes: QuestionTypeRequest
 ): Promise<AIGeneratedQuestion[]> {
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  
+
   if (!openaiApiKey) {
     // For development/testing purposes, return mock questions
     console.log('⚠️ OpenAI API key not configured, returning mock questions for testing');
@@ -96,32 +96,45 @@ Vak: ${subject}
 Onderwerp: ${topic}
 Gevraagde vragen: ${requestedQuestions}
 
-Genereer de vragen in JSON formaat. Elke vraag moet direct de vraag data bevatten zonder extra wrapper keys:
+Genereer een JSON object met een key "questions" die een array bevat van de vraag objecten. Elke vraag moet direct de vraag data bevatten:
 
-Voor multiple_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswers": [0] }
-Voor single_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswers": [0] }
-Voor short_answer: { "question": "vraag tekst", "correctAnswer": "antwoord" }
+Voor multiple_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswers": [0, 2] } (meerdere correct mogelijk)
+Voor single_choice: { "question": "vraag tekst", "options": ["optie1", "optie2", "optie3", "optie4"], "correctAnswer": 1 } (slechts 1 correct antwoord, index nummer)
+Voor short_answer: { "question": "vraag tekst", "expectedAnswers": ["antwoord1", "antwoord2"] }
 Voor essay: { "question": "vraag of opdracht tekst" }
-Voor matching: { "question": "instructie tekst", "pairs": [{"left": "item1", "right": "match1"}, {"left": "item2", "right": "match2"}] }
+Voor matching: { "question": "instructie tekst", "leftItems": ["item1", "item2", "item3"], "rightItems": ["match1", "match2", "match3"], "correctMatches": [0, 1, 2] } (correctMatches geeft per leftItem de index van het rightItem)
+Voor ordering: { "question": "instructie tekst", "items": ["item1", "item2", "item3", "item4"], "correctOrder": [2, 0, 3, 1] } (correctOrder geeft de juiste volgorde van indices)
 Voor fill_gaps: { "question": "context vraag", "textWithGaps": "tekst met [gap] markers" }
+Voor open-question: { "question": "open vraag tekst" } (voor open vragen waar studenten uitgebreid kunnen antwoorden)
 
-BELANGRIJK: Return alleen een JSON array met de vraag objecten, ZONDER type wrappers zoals "multiple_choice": {...}
+BELANGRIJK VOOR MATCHING:
+- leftItems en rightItems moeten even lang zijn
+- correctMatches array geeft voor elke leftItem (in volgorde) de index van het bijbehorende rightItem
+- Voorbeeld: leftItems: ["1/2", "1/4", "3/4"], rightItems: ["0.75", "0.5", "0.25"], correctMatches: [1, 2, 0]
+  Betekent: 1/2 matches met rightItems[1] (0.5), 1/4 matches met rightItems[2] (0.25), 3/4 matches met rightItems[0] (0.75)
+
+BELANGRIJK VOOR ORDERING:
+- items bevat de items in willekeurige volgorde
+- correctOrder geeft de juiste volgorde als indices (bijv [2, 0, 1, 3] betekent: item met index 2 eerst, dan index 0, dan index 1, dan index 3)
+
+BELANGRIJK: Return een valid JSON object: { "questions": [...] }
 
 Voorbeeld voor 1 meerkeuzevraag:
-[
-  {
-    "question": "Wat is 2 + 2?",
-    "options": ["3", "4", "5", "6"],
-    "correctAnswers": [1]
-  }
-]
+{
+  "questions": [
+    {
+      "question": "Wat is 2 + 2?",
+      "options": ["3", "4", "5", "6"],
+      "correctAnswer": 1
+    }
+  ]
+}
 
 Zorg ervoor dat:
 - Vragen geschikt zijn voor het opgegeven leerjaar
 - Content relevant is voor het vak en onderwerp
 - Antwoorden correct en logisch zijn
-- Gebruik Nederlandse taal (behalve als het vak een vreemde taal is)
-- Return alleen de JSON array, geen extra tekst of code blocks`;
+- Gebruik Nederlandse taal (behalve als het vak een vreemde taal is)`;
 
   console.log('🤖 AI PROMPT VERZONDEN:');
   console.log('='.repeat(80));
@@ -137,10 +150,11 @@ Zorg ervoor dat:
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
+        response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
-            content: 'Je bent een educatieve AI-assistent die hoogkwalitatieve werkbladcontent genereert. Antwoord ALLEEN met valid JSON arrays, geen code blocks, geen extra tekst, geen wrapper keys.'
+            content: 'Je bent een educatieve AI-assistent die hoogkwalitatieve werkbladcontent genereert. Antwoord ALLEEN met valid JSON.'
           },
           {
             role: 'user',
@@ -155,7 +169,7 @@ Zorg ervoor dat:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenAI API Response:', response.status, errorText);
-      
+
       if (response.status === 401) {
         throw new Error('OpenAI API key is ongeldig. Controleer de API key configuratie.');
       } else if (response.status === 429) {
@@ -181,19 +195,33 @@ Zorg ervoor dat:
     }
 
     // Parse AI response
+    let parsedData;
     let parsedQuestions;
     try {
-      parsedQuestions = JSON.parse(aiResponse);
+      parsedData = JSON.parse(aiResponse);
+      parsedQuestions = parsedData.questions;
+
+      if (!parsedQuestions && Array.isArray(parsedData)) {
+        // Fallback if AI returned array directly despite instructions
+        parsedQuestions = parsedData;
+      }
+
       console.log('✅ JSON PARSING SUCCESVOL:', JSON.stringify(parsedQuestions, null, 2));
     } catch (parseError) {
       console.log('❌ JSON PARSING GEFAALD, probeer JSON extractie...');
       console.log('Parse error:', parseError);
       // Try to extract JSON from response if it contains extra text
-      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         console.log('🔍 JSON GEVONDEN via regex:', jsonMatch[0]);
-        parsedQuestions = JSON.parse(jsonMatch[0]);
-        console.log('✅ JSON EXTRACTIE SUCCESVOL:', JSON.stringify(parsedQuestions, null, 2));
+        try {
+          parsedData = JSON.parse(jsonMatch[0]);
+          parsedQuestions = parsedData.questions;
+          console.log('✅ JSON EXTRACTIE SUCCESVOL:', JSON.stringify(parsedQuestions, null, 2));
+        } catch (e) {
+          console.error('❌ JSON EXTRACTIE OOK GEFAALD');
+          throw new Error('Ongeldig JSON antwoord van AI. Probeer het opnieuw.');
+        }
       } else {
         console.error('❌ GEEN JSON GEVONDEN in response:', aiResponse);
         throw new Error('Ongeldig JSON antwoord van AI. Probeer het opnieuw.');
@@ -202,7 +230,7 @@ Zorg ervoor dat:
 
     if (!Array.isArray(parsedQuestions)) {
       console.error('❌ RESPONSE IS GEEN ARRAY:', typeof parsedQuestions, parsedQuestions);
-      throw new Error('AI antwoord is geen geldige array van vragen');
+      throw new Error('AI antwoord bevat geen geldige "questions" array');
     }
 
     console.log('📝 TRANSFORMATIE NAAR WORKSHEET ELEMENTS:');
@@ -219,13 +247,13 @@ Zorg ervoor dat:
         for (let i = 0; i < count && questionIndex < parsedQuestions.length; i++) {
           const aiQuestion = parsedQuestions[questionIndex];
           console.log(`   - Verwerken vraag ${questionIndex}:`, JSON.stringify(aiQuestion, null, 2));
-          
+
           const transformedQuestion = {
             type,
             content: aiQuestion, // Store as object, not stringified
             maxScore: type === 'essay' ? 5 : (type === 'matching' ? 2 : 1)
           };
-          
+
           console.log(`   - Getransformeerd naar:`, JSON.stringify(transformedQuestion, null, 2));
           questions.push(transformedQuestion);
           questionIndex++;
@@ -243,12 +271,12 @@ Zorg ervoor dat:
 
   } catch (error) {
     console.error('AI generation error:', error);
-    
+
     if (error instanceof Error) {
       // Re-throw our custom error messages
       throw error;
     }
-    
+
     throw new Error('Onbekende fout bij genereren van vragen. Probeer het opnieuw.');
   }
 }
@@ -256,7 +284,7 @@ Zorg ervoor dat:
 export async function POST(request: NextRequest) {
   try {
     const body: GenerateRequest = await request.json();
-    
+
     const { worksheetId, gradeLevel, subject, topic, questionTypes } = body;
 
     // Validate required fields
@@ -299,41 +327,72 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     // Generate questions with AI
     const generatedQuestions = await generateQuestionsWithAI(
       gradeLevel,
-      subject, 
+      subject,
       topic,
       questionTypes
     );
 
     // Get current position for new elements
     const { data: existingElements } = await supabase
-      .from('worksheet_elements')
-      .select('position')
+      .from('tasks')
+      .select('order_index')
       .eq('worksheet_id', worksheetId)
-      .order('position', { ascending: false })
+      .order('order_index', { ascending: false })
       .limit(1);
 
-    const nextPosition = existingElements && existingElements.length > 0 
-      ? (existingElements[0].position || 0) + 1 
+    const nextPosition = existingElements && existingElements.length > 0
+      ? (existingElements[0].order_index || 0) + 1
       : 1;
 
-    // Insert generated questions as worksheet elements
-    const elementsToInsert = generatedQuestions.map((question, index) => ({
-      worksheet_id: worksheetId,
-      type: question.type,
-      content: question.content,
-      max_score: question.maxScore,
-      position: nextPosition + index
-    }));
+    // Insert generated questions as tasks
+    const elementsToInsert = generatedQuestions.map((question, index) => {
+      // Map internal type names to exact DB schema values (from CHECK constraint)
+      // DB allows: 'open-question', 'multiple-choice', 'information', 'text', 
+      // 'single_choice', 'short_answer', 'essay', 'matching', 'ordering', 'fill_gaps'
+      const typeMap: Record<string, string> = {
+        multiple_choice: 'multiple-choice',
+        single_choice: 'single_choice',
+        short_answer: 'short_answer',
+        fill_gaps: 'fill_gaps',
+        matching: 'matching',
+        essay: 'essay',
+        text: 'text',
+        information: 'information',
+        ordering: 'ordering',
+        open_question: 'open-question'
+      };
+      const taskType = typeMap[question.type] ?? question.type;
+
+      // Ensure we always have a title – fall back to the question text or a generic label
+      const title =
+        (question.content.title as string) ||
+        (question.content.question as string) ||
+        `Generated ${taskType}`;
+
+      // Remove title from content to avoid duplicate column conflict
+      const { title: _unused, ...contentWithoutTitle } = question.content as Record<string, any>;
+
+      return {
+        worksheet_id: worksheetId,
+        task_type: taskType,
+        content: {
+          ...contentWithoutTitle,
+          points: question.maxScore // Store maxScore in content
+        },
+        title,
+        order_index: nextPosition + index
+      };
+    });
 
     console.log('💾 DATABASE INSERT VOORBEREID:');
     console.log('Elements to insert:', JSON.stringify(elementsToInsert, null, 2));
 
     const { data: insertedElements, error: insertError } = await supabase
-      .from('worksheet_elements')
+      .from('tasks')
       .insert(elementsToInsert)
       .select(); // Select the inserted elements to return them
 

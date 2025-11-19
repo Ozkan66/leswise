@@ -32,7 +32,7 @@ export default function Navigation() {
   return (
     <nav style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}>
       <Link href="/" style={{ marginRight: 12, fontWeight: 'bold' }}>Leswise</Link>
-      
+
       {user ? (
         <>
           <Link href="/groups" style={{ marginRight: 12 }}>Groups</Link>
@@ -51,11 +51,11 @@ export default function Navigation() {
             <Link href="/teacher-submissions" style={{ marginRight: 12 }}>Teacher Submissions</Link>
           )}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Link 
-              href="/profile" 
-              style={{ 
+            <Link
+              href="/profile"
+              style={{
                 color: '#666',
-                textDecoration: 'none' 
+                textDecoration: 'none'
               }}
             >
               Welkom, {user.user_metadata?.first_name || user.email}
@@ -76,9 +76,9 @@ export default function Navigation() {
         </>
       ) : (
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
-          <Link 
-            href="/login" 
-            style={{ 
+          <Link
+            href="/login"
+            style={{
               padding: '6px 12px',
               backgroundColor: '#0070f3',
               color: 'white',
@@ -88,9 +88,9 @@ export default function Navigation() {
           >
             Inloggen
           </Link>
-          <Link 
-            href="/register" 
-            style={{ 
+          <Link
+            href="/register"
+            style={{
               padding: '6px 12px',
               backgroundColor: '#28a745',
               color: 'white',

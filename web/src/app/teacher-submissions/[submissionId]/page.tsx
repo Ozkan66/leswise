@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Worksheet, Submission, SubmissionElement, WorksheetElement } from "../../../types/database";
+import { Worksheet, Submission, SubmissionElement, Task } from "../../../types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +17,7 @@ export default function SubmissionReviewPage() {
 
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [worksheet, setWorksheet] = useState<Worksheet | null>(null);
-  const [elements, setElements] = useState<WorksheetElement[]>([]);
+  const [elements, setElements] = useState<Task[]>([]);
   const [answers, setAnswers] = useState<SubmissionElement[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,9 +50,10 @@ export default function SubmissionReviewPage() {
     }
     setWorksheet(worksheetData);
     const { data: elementsData, error: elementsError } = await supabase
-      .from("worksheet_elements")
+      .from("tasks")
       .select("*")
-      .eq("worksheet_id", worksheetData.id);
+      .eq("worksheet_id", worksheetData.id)
+      .order('order_index', { ascending: true });
     if (elementsError) {
       setError("Fout bij laden van vragen.");
       setLoading(false);
@@ -78,13 +79,13 @@ export default function SubmissionReviewPage() {
   }, [submissionId]);
 
   // Auto-score functie (supports all question types)
-  const calculateAutoScore = (element: WorksheetElement, answer: string): number => {
+  const calculateAutoScore = (element: Task, answer: string): number => {
     if (!element.content || answer == null) return 0;
-    const content = typeof element.content === 'string' ? JSON.parse(element.content) : element.content;
-    const maxScore = element.max_score || 1;
+    const content = element.content as Record<string, any>;
+    const maxScore = (content.points as number) || 1;
 
     // Multiple Choice (multiple correct answers, answer is comma-separated indices)
-    if (element.type === 'multiple_choice' && Array.isArray(content.correctAnswers)) {
+    if (element.task_type === 'multiple-choice' && Array.isArray(content.correctAnswers)) {
       const correct = content.correctAnswers.map(String).sort();
       const given = (answer || '').split(',').map((s: string) => s.trim()).filter(Boolean).sort();
       if (correct.length === given.length && correct.every((v: string, i: number) => v === given[i])) {
@@ -94,56 +95,56 @@ export default function SubmissionReviewPage() {
     }
 
     // Single Choice (one correct answer, answer is index as string)
-    if (element.type === 'single_choice' && typeof content.correctAnswers?.[0] !== 'undefined') {
+    if (element.task_type === 'single-choice' && typeof content.correctAnswers?.[0] !== 'undefined') {
       return String(content.correctAnswers[0]) === String(answer) ? maxScore : 0;
     }
 
     // Short Answer (case-insensitive, trims)
-    if (element.type === 'short_answer' && typeof content.correctAnswer === 'string') {
+    if (element.task_type === 'short-answer' && typeof content.correctAnswer === 'string') {
       return content.correctAnswer.trim().toLowerCase() === answer.trim().toLowerCase() ? maxScore : 0;
     }
 
     // Essay: altijd handmatig beoordelen
-    if (element.type === 'essay') {
+    if (element.task_type === 'essay') {
       return 0;
     }
 
     // Matching (answer is JSON.stringify(array of selected right values))
-    if (element.type === 'matching' && Array.isArray(content.pairs)) {
+    if (element.task_type === 'matching' && Array.isArray(content.pairs)) {
       try {
         const given = JSON.parse(answer);
         const correct = content.pairs.map((p: { right: string }) => p.right);
         if (Array.isArray(given) && given.length === correct.length && given.every((val: string, i: number) => val === correct[i])) {
           return maxScore;
         }
-      } catch {}
+      } catch { }
       return 0;
     }
 
     // Ordering (answer is JSON.stringify(array of user order))
-    if (element.type === 'ordering' && Array.isArray(content.correctOrder)) {
+    if (element.task_type === 'ordering' && Array.isArray(content.correctOrder)) {
       try {
         const given = JSON.parse(answer);
         if (Array.isArray(given) && given.length === content.correctOrder.length && given.every((val: string, i: number) => val === content.correctOrder[i])) {
           return maxScore;
         }
-      } catch {}
+      } catch { }
       return 0;
     }
 
     // Fill the Gaps (answer is JSON.stringify(array of gap answers))
-    if (element.type === 'fill_gaps' && Array.isArray(content.gapAnswers)) {
+    if (element.task_type === 'fill-gaps' && Array.isArray(content.gapAnswers)) {
       try {
         const given = JSON.parse(answer);
         if (Array.isArray(given) && given.length === content.gapAnswers.length && given.every((val: string, i: number) => val.trim().toLowerCase() === String(content.gapAnswers[i]).trim().toLowerCase())) {
           return maxScore;
         }
-      } catch {}
+      } catch { }
       return 0;
     }
 
     // Text/information: geen score
-    if (element.type === 'text') {
+    if (element.task_type === 'text' || element.task_type === 'information') {
       return 0;
     }
 
@@ -220,7 +221,7 @@ export default function SubmissionReviewPage() {
         }
       }
       const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
-      const maxScore = elements.reduce((sum, el) => sum + (el.max_score || 1), 0);
+      const maxScore = elements.reduce((sum, el) => sum + ((el.content?.points as number) || 1), 0);
       const { data: subData, error: subError } = await supabase
         .from("submissions")
         .update({ feedback: `Beoordeeld: ${totalScore}/${maxScore} punten`, score: totalScore, status: 'graded' })
@@ -243,7 +244,7 @@ export default function SubmissionReviewPage() {
   // Totale score berekenen
   const elMaxScores: Record<string, number> = {};
   elements.forEach(el => {
-    elMaxScores[el.id] = typeof el.max_score === "number" ? el.max_score : 1;
+    elMaxScores[el.id] = (el.content?.points as number) || 1;
   });
   const scored = answers
     .map(a => {
@@ -325,12 +326,12 @@ export default function SubmissionReviewPage() {
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <label>
-                    Score (0-{el.max_score ?? 1}):
+                    Score (0-{(el.content?.points as number) || 1}):
                     <input
                       name="score"
                       type="number"
                       min={0}
-                      max={el.max_score ?? 1}
+                      max={(el.content?.points as number) || 1}
                       step="0.1"
                       value={answerObj?.score !== null && answerObj?.score !== undefined ? String(answerObj.score) : ''}
                       onChange={e => {
@@ -338,10 +339,10 @@ export default function SubmissionReviewPage() {
                         setAnswers(prev => prev.map(a => a.worksheet_element_id === el.id ? { ...a, score: val === '' ? undefined : parseFloat(val) } : a));
                       }}
                       style={{ width: 100, padding: 6, marginLeft: 8, marginTop: 4 }}
-                      placeholder={`Score (max ${el.max_score ?? 1})`}
+                      placeholder={`Score (max ${(el.content?.points as number) || 1})`}
                     />
                     <span style={{ marginLeft: 8, color: '#888' }}>
-                      /{el.max_score ?? 1} punten
+                      /{(el.content?.points as number) || 1} punten
                     </span>
                   </label>
                 </div>
@@ -351,7 +352,7 @@ export default function SubmissionReviewPage() {
                 <div style={{ marginTop: 6, color: '#7f7' }}><b>Feedback:</b> {answerObj.feedback}</div>
               )}
               {typeof answerObj?.score !== 'undefined' && answerObj?.score !== null && (
-                <div style={{ color: '#7af' }}><b>Score:</b> {answerObj.score}/{el.max_score ?? 1}</div>
+                <div style={{ color: '#7af' }}><b>Score:</b> {answerObj.score}/{(el.content?.points as number) || 1}</div>
               )}
             </div>
           );

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Worksheet, Submission, SubmissionElement, WorksheetElement } from "../../types/database";
+import { Worksheet, Submission, SubmissionElement, Task } from "../../types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -158,7 +158,7 @@ const WorksheetSubmissionsCards = ({ worksheet }: { worksheet: Worksheet }) => {
 export default function TeacherSubmissionsPage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [elements, setElements] = useState<WorksheetElement[]>([]);
+  const [elements, setElements] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch worksheets owned by the teacher
@@ -166,17 +166,17 @@ export default function TeacherSubmissionsPage() {
     const fetchWorksheets = async () => {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
-      
+
       console.log('Current user ID:', user.id);
-      
+
       const { data, error } = await supabase
         .from("worksheets")
         .select("id, title, owner_id")
         .eq("owner_id", user.id);
-        
+
       console.log('Worksheets query result:', { data, error });
       console.log('Worksheet IDs:', data?.map(w => ({ id: w.id, title: w.title })));
-      
+
       if (error) setError(error.message);
       else setWorksheets(data || []);
     };
@@ -189,41 +189,41 @@ export default function TeacherSubmissionsPage() {
     setSelectedSubmission(null); // Reset detail panel every time worksheet changes
     setAnswers([]);
     setElements([]);
-    
+
     const fetchSubmissions = async () => {
       console.log('Fetching submissions for worksheet:', selectedSubmission);
-      
+
       // First, let's verify the current user and worksheet ownership
       const user = (await supabase.auth.getUser()).data.user;
       console.log('Current user in fetchSubmissions:', user?.id);
-      
+
       // Verify worksheet ownership
       const { data: worksheetData, error: worksheetError } = await supabase
         .from("worksheets")
         .select("id, title, owner_id")
         .eq("id", selectedSubmission)
         .single();
-        
+
       console.log('Selected worksheet details:', { worksheetData, worksheetError });
-      
+
       // Debug: Check total submissions count
       const { count: totalSubmissions } = await supabase
         .from("submissions")
         .select("*", { count: 'exact', head: true })
         .eq("worksheet_id", selectedSubmission);
-        
+
       console.log('Total submissions for this worksheet:', totalSubmissions);
-      
+
       // Debug: Show all submissions to see what worksheet_ids exist
       const { data: allSubmissions } = await supabase
         .from("submissions")
         .select("id, worksheet_id, user_id, created_at")
         .limit(10);
-        
+
       console.log('All submissions in database:', allSubmissions);
       console.log('Submission details:', JSON.stringify(allSubmissions, null, 2));
       console.log('Looking for worksheet_id:', selectedSubmission);
-      
+
       // Check if the submission's worksheet is owned by this teacher
       if (allSubmissions && allSubmissions.length > 0) {
         const submissionWorksheetId = allSubmissions[0].worksheet_id;
@@ -232,15 +232,15 @@ export default function TeacherSubmissionsPage() {
           .select("id, title, owner_id")
           .eq("id", submissionWorksheetId)
           .single();
-          
+
         console.log('Submission is for worksheet:', submissionWorksheet);
         console.log('Is this teacher the owner?', submissionWorksheet?.owner_id === user?.id);
       }
-      
+
       // Try multiple query approaches to handle different database schemas
       let submissionsData = null;
       let submissionsError = null;
-      
+
       // Approach 1: Try with user_profiles join (specify the relationship)
       const { data: data1, error: error1 } = await supabase
         .from("submissions")
@@ -255,14 +255,14 @@ export default function TeacherSubmissionsPage() {
         `)
         .eq("worksheet_id", selectedSubmission)
         .order("submitted_at", { ascending: false });
-        
+
       if (!error1 && data1) {
         submissionsData = data1;
         console.log('✅ Submissions found with user_profiles join:', submissionsData);
         console.log('First submission structure:', JSON.stringify(submissionsData[0], null, 2));
       } else {
         console.log('❌ user_profiles join failed:', error1);
-        
+
         // Approach 1b: Try alternative join syntax
         const { data: data1b, error: error1b } = await supabase
           .from("submissions")
@@ -277,13 +277,13 @@ export default function TeacherSubmissionsPage() {
           `)
           .eq("worksheet_id", selectedSubmission)
           .order("submitted_at", { ascending: false });
-          
+
         if (!error1b && data1b) {
           submissionsData = data1b;
           console.log('✅ Submissions found with alternative user_profiles join:', submissionsData);
         } else {
           console.log('❌ Alternative user_profiles join also failed:', error1b);
-          
+
           // Approach 2: Try basic query without join
           const { data: data2, error: error2 } = await supabase
             .from("submissions")
@@ -297,7 +297,7 @@ export default function TeacherSubmissionsPage() {
             `)
             .eq("worksheet_id", selectedSubmission)
             .order("submitted_at", { ascending: false });
-            
+
           if (!error2 && data2) {
             // Replace manual enrichment loop with mapping that returns new objects
             submissionsData = await Promise.all(
@@ -323,7 +323,7 @@ export default function TeacherSubmissionsPage() {
           }
         }
       }
-        
+
       // Set final result
       if (submissionsData) {
         // setSubmissions(submissionsData); // Verwijderd: geen setSubmissions in deze scope
@@ -333,7 +333,7 @@ export default function TeacherSubmissionsPage() {
       } else {
         // setSubmissions([]); // Verwijderd: geen setSubmissions in deze scope
       }
-      
+
     };
     fetchSubmissions();
   }, [selectedSubmission]);
@@ -341,19 +341,20 @@ export default function TeacherSubmissionsPage() {
   // Fetch answers for selected submission
   useEffect(() => {
     if (!selectedSubmission) return;
-    
+
     const fetchElements = async () => {
       const { data: elementsData, error: elError } = await supabase
-        .from("worksheet_elements")
-        .select("id, content, max_score")
-        .eq("worksheet_id", selectedSubmission);
-      
+        .from("tasks")
+        .select("id, content, task_type, order_index, worksheet_id, title")
+        .eq("worksheet_id", selectedSubmission)
+        .order('order_index', { ascending: true });
+
       console.log('Elements data:', elementsData);
       console.log('Elements error:', elError);
-      
+
       if (elError) setError(elError.message);
       else setElements(elementsData || []);
-      
+
     };
     fetchElements();
   }, [selectedSubmission]);
@@ -368,25 +369,25 @@ export default function TeacherSubmissionsPage() {
         .from("submission_elements")
         .select("worksheet_element_id, answer, feedback, score")
         .eq("submission_id", selectedSubmission.id);
-      
+
       console.log('Fetched answers:', data);
       console.log('Answers error:', error);
-      
+
       if (error) setError(error.message);
       else setAnswers(data || []);
-      
+
     };
     fetchAnswers();
   }, [selectedSubmission, elements, answers]);
 
   // Auto-scoring function (supports all question types)
-  const calculateAutoScore = (element: WorksheetElement, answer: string): number => {
+  const calculateAutoScore = (element: Task, answer: string): number => {
     if (!element.content || answer == null) return 0;
-    const content = typeof element.content === 'string' ? JSON.parse(element.content) : element.content;
-    const maxScore = element.max_score || 1;
+    const content = element.content as Record<string, any>;
+    const maxScore = (content.points as number) || 1;
 
     // Multiple Choice (multiple correct answers, answer is comma-separated indices)
-    if (element.type === 'multiple_choice' && Array.isArray(content.correctAnswers)) {
+    if (element.task_type === 'multiple-choice' && Array.isArray(content.correctAnswers)) {
       const correct = content.correctAnswers.map(String).sort();
       const given = (answer || '').split(',').map(s => s.trim()).filter(Boolean).sort();
       if (correct.length === given.length && correct.every((v: string, i: number) => v === given[i])) {
@@ -396,56 +397,56 @@ export default function TeacherSubmissionsPage() {
     }
 
     // Single Choice (one correct answer, answer is index as string)
-    if (element.type === 'single_choice' && typeof content.correctAnswers?.[0] !== 'undefined') {
+    if (element.task_type === 'single-choice' && typeof content.correctAnswers?.[0] !== 'undefined') {
       return String(content.correctAnswers[0]) === String(answer) ? maxScore : 0;
     }
 
     // Short Answer (case-insensitive, trims)
-    if (element.type === 'short_answer' && typeof content.correctAnswer === 'string') {
+    if (element.task_type === 'short-answer' && typeof content.correctAnswer === 'string') {
       return content.correctAnswer.trim().toLowerCase() === answer.trim().toLowerCase() ? maxScore : 0;
     }
 
     // Essay: altijd handmatig beoordelen
-    if (element.type === 'essay') {
+    if (element.task_type === 'essay') {
       return 0;
     }
 
     // Matching (answer is JSON.stringify(array of selected right values))
-    if (element.type === 'matching' && Array.isArray(content.pairs)) {
+    if (element.task_type === 'matching' && Array.isArray(content.pairs)) {
       try {
         const given = JSON.parse(answer);
         const correct = content.pairs.map((p: { right: string }) => p.right);
         if (Array.isArray(given) && given.length === correct.length && given.every((val: string, i: number) => val === correct[i])) {
           return maxScore;
         }
-      } catch {}
+      } catch { }
       return 0;
     }
 
     // Ordering (answer is JSON.stringify(array of user order))
-    if (element.type === 'ordering' && Array.isArray(content.correctOrder)) {
+    if (element.task_type === 'ordering' && Array.isArray(content.correctOrder)) {
       try {
         const given = JSON.parse(answer);
         if (Array.isArray(given) && given.length === content.correctOrder.length && given.every((val: string, i: number) => val === content.correctOrder[i])) {
           return maxScore;
         }
-      } catch {}
+      } catch { }
       return 0;
     }
 
     // Fill the Gaps (answer is JSON.stringify(array of gap answers))
-    if (element.type === 'fill_gaps' && Array.isArray(content.gapAnswers)) {
+    if (element.task_type === 'fill-gaps' && Array.isArray(content.gapAnswers)) {
       try {
         const given = JSON.parse(answer);
         if (Array.isArray(given) && given.length === content.gapAnswers.length && given.every((val: string, i: number) => val.trim().toLowerCase() === String(content.gapAnswers[i]).trim().toLowerCase())) {
           return maxScore;
         }
-      } catch {}
+      } catch { }
       return 0;
     }
 
     // Text/information: geen score
-    if (element.type === 'text') {
+    if (element.task_type === 'text' || element.task_type === 'information') {
       return 0;
     }
 
@@ -472,12 +473,12 @@ export default function TeacherSubmissionsPage() {
         }
         return answer;
       });
-      
+
       // Update state if scores were auto-calculated
-      const hasNewScores = updatedAnswers.some((updated, index) => 
+      const hasNewScores = updatedAnswers.some((updated, index) =>
         (updated.score !== answers[index].score) && (answers[index].score === null || answers[index].score === undefined)
       );
-      
+
       if (hasNewScores) {
         setAnswers(updatedAnswers);
         console.log('Auto-scored answers (only unscored):', updatedAnswers);
@@ -541,7 +542,7 @@ export default function TeacherSubmissionsPage() {
                       }
                       return answer;
                     });
-                    
+
                     setAnswers(updatedAnswers);
                     alert('Automatische scoring toegepast!');
                   } catch (err) {
@@ -567,28 +568,28 @@ export default function TeacherSubmissionsPage() {
                     for (const answer of answers) {
                       const { error } = await supabase
                         .from('submission_elements')
-                        .update({ 
-                          feedback: answer.feedback || '', 
-                          score: answer.score || 0 
+                        .update({
+                          feedback: answer.feedback || '',
+                          score: answer.score || 0
                         })
                         .eq('submission_id', selectedSubmission.id)
                         .eq('worksheet_element_id', answer.worksheet_element_id);
-                      
+
                       if (error) throw error;
                     }
-                    
+
                     // Update the submission with overall feedback
                     const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
                     const { error: submissionError } = await supabase
                       .from('submissions')
-                      .update({ 
+                      .update({
                         feedback: 'Beoordeeld door docent',
-                        score: totalScore 
+                        score: totalScore
                       })
                       .eq('id', selectedSubmission.id);
-                    
+
                     if (submissionError) throw submissionError;
-                    
+
                     alert('✅ Beoordeling opgeslagen in database!');
                   } catch (err) {
                     setError(`Error saving: ${(err as Error).message}`);
@@ -613,32 +614,32 @@ export default function TeacherSubmissionsPage() {
                     for (const answer of answers) {
                       const { error } = await supabase
                         .from('submission_elements')
-                        .update({ 
-                          feedback: answer.feedback || '', 
-                          score: answer.score || 0 
+                        .update({
+                          feedback: answer.feedback || '',
+                          score: answer.score || 0
                         })
                         .eq('submission_id', selectedSubmission.id)
                         .eq('worksheet_element_id', answer.worksheet_element_id);
-                      
+
                       if (error) throw error;
                     }
-                    
+
                     // Update submission status
                     const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
-                    const maxScore = elements.reduce((sum, el) => sum + (el.max_score || 1), 0);
+                    const maxScore = elements.reduce((sum, el) => sum + ((el.content?.points as number) || 1), 0);
                     const { error: submissionError } = await supabase
                       .from('submissions')
-                      .update({ 
+                      .update({
                         feedback: `Beoordeeld: ${totalScore}/${maxScore} punten`,
-                        score: totalScore 
+                        score: totalScore
                       })
                       .eq('id', selectedSubmission.id);
-                    
+
                     if (submissionError) throw submissionError;
-                    
+
                     // TODO: Send notification to student (email/in-app notification)
                     alert('✅ Beoordeling verstuurd naar student!');
-                    
+
                     // Refresh the page data
                     window.location.reload();
                   } catch (err) {
@@ -663,7 +664,7 @@ export default function TeacherSubmissionsPage() {
             // Map: elementId -> max_score
             const elMaxScores: Record<string, number> = {};
             elements.forEach(el => {
-              elMaxScores[el.id] = typeof el.max_score === 'number' ? el.max_score : 1;
+              elMaxScores[el.id] = (el.content?.points as number) || 1;
             });
             // Only count answers for elements that exist
             const scored = answers
@@ -684,27 +685,25 @@ export default function TeacherSubmissionsPage() {
 
           {elements.map(el => {
             const answerObj = answers.find(a => a.worksheet_element_id === el.id);
-            
+
             console.log('Element:', el);
             console.log('Element content type:', typeof el.content);
             console.log('Element content value:', el.content);
-            
+
             // Handle content as either string (old format) or object (new format)
             let questionText = 'Question text not available';
             try {
-              const contentObj = typeof el.content === 'string' 
-                ? JSON.parse(el.content) 
-                : el.content;
+              const contentObj = el.content as Record<string, any>;
               console.log('Parsed content:', contentObj);
               // Try different possible property names for the question text
-              questionText = (contentObj as { question?: string; text?: string })?.question 
-                          || (contentObj as { question?: string; text?: string })?.text 
-                          || 'Question text not available';
+              questionText = (contentObj as { question?: string; text?: string })?.question
+                || (contentObj as { question?: string; text?: string })?.text
+                || 'Question text not available';
             } catch (e) {
               console.error('Error parsing content:', e);
               questionText = 'Error parsing question content';
             }
-            
+
             return (
               <div key={el.id} style={{ marginBottom: 24, borderBottom: '1px solid #333', paddingBottom: 12 }}>
                 <b>{questionText}</b>
@@ -717,14 +716,14 @@ export default function TeacherSubmissionsPage() {
                     const form = e.target as HTMLFormElement;
                     const feedback = (form.elements.namedItem('feedback') as HTMLInputElement).value;
                     const score = (form.elements.namedItem('score') as HTMLInputElement).value;
-                    
+
                     setError(null);
                     const { error } = await supabase
                       .from('submission_elements')
                       .update({ feedback, score: score ? parseInt(score) : null })
                       .eq('submission_id', selectedSubmission.id)
                       .eq('worksheet_element_id', el.id);
-                    
+
                     if (error) setError(error.message);
                     else {
                       setAnswers(answers.map(a => a.worksheet_element_id === el.id ? { ...a, feedback, score: parseFloat(score) || 0 } : a));
@@ -746,19 +745,19 @@ export default function TeacherSubmissionsPage() {
                   </div>
                   <div style={{ marginBottom: 8 }}>
                     <label>
-                      Score (0-{el.max_score ?? 1}):
+                      Score (0-{(el.content?.points as number) || 1}):
                       <input
                         name="score"
                         type="number"
                         min={0}
-                        max={el.max_score ?? 1}
+                        max={(el.content?.points as number) || 1}
                         step="0.1"
                         defaultValue={answerObj?.score !== null && answerObj?.score !== undefined ? String(answerObj.score) : ''}
                         style={{ width: 100, padding: 6, marginLeft: 8, marginTop: 4 }}
-                        placeholder={`Score (max ${el.max_score ?? 1})`}
+                        placeholder={`Score (max ${(el.content?.points as number) || 1})`}
                       />
                       <span style={{ marginLeft: 8, color: '#888' }}>
-                        /{el.max_score ?? 1} punten
+                        /{(el.content?.points as number) || 1} punten
                       </span>
                     </label>
                   </div>
