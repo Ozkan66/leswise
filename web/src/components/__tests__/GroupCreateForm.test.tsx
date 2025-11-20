@@ -55,11 +55,11 @@ describe('GroupCreateForm', () => {
     render(<GroupCreateForm onGroupCreated={onGroupCreated} />);
 
     // Fill in the form - use new placeholder text
-    const nameInput = screen.getByPlaceholderText('Enter group name');
+    const nameInput = screen.getByPlaceholderText('Bijv. Wiskunde 4B');
     fireEvent.change(nameInput, { target: { value: 'Test Group' } });
 
     // Submit the form
-    const submitButton = screen.getByText('Create Group');
+    const submitButton = screen.getByText('Groep Aanmaken');
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -88,10 +88,10 @@ describe('GroupCreateForm', () => {
 
     render(<GroupCreateForm />);
 
-    const nameInput = screen.getByPlaceholderText('Enter group name');
+    const nameInput = screen.getByPlaceholderText('Bijv. Wiskunde 4B');
     fireEvent.change(nameInput, { target: { value: 'Test Group' } });
 
-    const submitButton = screen.getByText('Create Group');
+    const submitButton = screen.getByText('Groep Aanmaken');
     fireEvent.click(submitButton);
 
     await waitFor(() => {
