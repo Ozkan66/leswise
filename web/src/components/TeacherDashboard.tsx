@@ -54,7 +54,8 @@ export default function TeacherDashboard() {
         setWorksheets(recentWorksheets as Worksheet[]);
       }
 
-      // Fetch stats in parallel - no need for separate worksheets query
+      // Fetch stats in parallel
+      // Note: We fetch worksheet IDs (not just count) because we need them for the submissions query
       const [
         worksheetsResult,
         foldersCount,

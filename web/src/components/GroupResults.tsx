@@ -43,6 +43,18 @@ interface SubmissionResult {
   status: string;
 }
 
+// Type for Supabase join result
+interface SubmissionWithWorksheet {
+  user_id: string;
+  worksheet_id: string;
+  score: number | null;
+  created_at: string;
+  worksheets: {
+    id: string;
+    title: string;
+  } | null;
+}
+
 export default function GroupResults({ groupId, groupName, onClose }: GroupResultsProps) {
   const [results, setResults] = useState<SubmissionResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,12 +137,9 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
       const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]) || []);
 
       // Format results (single pass through submissions)
-      const formattedResults: SubmissionResult[] = submissionsData.map((sub) => {
+      const formattedResults: SubmissionResult[] = (submissionsData as SubmissionWithWorksheet[]).map((sub) => {
         const profile = profilesMap.get(sub.user_id);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const worksheet = Array.isArray((sub as any).worksheets) 
-          ? (sub as any).worksheets[0] 
-          : (sub as any).worksheets;
+        const worksheet = sub.worksheets;
 
         return {
           user_id: sub.user_id,
