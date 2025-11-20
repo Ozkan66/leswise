@@ -108,23 +108,24 @@ export default function TeacherSubmissionsPage() {
         const totalSubmissions = wsSubmissions.length;
         const gradedSubmissions = wsSubmissions.filter(s => s.status === 'graded').length;
 
-        // Calculate average score
-        let totalScore = 0;
-        let scoreCount = 0;
-        wsSubmissions.forEach(sub => {
+        // Calculate average score using reduce
+        const { totalScore, scoreCount } = wsSubmissions.reduce((acc, sub) => {
           if (sub.score) {
-            // Parse score format "X/Y"
             const parts = sub.score.toString().split('/');
             if (parts.length === 2) {
               const obtained = parseFloat(parts[0]);
               const max = parseFloat(parts[1]);
               if (!isNaN(obtained) && !isNaN(max) && max > 0) {
-                totalScore += (obtained / max) * 100;
-                scoreCount++;
+                return {
+                  totalScore: acc.totalScore + (obtained / max) * 100,
+                  scoreCount: acc.scoreCount + 1
+                };
               }
             }
           }
-        });
+          return acc;
+        }, { totalScore: 0, scoreCount: 0 });
+        
         const averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
 
         const lastSubmissionDate = wsSubmissions.length > 0 ? wsSubmissions[0].submitted_at : null;

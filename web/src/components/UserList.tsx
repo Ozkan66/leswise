@@ -1,7 +1,8 @@
 "use client";
+import { memo } from "react";
 import { User } from "../types/database";
 
-export default function UserList({ users }: { users: User[] }) {
+const UserList = memo(function UserList({ users }: { users: User[] }) {
   return (
     <div style={{margin: '16px 0', padding: '12px', background: '#f8f8ff', borderRadius: '8px'}}>
       <strong>Alle gebruikers:</strong>
@@ -13,4 +14,6 @@ export default function UserList({ users }: { users: User[] }) {
       </ul>
     </div>
   );
-}
+});
+
+export default UserList;

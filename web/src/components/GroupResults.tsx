@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../utils/supabaseClient";
 import {
   Dialog,
@@ -55,7 +55,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
     setError("");
 
     try {
-      // 1. Get all group members
+      // Get all group members first to filter submissions
       const { data: membersData, error: membersError } = await supabase
         .from("group_members")
         .select("user_id")
@@ -78,17 +78,40 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
         return;
       }
 
-      // 2. Fetch submissions for these users
-      const { data: submissionsData, error: submissionsError } = await supabase
-        .from("submissions")
-        .select("user_id, worksheet_id, score, created_at")
-        .in("user_id", userIds);
+      // Fetch all data in parallel using joins to reduce round trips
+      const [submissionsResult, profilesResult] = await Promise.all([
+        supabase
+          .from("submissions")
+          .select(`
+            user_id,
+            worksheet_id,
+            score,
+            created_at,
+            worksheets (
+              id,
+              title
+            )
+          `)
+          .in("user_id", userIds),
+        supabase
+          .from("user_profiles")
+          .select("user_id, first_name, last_name, email")
+          .in("user_id", userIds)
+      ]);
+
+      const { data: submissionsData, error: submissionsError } = submissionsResult;
+      const { data: profilesData, error: profilesError } = profilesResult;
 
       if (submissionsError) {
         console.error("Error fetching submissions:", submissionsError);
         setError(`Kon resultaten niet laden: ${submissionsError.message}`);
         setLoading(false);
         return;
+      }
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        // Continue without profiles if needed
       }
 
       if (!submissionsData || submissionsData.length === 0) {
@@ -98,35 +121,16 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
         return;
       }
 
-      // 3. Fetch user profiles manually
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("user_profiles")
-        .select("user_id, first_name, last_name, email")
-        .in("user_id", userIds);
+      // Create lookup map for profiles (single pass)
+      const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]) || []);
 
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        // Continue without profiles if needed, but better to show error
-      }
-
-      // 4. Fetch worksheet details manually
-      const worksheetIds = Array.from(new Set(submissionsData.map(s => s.worksheet_id)));
-      const { data: worksheetsData, error: worksheetsError } = await supabase
-        .from("worksheets")
-        .select("id, title")
-        .in("id", worksheetIds);
-
-      if (worksheetsError) {
-        console.error("Error fetching worksheets:", worksheetsError);
-      }
-
-      // 5. Combine data in memory
-      const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]));
-      const worksheetsMap = new Map(worksheetsData?.map(w => [w.id, w]));
-
+      // Format results (single pass through submissions)
       const formattedResults: SubmissionResult[] = submissionsData.map((sub) => {
         const profile = profilesMap.get(sub.user_id);
-        const worksheet = worksheetsMap.get(sub.worksheet_id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const worksheet = Array.isArray((sub as any).worksheets) 
+          ? (sub as any).worksheets[0] 
+          : (sub as any).worksheets;
 
         return {
           user_id: sub.user_id,
@@ -144,12 +148,15 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
 
       setResults(formattedResults);
 
-      // Extract unique worksheets for filtering
-      const uniqueWorksheets = Array.from(
-        new Map(formattedResults.map(r => [r.worksheet_id, { id: r.worksheet_id, title: r.worksheet_title }]))
-          .values()
-      );
-      setWorksheets(uniqueWorksheets);
+      // Extract unique worksheets using reduce (single pass)
+      const worksheetsMap = formattedResults.reduce((acc, r) => {
+        if (!acc.has(r.worksheet_id)) {
+          acc.set(r.worksheet_id, { id: r.worksheet_id, title: r.worksheet_title });
+        }
+        return acc;
+      }, new Map<string, { id: string; title: string }>());
+      
+      setWorksheets(Array.from(worksheetsMap.values()));
 
     } catch (err) {
       setError("Er is een onverwachte fout opgetreden");
@@ -163,11 +170,16 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
     fetchResults();
   }, [fetchResults]);
 
-  const filteredResults = selectedWorksheet === 'all'
-    ? results
-    : results.filter(r => r.worksheet_id === selectedWorksheet);
+  // Memoize filtered results to avoid re-filtering on every render
+  const filteredResults = useMemo(() => 
+    selectedWorksheet === 'all'
+      ? results
+      : results.filter(r => r.worksheet_id === selectedWorksheet),
+    [selectedWorksheet, results]
+  );
 
-  const getGroupStats = () => {
+  // Memoize stats calculation to avoid recalculation on every render
+  const stats = useMemo(() => {
     const totalSubmissions = filteredResults.length;
     const completedSubmissions = filteredResults.filter(r => r.score !== null).length;
     const averageScore = filteredResults
@@ -180,9 +192,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
       averageScore: Math.round(averageScore * 100) / 100,
       completionRate: totalSubmissions > 0 ? Math.round((completedSubmissions / totalSubmissions) * 100) : 0
     };
-  };
-
-  const stats = getGroupStats();
+  }, [filteredResults]);
 
   return (
     <Dialog open={true} onOpenChange={onClose}>

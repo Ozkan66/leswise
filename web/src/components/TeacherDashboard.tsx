@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '../utils/supabaseClient';
 import { Worksheet } from '../types/database';
@@ -19,85 +19,85 @@ export default function TeacherDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+  // Memoize fetchData to avoid recreating on every render
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
 
-      if (user) {
-        // Fetch user profile
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', user.id)
-          .single();
+    if (user) {
+      // Fetch user profile
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .single();
 
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          // Continue with null profile - don't block the rest of the dashboard
-        } else {
-          setProfile(userProfile);
-        }
-
-        // Fetch recent worksheets
-        const { data: recentWorksheets, error: worksheetsError } = await supabase
-          .from('worksheets')
-          .select('id, title, description')
-          .eq('owner_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(2);
-
-        if (worksheetsError) {
-          console.error('Error fetching worksheets:', worksheetsError.message);
-          setWorksheets([]);
-        } else if (recentWorksheets) {
-          setWorksheets(recentWorksheets as Worksheet[]);
-        }
-
-        // Fetch stats
-        const { data: ownedWorksheets } = await supabase
-          .from('worksheets')
-          .select('id')
-          .eq('owner_id', user.id);
-        const worksheetIdsOwnedByUser = ownedWorksheets?.map(w => w.id) || [];
-
-        const [
-          worksheetsCount,
-          foldersCount,
-          groupsCount,
-          submissionsCount,
-        ] = await Promise.all([
-          supabase.from('worksheets').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
-          supabase.from('folders').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
-          supabase.from('group_members').select('group_id', { count: 'exact', head: true }).eq('user_id', user.id),
-          worksheetIdsOwnedByUser.length > 0
-            ? supabase.from('submissions').select('id', { count: 'exact', head: true }).in('worksheet_id', worksheetIdsOwnedByUser)
-            : Promise.resolve({ count: 0, error: null })
-        ]);
-
-        setStats({
-          worksheets: worksheetsCount.count ?? 0,
-          folders: foldersCount.count ?? 0,
-          groups: groupsCount.count ?? 0,
-          submissions: submissionsCount.count ?? 0,
-        });
-
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        // Continue with null profile - don't block the rest of the dashboard
       } else {
-        setWorksheets([]);
-        setStats({ worksheets: 0, folders: 0, groups: 0, submissions: 0 });
+        setProfile(userProfile);
       }
-      setLoading(false);
-    };
 
-    fetchData();
+      // Fetch recent worksheets
+      const { data: recentWorksheets, error: worksheetsError } = await supabase
+        .from('worksheets')
+        .select('id, title, description')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+      if (worksheetsError) {
+        console.error('Error fetching worksheets:', worksheetsError.message);
+        setWorksheets([]);
+      } else if (recentWorksheets) {
+        setWorksheets(recentWorksheets as Worksheet[]);
+      }
+
+      // Fetch stats in parallel - no need for separate worksheets query
+      const [
+        worksheetsResult,
+        foldersCount,
+        groupsCount,
+      ] = await Promise.all([
+        supabase.from('worksheets').select('id', { count: 'exact' }).eq('owner_id', user.id),
+        supabase.from('folders').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
+        supabase.from('group_members').select('group_id', { count: 'exact', head: true }).eq('user_id', user.id),
+      ]);
+
+      // Get worksheet IDs from the result (already fetched)
+      const worksheetIdsOwnedByUser = worksheetsResult.data?.map(w => w.id) || [];
+
+      // Only fetch submissions if there are worksheets
+      const submissionsCount = worksheetIdsOwnedByUser.length > 0
+        ? await supabase.from('submissions').select('id', { count: 'exact', head: true }).in('worksheet_id', worksheetIdsOwnedByUser)
+        : { count: 0, error: null };
+
+      setStats({
+        worksheets: worksheetsResult.count ?? 0,
+        folders: foldersCount.count ?? 0,
+        groups: groupsCount.count ?? 0,
+        submissions: submissionsCount.count ?? 0,
+      });
+
+    } else {
+      setWorksheets([]);
+      setStats({ worksheets: 0, folders: 0, groups: 0, submissions: 0 });
+    }
+    setLoading(false);
   }, []);
 
-  const statsCards = [
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Memoize statsCards to avoid recreating on every render
+  const statsCards = useMemo(() => [
     { icon: FileText, label: "Werkbladen", value: stats.worksheets, href: "/worksheets", color: "text-teal-600" },
     { icon: Folder, label: "Mappen", value: stats.folders, href: "/folders", color: "text-orange-600" },
     { icon: Users, label: "Klassen", value: stats.groups, href: "/groups", color: "text-blue-600" },
     { icon: Inbox, label: "Inzendingen", value: stats.submissions, href: "/teacher-submissions", color: "text-green-600" },
-  ];
+  ], [stats]);
 
   return (
     <div className="min-h-screen bg-background">
