@@ -26,3 +26,8 @@ web/node_modules
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite
+db.sqlite
