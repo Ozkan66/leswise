@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { WorksheetElement } from "../types/database";
 
@@ -35,17 +35,18 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
         // Check for missing max_score
         const missing = (data || []).filter(el => typeof el.max_score !== 'number' || el.max_score === null);
         if (missing.length > 0) {
-          // Update all with missing max_score to 1
-          await Promise.all(missing.map(el =>
-            supabase.from("worksheet_elements").update({ max_score: 1 }).eq("id", el.id)
-          ));
-          // Fetch again
-          const { data: newData } = await supabase
+          // Batch update all with missing max_score to 1 using a single query
+          const missingIds = missing.map(el => el.id);
+          await supabase
             .from("worksheet_elements")
-            .select("id, type, content, position, worksheet_id, max_score, worksheets(owner_id)")
-            .eq("worksheet_id", worksheetId)
-            .order("position", { ascending: true });
-          setElements(newData || []);
+            .update({ max_score: 1 })
+            .in("id", missingIds);
+          
+          // Update the data in memory instead of re-fetching
+          const updatedData = (data || []).map(el => 
+            missingIds.includes(el.id) ? { ...el, max_score: 1 } : el
+          );
+          setElements(updatedData);
         } else {
           setElements(data || []);
         }
@@ -55,7 +56,8 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     if (worksheetId) fetchElements();
   }, [worksheetId]);
 
-  const renderElementContent = (el: WorksheetElement) => {
+  // Memoize renderElementContent to avoid recreating on each render
+  const renderElementContent = useCallback((el: WorksheetElement) => {
     try {
       // Handle content as either string (old format) or object (new format)
       const content = typeof el.content === 'string' 
@@ -127,9 +129,9 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     } catch {
       return <div style={{ color: 'red' }}>Invalid content format</div>;
     }
-  };
+  }, []);
 
-  const handleEdit = (el: WorksheetElement) => {
+  const handleEdit = useCallback((el: WorksheetElement) => {
     setEditingId(el.id);
     try {
       // Handle content as either string (old format) or object (new format)
@@ -141,9 +143,9 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       // Fallback for invalid content format
       setEditContent({ text: typeof el.content === 'string' ? el.content : 'Invalid content' });
     }
-  };
+  }, []);
 
-  const handleEditSave = async (el: WorksheetElement) => {
+  const handleEditSave = useCallback(async (el: WorksheetElement) => {
     if (!editContent) {
       setEditingId(null);
       return;
@@ -172,7 +174,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       .eq("worksheet_id", worksheetId)
       .order("position", { ascending: true });
     setElements(data || []);
-  };
+  }, [editContent, worksheetId]);
 
   const renderEditForm = (el: WorksheetElement) => {
     if (!editContent) return null;
@@ -396,32 +398,31 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     const [draggedElement] = newElements.splice(draggedIndex, 1);
     newElements.splice(targetIndex, 0, draggedElement);
 
-    // Update positions in database
-    const updates = newElements.map((el, index) => ({
-      id: el.id,
+    // Update positions for all affected elements
+    const updatedElements = newElements.map((el, index) => ({
+      ...el,
       position: index + 1
     }));
 
-    try {
-      await Promise.all(
-        updates.map(update =>
-          supabase
-            .from("worksheet_elements")
-            .update({ position: update.position })
-            .eq("id", update.id)
-        )
-      );
+    // Optimistically update UI
+    setElements(updatedElements);
 
-      // Refresh the list
-      const { data } = await supabase
-        .from("worksheet_elements")
-        .select("id, type, content, position, worksheet_id, max_score, worksheets(owner_id)")
-        .eq("worksheet_id", worksheetId)
-        .order("position", { ascending: true });
-      setElements(data || []);
+    try {
+      // Use RPC or batch update - for now, use upsert with all elements
+      // Note: This could be further optimized with a database function
+      const updatePromises = updatedElements.map(el =>
+        supabase
+          .from("worksheet_elements")
+          .update({ position: el.position })
+          .eq("id", el.id)
+      );
+      
+      await Promise.all(updatePromises);
     } catch (error) {
       console.error("Error reordering elements:", error);
       alert("Failed to reorder elements. Please try again.");
+      // Revert to original order on error
+      setElements(elements);
     }
     
     setDragging(null);

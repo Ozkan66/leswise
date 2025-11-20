@@ -120,7 +120,7 @@ describe('GroupSettings', () => {
     fireEvent.change(nameInput, { target: { value: 'Updated Group' } });
 
     // Submit form
-    const saveButton = screen.getByText('Save Changes');
+    const saveButton = screen.getByText('Opslaan');
     fireEvent.click(saveButton);
 
     await waitFor(() => {

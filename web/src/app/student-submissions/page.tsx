@@ -106,15 +106,14 @@ export default function StudentSubmissionsPage() {
 
   useEffect(() => {
     if (submissions.length > 0) {
-      // Build subDetails from feedback_data in submissions
-      const details: Record<string, Array<{ feedback?: string; score?: number }>> = {};
-      for (const sub of submissions) {
+      // Build subDetails from feedback_data in submissions using reduce
+      const details = submissions.reduce<Record<string, Array<{ feedback?: string; score?: number }>>>((acc, sub) => {
         if (sub.worksheet_id) {
           const feedbackData = sub.feedback_data as Record<string, { score: number; feedback: string }> || {};
-          const feedbackArray = Object.values(feedbackData);
-          details[sub.worksheet_id] = feedbackArray;
+          acc[sub.worksheet_id] = Object.values(feedbackData);
         }
-      }
+        return acc;
+      }, {});
       setSubDetails(details);
     }
   }, [submissions]);
