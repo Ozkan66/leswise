@@ -63,15 +63,20 @@ export interface Task {
 
 export interface Submission {
   id: string;
-  worksheet_id?: string;
-  user_id?: string;
+  worksheet_id: string;
+  user_id: string;
+  answers?: Record<string, any>;
+  feedback_data?: Record<string, { score: number; feedback: string }>;
+  score?: number;
+  feedback?: string;
+  status?: string;
+  submitted_at?: string;
   created_at: string;
   updated_at?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   users?: any; // For joins - flexible to handle different query structures
-  feedback?: string;
-  score?: number;
 }
+
 
 export interface SubmissionElement {
   id?: string;

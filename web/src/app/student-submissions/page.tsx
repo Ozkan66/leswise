@@ -32,7 +32,16 @@ export default function StudentSubmissionsPage() {
     setError(null);
 
     try {
-      // Fetch worksheets shared with the current student
+      // Step 1: Get user's groups
+      const { data: userGroups } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", user.id)
+        .eq("status", "active");
+
+      const groupIds = userGroups?.map(g => g.group_id) || [];
+
+      // Step 2: Fetch worksheets shared directly with user OR with their groups
       const { data: sharedWorksheetsData, error: sharedError } = await supabase
         .from("worksheet_shares")
         .select(`
@@ -41,10 +50,13 @@ export default function StudentSubmissionsPage() {
             id,
             title,
             description,
-            owner_id
+            owner_id,
+            tasks (
+              content
+            )
           )
         `)
-        .eq("shared_with_user_id", user.id);
+        .or(`shared_with_user_id.eq.${user.id},shared_with_group_id.in.(${groupIds.join(',')})`);
 
       if (sharedError) {
         console.error("Error fetching shared worksheets:", sharedError);
@@ -93,24 +105,19 @@ export default function StudentSubmissionsPage() {
   }, [roleLoading, fetchData]);
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      if (!submissions.length || !user) return;
-
+    if (submissions.length > 0) {
+      // Build subDetails from feedback_data in submissions
       const details: Record<string, Array<{ feedback?: string; score?: number }>> = {};
       for (const sub of submissions) {
-        const { data: elems } = await supabase
-          .from("submission_elements")
-          .select("feedback, score")
-          .eq("submission_id", sub.id);
         if (sub.worksheet_id) {
-          details[sub.worksheet_id] = elems || [];
+          const feedbackData = sub.feedback_data as Record<string, { score: number; feedback: string }> || {};
+          const feedbackArray = Object.values(feedbackData);
+          details[sub.worksheet_id] = feedbackArray;
         }
       }
       setSubDetails(details);
-    };
-
-    fetchDetails();
-  }, [submissions, user]);
+    }
+  }, [submissions]);
 
   // Helper to get submission status
   const getSubmissionStatus = (worksheetId: string) => {
@@ -121,7 +128,7 @@ export default function StudentSubmissionsPage() {
     const hasFeedback = elems.some(e => e.feedback && e.feedback.trim() !== "");
     const hasScores = elems.some(e => typeof e.score === "number");
 
-    if (hasFeedback || hasScores) {
+    if (hasFeedback || hasScores || submission.status === 'graded') {
       const totalQuestions = elems.length;
       // Show number of questions graded
       const gradedCount = elems.filter(e => typeof e.score === "number").length;
@@ -186,6 +193,32 @@ export default function StudentSubmissionsPage() {
                   <p className="text-gray-600 mb-2">{ws.description}</p>
                   <div className="text-sm text-gray-500 mb-4">
                     <p>Status: <span className="font-semibold" style={{ color: status.color }}>{status.label}</span></p>
+
+                    {/* Show score if graded */}
+                    {status.action === 'view' && status.hasScores && (() => {
+                      const submission = submissions.find(s => s.worksheet_id === ws.id);
+                      if (submission?.score !== undefined) {
+                        const totalScore = submission.score;
+
+                        // Calculate max score from tasks attached to the worksheet
+                        // We need to cast ws to any because tasks property is not in the standard Worksheet type yet
+                        // or we need to update the type. For now, let's access it safely.
+                        const worksheetTasks = (ws as any).tasks || [];
+                        const maxScore = worksheetTasks.reduce((sum: number, t: any) => {
+                          const points = t.content?.points;
+                          return sum + (typeof points === 'number' ? points : 1);
+                        }, 0);
+
+                        const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+                        return (
+                          <div className="mt-2 p-2 bg-blue-50 rounded">
+                            <p className="font-bold text-blue-700">Score: {totalScore} / {maxScore} ({percentage}%)</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     {status.action === 'view' && (status.hasFeedback || status.hasScores) && (
                       <div>
                         {status.hasScores && (
@@ -208,7 +241,11 @@ export default function StudentSubmissionsPage() {
                     )}
                   </div>
                   <a
-                    href={`/worksheet-submission?worksheetId=${ws.id}`}
+                    href={
+                      status.action === 'view' && status.submissionId
+                        ? `/student-submission-review/${status.submissionId}`
+                        : `/worksheet-submission?worksheetId=${ws.id}`
+                    }
                     style={{
                       display: 'inline-block',
                       padding: '8px 16px',
@@ -221,7 +258,7 @@ export default function StudentSubmissionsPage() {
                       marginTop: 8
                     }}
                   >
-                    {status.action === 'submit' ? 'Werkblad maken' : 'Bekijk inzending'}
+                    {status.action === 'view' && (status.hasFeedback || status.hasScores) ? 'Bekijk beoordeling' : 'Werkblad maken'}
                   </a>
                 </div>
               );

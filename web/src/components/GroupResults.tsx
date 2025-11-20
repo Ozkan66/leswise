@@ -52,7 +52,6 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
         return;
       }
 
-      // Get submissions from group members
       const { data: submissionsData, error: submissionsError } = await supabase
         .from("submissions")
         .select(`
@@ -60,7 +59,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
           worksheet_id,
           score,
           created_at,
-          users:user_profiles(first_name, last_name, email),
+          user_profiles(first_name, last_name, email),
           worksheets(title)
         `)
         .in("user_id", userIds);
@@ -75,10 +74,10 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
       const formattedResults: SubmissionResult[] = (submissionsData || []).map((sub: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
         user_id: sub.user_id,
         worksheet_id: sub.worksheet_id,
-        user_name: sub.users[0]?.first_name && sub.users[0]?.last_name 
-          ? `${sub.users[0].first_name} ${sub.users[0].last_name}`
-          : sub.users[0]?.email || 'Unknown User',
-        user_email: sub.users[0]?.email || '',
+        user_name: sub.user_profiles?.first_name && sub.user_profiles?.last_name
+          ? `${sub.user_profiles.first_name} ${sub.user_profiles.last_name}`
+          : sub.user_profiles?.email || 'Unknown User',
+        user_email: sub.user_profiles?.email || '',
         worksheet_title: sub.worksheets?.title || 'Unknown Worksheet',
         score: sub.score,
         submitted_at: sub.created_at,
@@ -90,7 +89,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
       // Extract unique worksheets for filtering
       const uniqueWorksheets = Array.from(
         new Map(formattedResults.map(r => [r.worksheet_id, { id: r.worksheet_id, title: r.worksheet_title }]))
-        .values()
+          .values()
       );
       setWorksheets(uniqueWorksheets);
 
@@ -106,8 +105,8 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
     fetchResults();
   }, [fetchResults]);
 
-  const filteredResults = selectedWorksheet === 'all' 
-    ? results 
+  const filteredResults = selectedWorksheet === 'all'
+    ? results
     : results.filter(r => r.worksheet_id === selectedWorksheet);
 
   const getGroupStats = () => {
@@ -129,15 +128,15 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
 
   if (loading) {
     return (
-      <div style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        bottom: 0, 
-        backgroundColor: 'rgba(0,0,0,0.5)', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000
       }}>
@@ -149,35 +148,35 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
   }
 
   return (
-    <div style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.5)', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000
     }}>
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: 24, 
-        borderRadius: 8, 
-        width: '95%', 
+      <div style={{
+        backgroundColor: 'white',
+        padding: 24,
+        borderRadius: 8,
+        width: '95%',
         maxWidth: 900,
         maxHeight: '90vh',
         overflow: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0 }}>Results for {groupName}</h2>
-          <button 
+          <button
             onClick={onClose}
-            style={{ 
-              backgroundColor: 'transparent', 
-              border: 'none', 
-              fontSize: 24, 
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              fontSize: 24,
               cursor: 'pointer',
               padding: 4
             }}
@@ -187,22 +186,22 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
         </div>
 
         {error && (
-          <div style={{ 
-            color: 'red', 
-            marginBottom: 16, 
-            padding: 8, 
-            backgroundColor: '#ffeaea', 
-            borderRadius: 4 
+          <div style={{
+            color: 'red',
+            marginBottom: 16,
+            padding: 8,
+            backgroundColor: '#ffeaea',
+            borderRadius: 4
           }}>
             {error}
           </div>
         )}
 
         {/* Filter and Stats */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'auto 1fr', 
-          gap: 20, 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr',
+          gap: 20,
           alignItems: 'center',
           marginBottom: 20,
           padding: 16,
@@ -273,7 +272,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
                     <td style={{ padding: 12 }}>{result.worksheet_title}</td>
                     <td style={{ padding: 12, textAlign: 'center' }}>
                       {result.score !== null ? (
-                        <span style={{ 
+                        <span style={{
                           fontWeight: 'bold',
                           color: result.score >= 75 ? '#28a745' : result.score >= 50 ? '#ffc107' : '#dc3545'
                         }}>
@@ -284,7 +283,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
                       )}
                     </td>
                     <td style={{ padding: 12, textAlign: 'center' }}>
-                      <span style={{ 
+                      <span style={{
                         padding: '4px 8px',
                         borderRadius: 4,
                         fontSize: 12,

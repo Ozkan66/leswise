@@ -9,11 +9,11 @@ interface GroupMember {
   role: string;
   status: string;
   joined_at: string;
-  users: {
+  user_profiles: {
     first_name: string | null;
     last_name: string | null;
     email: string;
-  }[];
+  } | null;
 }
 
 export default function GroupList() {
@@ -63,7 +63,7 @@ export default function GroupList() {
         role,
         status,
         joined_at,
-        users:user_profiles(first_name, last_name, email)
+        user_profiles(first_name, last_name, email)
       `)
       .eq("group_id", groupId)
       .order("joined_at", { ascending: false });
@@ -71,7 +71,14 @@ export default function GroupList() {
     if (error || !data) {
       setMembers([]);
     } else {
-      setMembers(data);
+      // Normalize user_profiles from array to single object
+      const normalizedMembers = (data as any[]).map((member: any) => ({
+        ...member,
+        user_profiles: Array.isArray(member.user_profiles)
+          ? member.user_profiles[0] || null
+          : member.user_profiles
+      }));
+      setMembers(normalizedMembers);
     }
     setLoadingMembers(false);
   };
@@ -132,7 +139,7 @@ export default function GroupList() {
 
   const handleRemoveMember = async (groupId: string, userId: string) => {
     if (!window.confirm("Are you sure you want to remove this member?")) return;
-    
+
     const { error } = await supabase
       .from("group_members")
       .delete()
@@ -169,11 +176,11 @@ export default function GroupList() {
   };
 
   const formatMemberName = (member: GroupMember) => {
-    const user = member.users[0];
-    if (user?.first_name && user?.last_name) {
-      return `${user.first_name} ${user.last_name}`;
+    const profile = member.user_profiles;
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
     }
-    return user?.email || 'Unknown User';
+    return profile?.email || 'Unknown User';
   };
 
   return (
@@ -181,9 +188,9 @@ export default function GroupList() {
       <h2>Your Groups</h2>
       <div style={{ display: 'grid', gap: 16 }}>
         {groups.map((group) => (
-          <div key={group.id} style={{ 
-            border: '1px solid #ccc', 
-            borderRadius: 8, 
+          <div key={group.id} style={{
+            border: '1px solid #ccc',
+            borderRadius: 8,
             padding: 16,
             backgroundColor: '#f9f9f9'
           }}>
@@ -197,14 +204,14 @@ export default function GroupList() {
                     style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4 }}
                   />
                   <div style={{ marginTop: 8 }}>
-                    <button 
-                      style={{ marginRight: 8, backgroundColor: '#28a745', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4 }} 
+                    <button
+                      style={{ marginRight: 8, backgroundColor: '#28a745', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4 }}
                       onClick={() => handleEditSave(group)}
                     >
                       Save
                     </button>
-                    <button 
-                      style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4 }} 
+                    <button
+                      style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4 }}
                       onClick={() => setEditingId(null)}
                     >
                       Cancel
@@ -223,34 +230,34 @@ export default function GroupList() {
                     <p style={{ margin: 0, marginBottom: 8, fontSize: 14, color: '#666' }}>{group.description}</p>
                   )}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button 
-                      style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
+                    <button
+                      style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
                       onClick={() => handleShowMembers(group.id)}
                     >
                       {showMembers === group.id ? 'Hide Members' : 'Show Members'}
                     </button>
-                    <button 
-                      style={{ backgroundColor: '#17a2b8', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
+                    <button
+                      style={{ backgroundColor: '#17a2b8', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
                       onClick={() => handleShowResults(group.id, group.name)}
                     >
                       View Results
                     </button>
                     {group.role === 'leader' && (
                       <>
-                        <button 
-                          style={{ backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
+                        <button
+                          style={{ backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
                           onClick={() => handleShowSettings(group.id)}
                         >
                           Settings
                         </button>
-                        <button 
-                          style={{ backgroundColor: '#ffc107', color: 'black', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
+                        <button
+                          style={{ backgroundColor: '#ffc107', color: 'black', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
                           onClick={() => handleEdit(group)}
                         >
                           Quick Edit
                         </button>
-                        <button 
-                          style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }} 
+                        <button
+                          style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
                           onClick={() => handleDelete(group)}
                         >
                           Delete
@@ -264,9 +271,9 @@ export default function GroupList() {
 
             {/* Members List */}
             {showMembers === group.id && (
-              <div style={{ 
-                borderTop: '1px solid #ddd', 
-                paddingTop: 12, 
+              <div style={{
+                borderTop: '1px solid #ddd',
+                paddingTop: 12,
                 marginTop: 12,
                 backgroundColor: 'white',
                 borderRadius: 4,
@@ -280,9 +287,9 @@ export default function GroupList() {
                 ) : (
                   <div style={{ display: 'grid', gap: 8 }}>
                     {members.map((member) => (
-                      <div key={member.user_id} style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
+                      <div key={member.user_id} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: 8,
                         backgroundColor: member.status === 'pending' ? '#fff3cd' : '#f8f9fa',
@@ -292,8 +299,8 @@ export default function GroupList() {
                         <div>
                           <strong>{formatMemberName(member)}</strong>
                           <div style={{ fontSize: 12, color: '#666' }}>
-                            {member.role === 'leader' ? 'Leader' : 'Member'} • 
-                            {member.status === 'pending' ? ' Pending approval' : ' Active'} • 
+                            {member.role === 'leader' ? 'Leader' : 'Member'} •
+                            {member.status === 'pending' ? ' Pending approval' : ' Active'} •
                             Joined {new Date(member.joined_at).toLocaleDateString()}
                           </div>
                         </div>
@@ -301,13 +308,13 @@ export default function GroupList() {
                           <div style={{ display: 'flex', gap: 4 }}>
                             {member.status === 'pending' && (
                               <>
-                                <button 
+                                <button
                                   style={{ backgroundColor: '#28a745', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 2, fontSize: 11 }}
                                   onClick={() => handleApproveMember(group.id, member.user_id)}
                                 >
                                   Approve
                                 </button>
-                                <button 
+                                <button
                                   style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 2, fontSize: 11 }}
                                   onClick={() => handleRejectMember(group.id, member.user_id)}
                                 >
@@ -316,7 +323,7 @@ export default function GroupList() {
                               </>
                             )}
                             {member.status === 'active' && member.role !== 'leader' && (
-                              <button 
+                              <button
                                 style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 2, fontSize: 11 }}
                                 onClick={() => handleRemoveMember(group.id, member.user_id)}
                               >

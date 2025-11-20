@@ -22,6 +22,7 @@ const menuItems: MenuItem[] = [
     { icon: "🏠", label: "Dashboard", href: "/dashboard", roles: ["teacher"] },
     { icon: "🏠", label: "Dashboard", href: "/student-dashboard", roles: ["student"] },
     { icon: "👥", label: "Mijn Klassen", href: "/groups", roles: ["teacher"] },
+    { icon: "👥", label: "Mijn Klassen", href: "/student-groups", roles: ["student"] },
     { icon: "📁", label: "Mappen", href: "/folders", roles: ["teacher"] },
     { icon: "📝", label: "Werkbladen", href: "/worksheets", roles: ["teacher"] },
     { icon: "🔗", label: "Gedeelde Werkbladen", href: "/shared-worksheets", roles: ["teacher"] },

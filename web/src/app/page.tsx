@@ -14,19 +14,22 @@ export default function LandingPage() {
     if (!loading) {
       setIsLoading(false);
       if (user) {
-        // Redirect authenticated users to their dashboard
-        // You can implement role-based routing here if needed
-        router.push('/dashboard');
+        // Redirect authenticated users to their dashboard based on role
+        if (user.user_metadata?.role === 'student') {
+          router.push('/student-dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       }
     }
   }, [user, loading, router]);
 
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '100vh',
         backgroundColor: '#f9fafb'
       }}>
@@ -36,20 +39,20 @@ export default function LandingPage() {
   }
 
   return (
-    <div style={{ 
+    <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       color: 'white'
     }}>
       {/* Header */}
-      <header style={{ 
+      <header style={{
         padding: '20px 40px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <div style={{ 
-          fontSize: '24px', 
+        <div style={{
+          fontSize: '24px',
           fontWeight: 'bold',
           display: 'flex',
           alignItems: 'center'
@@ -58,8 +61,8 @@ export default function LandingPage() {
           Leswise
         </div>
         <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <Link href="/login" style={{ 
-            color: 'white', 
+          <Link href="/login" style={{
+            color: 'white',
             textDecoration: 'none',
             fontSize: '16px',
             fontWeight: '500'
@@ -83,13 +86,13 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <main style={{ 
+      <main style={{
         maxWidth: '1200px',
         margin: '0 auto',
         padding: '80px 40px 0',
         textAlign: 'center'
       }}>
-        <h1 style={{ 
+        <h1 style={{
           fontSize: '48px',
           fontWeight: 'bold',
           marginBottom: '24px',
@@ -97,7 +100,7 @@ export default function LandingPage() {
         }}>
           Welkom bij Leswise
         </h1>
-        <p style={{ 
+        <p style={{
           fontSize: '24px',
           marginBottom: '48px',
           opacity: 0.9,
@@ -108,7 +111,7 @@ export default function LandingPage() {
         </p>
 
         {/* CTA Buttons */}
-        <div style={{ 
+        <div style={{
           display: 'flex',
           gap: '20px',
           justifyContent: 'center',
@@ -146,7 +149,7 @@ export default function LandingPage() {
         </div>
 
         {/* Features Section */}
-        <div style={{ 
+        <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: '40px',
@@ -161,20 +164,20 @@ export default function LandingPage() {
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)'
           }}>
-            <div style={{ 
+            <div style={{
               fontSize: '48px',
               marginBottom: '16px'
             }}>
               🚀
             </div>
-            <h3 style={{ 
+            <h3 style={{
               fontSize: '24px',
               fontWeight: 'bold',
               marginBottom: '16px'
             }}>
               Direct aan de slag
             </h3>
-            <p style={{ 
+            <p style={{
               fontSize: '16px',
               opacity: 0.9,
               lineHeight: '1.6'
@@ -191,20 +194,20 @@ export default function LandingPage() {
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)'
           }}>
-            <div style={{ 
+            <div style={{
               fontSize: '48px',
               marginBottom: '16px'
             }}>
               👥
             </div>
-            <h3 style={{ 
+            <h3 style={{
               fontSize: '24px',
               fontWeight: 'bold',
               marginBottom: '16px'
             }}>
               Voor docenten & leerlingen
             </h3>
-            <p style={{ 
+            <p style={{
               fontSize: '16px',
               opacity: 0.9,
               lineHeight: '1.6'
@@ -221,20 +224,20 @@ export default function LandingPage() {
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)'
           }}>
-            <div style={{ 
+            <div style={{
               fontSize: '48px',
               marginBottom: '16px'
             }}>
               🔒
             </div>
-            <h3 style={{ 
+            <h3 style={{
               fontSize: '24px',
               fontWeight: 'bold',
               marginBottom: '16px'
             }}>
               Veilig & privacyvriendelijk
             </h3>
-            <p style={{ 
+            <p style={{
               fontSize: '16px',
               opacity: 0.9,
               lineHeight: '1.6'
@@ -245,19 +248,19 @@ export default function LandingPage() {
         </div>
 
         {/* Call to Action Section */}
-        <div style={{ 
+        <div style={{
           marginTop: '80px',
           padding: '60px 0',
           textAlign: 'center'
         }}>
-          <h2 style={{ 
+          <h2 style={{
             fontSize: '36px',
             fontWeight: 'bold',
             marginBottom: '24px'
           }}>
             Klaar om te beginnen?
           </h2>
-          <p style={{ 
+          <p style={{
             fontSize: '18px',
             marginBottom: '32px',
             opacity: 0.9
@@ -282,13 +285,13 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer style={{ 
+      <footer style={{
         borderTop: '1px solid rgba(255, 255, 255, 0.2)',
         padding: '40px',
         textAlign: 'center',
         marginTop: '80px'
       }}>
-        <div style={{ 
+        <div style={{
           maxWidth: '1200px',
           margin: '0 auto',
           display: 'flex',
@@ -301,24 +304,24 @@ export default function LandingPage() {
             📚 Leswise
           </div>
           <div style={{ display: 'flex', gap: '30px' }}>
-            <Link href="/privacy-policy" style={{ 
-              color: 'white', 
+            <Link href="/privacy-policy" style={{
+              color: 'white',
               textDecoration: 'none',
               opacity: 0.8,
               fontSize: '14px'
             }}>
               Privacy Policy
             </Link>
-            <a href="#" style={{ 
-              color: 'white', 
+            <a href="#" style={{
+              color: 'white',
               textDecoration: 'none',
               opacity: 0.8,
               fontSize: '14px'
             }}>
               Contact
             </a>
-            <a href="#" style={{ 
-              color: 'white', 
+            <a href="#" style={{
+              color: 'white',
               textDecoration: 'none',
               opacity: 0.8,
               fontSize: '14px'
@@ -327,7 +330,7 @@ export default function LandingPage() {
             </a>
           </div>
         </div>
-        <div style={{ 
+        <div style={{
           marginTop: '20px',
           fontSize: '14px',
           opacity: 0.7

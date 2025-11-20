@@ -25,7 +25,7 @@ export default function LoginForm() {
     setError(null);
 
     const { error } = await signIn(email, password);
-    
+
     if (error) {
       setError(error.message);
       await logLoginFailed(email, 'email', undefined, error.message);
@@ -35,23 +35,25 @@ export default function LoginForm() {
       if (user) {
         await logLoginSuccess(user.id, 'email');
       }
-      
+
       if (user && !user.user_metadata?.role) {
         router.push('/role-selection');
+      } else if (user?.user_metadata?.role === 'student') {
+        router.push('/student-dashboard');
       } else {
-        router.push('/');
+        router.push('/dashboard');
       }
     }
-    
+
     setIsLoading(false);
   };
 
   const handleOAuthSignIn = async (provider: 'google' | 'azure') => {
     setIsLoading(true);
     setError(null);
-    
+
     const { error } = await signInWithProvider(provider);
-    
+
     if (error) {
       setError(error.message);
       await logLoginFailed(undefined, 'oauth', provider, error.message);
@@ -59,7 +61,7 @@ export default function LoginForm() {
       // OAuth success will be handled by the auth state change
       // We'll log it in the AuthContext when the session is established
     }
-    
+
     setIsLoading(false);
   };
 
@@ -67,7 +69,7 @@ export default function LoginForm() {
     <div className="max-w-md mx-auto">
       <Card>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Inloggen</h1>
-        
+
         {error && (
           <Alert variant="error" className="mb-4">
             {error}
@@ -105,8 +107,8 @@ export default function LoginForm() {
           </Button>
 
           <div className="text-center">
-            <Link 
-              href="/forgot-password" 
+            <Link
+              href="/forgot-password"
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
               Wachtwoord vergeten?
@@ -139,8 +141,8 @@ export default function LoginForm() {
 
         <div className="text-center text-gray-600 dark:text-gray-400">
           <span>Nog geen account? </span>
-          <Link 
-            href="/register" 
+          <Link
+            href="/register"
             className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
           >
             Registreren

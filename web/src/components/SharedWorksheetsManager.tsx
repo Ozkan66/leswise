@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { WorksheetShare, AnonymousLink, AnonymousSubmission } from "../types/database";
+import { toast } from "sonner";
 
 export default function SharedWorksheetsManager() {
   const [shares, setShares] = useState<WorksheetShare[]>([]);
@@ -9,6 +10,7 @@ export default function SharedWorksheetsManager() {
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'shares' | 'anonymous'>('shares');
   const [error, setError] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -17,7 +19,7 @@ export default function SharedWorksheetsManager() {
   const fetchData = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) {
@@ -76,49 +78,76 @@ export default function SharedWorksheetsManager() {
   };
 
   const handleDeleteShare = async (shareId: string) => {
-    if (!window.confirm('Are you sure you want to remove this share?')) return;
-    
+    // If not in confirming state, set it and return
+    if (confirmingDelete !== shareId) {
+      setConfirmingDelete(shareId);
+      toast.warning('Klik nogmaals op "Remove" om te bevestigen', {
+        duration: 3000,
+      });
+      // Reset confirmation after 3 seconds
+      setTimeout(() => setConfirmingDelete(null), 3000);
+      return;
+    }
+
+    // User confirmed, proceed with deletion
     try {
       const { error } = await supabase
         .from('worksheet_shares')
         .delete()
         .eq('id', shareId);
-      
+
       if (error) throw error;
+
+      toast.success('Share succesvol verwijderd');
+      setConfirmingDelete(null);
       await fetchData();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete share';
       setError(errorMessage);
+      toast.error('Fout bij verwijderen: ' + errorMessage);
+      setConfirmingDelete(null);
     }
   };
 
   const handleDeactivateLink = async (linkId: string) => {
-    if (!window.confirm('Are you sure you want to deactivate this anonymous link?')) return;
-    
+    if (confirmingDelete !== linkId) {
+      setConfirmingDelete(linkId);
+      toast.warning('Klik nogmaals op "Deactivate" om te bevestigen', {
+        duration: 3000,
+      });
+      setTimeout(() => setConfirmingDelete(null), 3000);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('anonymous_links')
         .update({ is_active: false })
         .eq('id', linkId);
-      
+
       if (error) throw error;
+
+      toast.success('Link gedeactiveerd');
+      setConfirmingDelete(null);
       await fetchData();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate link';
       setError(errorMessage);
+      toast.error('Fout bij deactiveren: ' + errorMessage);
+      setConfirmingDelete(null);
     }
   };
 
   const handleResetAttempts = async (shareId: string, type: 'share' | 'link') => {
     if (!window.confirm('Are you sure you want to reset the attempt count?')) return;
-    
+
     try {
       const table = type === 'share' ? 'worksheet_shares' : 'anonymous_links';
       const { error } = await supabase
         .from(table)
         .update({ attempts_used: 0 })
         .eq('id', shareId);
-      
+
       if (error) throw error;
       await fetchData();
     } catch (err) {
@@ -136,14 +165,14 @@ export default function SharedWorksheetsManager() {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
       <h1>Shared Worksheets Management</h1>
-      
+
       {error && (
-        <div style={{ 
-          color: 'red', 
-          marginBottom: '16px', 
-          padding: '8px', 
-          backgroundColor: '#ffebee', 
-          borderRadius: '4px' 
+        <div style={{
+          color: 'red',
+          marginBottom: '16px',
+          padding: '8px',
+          backgroundColor: '#ffebee',
+          borderRadius: '4px'
         }}>
           {error}
         </div>
@@ -188,10 +217,10 @@ export default function SharedWorksheetsManager() {
           ) : (
             <div>
               {shares.map(share => (
-                <div key={share.id} style={{ 
-                  marginBottom: '16px', 
-                  padding: '16px', 
-                  border: '1px solid #ddd', 
+                <div key={share.id} style={{
+                  marginBottom: '16px',
+                  padding: '16px',
+                  border: '1px solid #ddd',
                   borderRadius: '8px',
                   backgroundColor: '#f9f9f9'
                 }}>
@@ -202,8 +231,8 @@ export default function SharedWorksheetsManager() {
                       </h3>
                       <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '8px' }}>
                         <strong>Shared with:</strong> {
-                          share.shared_with_user_id 
-                            ? `User ID: ${share.shared_with_user_id}` 
+                          share.shared_with_user_id
+                            ? `User ID: ${share.shared_with_user_id}`
                             : `Group ID: ${share.shared_with_group_id}`
                         }
                       </div>
@@ -224,14 +253,14 @@ export default function SharedWorksheetsManager() {
                         Created: {new Date(share.created_at!).toLocaleDateString()}
                       </div>
                     </div>
-                    
+
                     <div style={{ marginLeft: '16px' }}>
                       {share.max_attempts && (
                         <button
                           onClick={() => handleResetAttempts(share.id, 'share')}
-                          style={{ 
-                            marginRight: '8px', 
-                            padding: '4px 8px', 
+                          style={{
+                            marginRight: '8px',
+                            padding: '4px 8px',
                             backgroundColor: '#ffc107',
                             color: 'black',
                             border: 'none',
@@ -244,15 +273,17 @@ export default function SharedWorksheetsManager() {
                       )}
                       <button
                         onClick={() => handleDeleteShare(share.id)}
-                        style={{ 
-                          color: 'red', 
-                          background: 'none', 
-                          border: 'none', 
+                        style={{
+                          color: confirmingDelete === share.id ? 'white' : 'red',
+                          background: confirmingDelete === share.id ? '#dc2626' : 'none',
+                          border: 'none',
                           cursor: 'pointer',
-                          padding: '4px 8px'
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontWeight: confirmingDelete === share.id ? 'bold' : 'normal'
                         }}
                       >
-                        Remove
+                        {confirmingDelete === share.id ? 'Klik nogmaals om te verwijderen' : 'Remove'}
                       </button>
                     </div>
                   </div>
@@ -272,12 +303,12 @@ export default function SharedWorksheetsManager() {
             <div>
               {anonymousLinks.map(link => {
                 const linkSubmissions = anonymousSubmissions.filter(s => s.anonymous_link_id === link.id);
-                
+
                 return (
-                  <div key={link.id} style={{ 
-                    marginBottom: '16px', 
-                    padding: '16px', 
-                    border: '1px solid #ddd', 
+                  <div key={link.id} style={{
+                    marginBottom: '16px',
+                    padding: '16px',
+                    border: '1px solid #ddd',
                     borderRadius: '8px',
                     backgroundColor: link.is_active ? '#e8f5e8' : '#ffebee'
                   }}>
@@ -295,9 +326,9 @@ export default function SharedWorksheetsManager() {
                           </code>
                           <button
                             onClick={() => navigator.clipboard.writeText(getShareUrl(link.link_code))}
-                            style={{ 
-                              marginLeft: '8px', 
-                              padding: '2px 6px', 
+                            style={{
+                              marginLeft: '8px',
+                              padding: '2px 6px',
                               fontSize: '0.8em',
                               backgroundColor: '#007bff',
                               color: 'white',
@@ -325,14 +356,14 @@ export default function SharedWorksheetsManager() {
                           Created: {new Date(link.created_at!).toLocaleDateString()}
                         </div>
                       </div>
-                      
+
                       <div style={{ marginLeft: '16px' }}>
                         {link.max_attempts && link.is_active && (
                           <button
                             onClick={() => handleResetAttempts(link.id, 'link')}
-                            style={{ 
-                              marginRight: '8px', 
-                              padding: '4px 8px', 
+                            style={{
+                              marginRight: '8px',
+                              padding: '4px 8px',
                               backgroundColor: '#ffc107',
                               color: 'black',
                               border: 'none',
@@ -346,29 +377,33 @@ export default function SharedWorksheetsManager() {
                         {link.is_active && (
                           <button
                             onClick={() => handleDeactivateLink(link.id)}
-                            style={{ 
-                              color: 'red', 
-                              background: 'none', 
-                              border: 'none', 
+                            style={{
+                              color: confirmingDelete === link.id ? 'white' : 'red',
+                              background: confirmingDelete === link.id ? '#dc2626' : 'none',
+                              border: 'none',
                               cursor: 'pointer',
-                              padding: '4px 8px'
+                              fontSize: '0.8em',
+                              marginTop: '4px',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontWeight: confirmingDelete === link.id ? 'bold' : 'normal'
                             }}
                           >
-                            Deactivate
+                            {confirmingDelete === link.id ? 'Klik nogmaals om te deactiveren' : 'Deactivate'}
                           </button>
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Show recent submissions */}
                     {linkSubmissions.length > 0 && (
                       <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #ddd' }}>
                         <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9em' }}>Recent Submissions:</h4>
                         <div style={{ maxHeight: '150px', overflow: 'auto' }}>
                           {linkSubmissions.slice(0, 5).map(submission => (
-                            <div key={submission.id} style={{ 
-                              fontSize: '0.8em', 
-                              color: '#666', 
+                            <div key={submission.id} style={{
+                              fontSize: '0.8em',
+                              color: '#666',
                               marginBottom: '4px',
                               padding: '4px 8px',
                               backgroundColor: 'white',

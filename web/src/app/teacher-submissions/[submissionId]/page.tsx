@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Worksheet, Submission, SubmissionElement, Task } from "../../../types/database";
+import AuthenticatedLayout from "../../../components/AuthenticatedLayout";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,16 +61,38 @@ export default function SubmissionReviewPage() {
       return;
     }
     setElements(elementsData || []);
-    const { data: answersData, error: answersError } = await supabase
-      .from("submission_elements")
-      .select("*")
-      .eq("submission_id", submissionId);
-    if (answersError) {
-      setError("Fout bij laden van antwoorden.");
-      setLoading(false);
-      return;
-    }
-    setAnswers(answersData || []);
+
+    // Load answers from the JSON field in submissions table
+    const answersJson = submissionData.answers as Record<string, any> || {};
+
+    // Convert JSON answers to submission_elements format for compatibility
+    const convertedAnswers: SubmissionElement[] = (elementsData || []).map(task => {
+      const answer = answersJson[task.id];
+      let answerString = '';
+
+      if (answer !== undefined && answer !== null) {
+        if (typeof answer === 'object') {
+          answerString = JSON.stringify(answer);
+        } else if (Array.isArray(answer)) {
+          answerString = answer.join(',');
+        } else {
+          answerString = String(answer);
+        }
+      }
+
+      return {
+        id: `temp-${task.id}`,
+        submission_id: submissionId,
+        worksheet_element_id: task.id,
+        answer: answerString,
+        score: 0,
+        feedback: '',
+        status: 'submitted',
+        created_at: submissionData.created_at
+      } as SubmissionElement;
+    });
+
+    setAnswers(convertedAnswers);
     setLoading(false);
   };
 
@@ -177,25 +200,34 @@ export default function SubmissionReviewPage() {
     setSaving(true);
     setError(null);
     try {
-      for (const answer of answers) {
-        const { error: ansError } = await supabase
-          .from("submission_elements")
-          .update({ feedback: answer.feedback || "", score: answer.score || 0 })
-          .eq("submission_id", submissionId)
-          .eq("worksheet_element_id", answer.worksheet_element_id);
-        if (ansError) {
-          // Debug: log en alert error
-          console.error('Supabase update error:', ansError);
-          alert('Supabase update error: ' + ansError.message);
-          throw ansError;
+      // Build feedback object keyed by task ID
+      const feedbackByTask: Record<string, { score: number; feedback: string }> = {};
+      answers.forEach(ans => {
+        if (ans.worksheet_element_id) {
+          feedbackByTask[ans.worksheet_element_id] = {
+            score: ans.score || 0,
+            feedback: ans.feedback || ''
+          };
         }
-      }
-      // Update submission met totaalscore
+      });
+
       const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
-      await supabase
+
+      // Update submission with feedback data
+      const { error: subError } = await supabase
         .from("submissions")
-        .update({ feedback: "Beoordeeld door docent", score: totalScore })
+        .update({
+          feedback_data: feedbackByTask,
+          score: totalScore,
+          status: 'graded'
+        })
         .eq("id", submissionId);
+
+      if (subError) {
+        console.error('Supabase update error:', subError);
+        throw subError;
+      }
+
       alert("✅ Beoordeling opgeslagen in database!");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Onbekende fout bij opslaan");
@@ -208,27 +240,36 @@ export default function SubmissionReviewPage() {
     setSaving(true);
     setError(null);
     try {
-      for (const answer of answers) {
-        const { error: ansError } = await supabase
-          .from("submission_elements")
-          .update({ feedback: answer.feedback || "", score: answer.score || 0, status: 'graded' })
-          .eq("submission_id", submissionId)
-          .eq("worksheet_element_id", answer.worksheet_element_id);
-        if (ansError) {
-          console.error('Supabase update error:', ansError);
-          alert('Supabase update error: ' + ansError.message);
-          throw ansError;
+      // Build feedback object keyed by task ID
+      const feedbackByTask: Record<string, { score: number; feedback: string }> = {};
+      answers.forEach(ans => {
+        if (ans.worksheet_element_id) {
+          feedbackByTask[ans.worksheet_element_id] = {
+            score: ans.score || 0,
+            feedback: ans.feedback || ''
+          };
         }
-      }
+      });
+
       const totalScore = answers.reduce((sum, ans) => sum + (ans.score || 0), 0);
       const maxScore = elements.reduce((sum, el) => sum + ((el.content?.points as number) || 1), 0);
-      const { data: subData, error: subError } = await supabase
+
+      // Update submission with complete feedback
+      const { error: subError } = await supabase
         .from("submissions")
-        .update({ feedback: `Beoordeeld: ${totalScore}/${maxScore} punten`, score: totalScore, status: 'graded' })
-        .eq("id", submissionId)
-        .select();
-      console.log('Supabase submissions update response:', subData, subError);
-      if (subError) alert('Supabase submissions update error: ' + subError.message);
+        .update({
+          feedback_data: feedbackByTask,
+          score: totalScore,
+          feedback: `Beoordeeld: ${totalScore}/${maxScore} punten`,
+          status: 'graded'
+        })
+        .eq("id", submissionId);
+
+      if (subError) {
+        console.error('Supabase submissions update error:', subError);
+        throw subError;
+      }
+
       alert("✅ Beoordeling verstuurd naar student!");
       router.push("/teacher-submissions");
     } catch (err: unknown) {
@@ -237,8 +278,8 @@ export default function SubmissionReviewPage() {
     setSaving(false);
   };
 
-  if (loading) return <div>Laden...</div>;
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
+  if (loading) return <AuthenticatedLayout><div className="p-8">Laden...</div></AuthenticatedLayout>;
+  if (error) return <AuthenticatedLayout><div className="p-8 text-red-600">{error}</div></AuthenticatedLayout>;
   if (!submission || !worksheet) return null;
 
   // Totale score berekenen
@@ -256,126 +297,107 @@ export default function SubmissionReviewPage() {
   const sum = scored.reduce((acc, s) => acc + (s.score || 0), 0);
   const maxSum = scored.reduce((acc, s) => acc + (s.max || 1), 0);
 
+
   return (
-    <div style={{ maxWidth: 900, margin: "2rem auto", background: "#fff", borderRadius: 10, boxShadow: "0 1px 8px #0002", padding: 32 }}>
-      <button onClick={() => router.push("/teacher-submissions")} style={{ marginBottom: 16 }}>
-        ← Terug naar overzicht
-      </button>
-      <h2>Beoordeling: {worksheet.title}</h2>
-      <div style={{ color: "#007acc", fontWeight: 500, marginBottom: 8 }}>
-        Inzending ID: {submission.id}
-      </div>
-      <div style={{ marginBottom: 16, fontWeight: 'bold', fontSize: 18 }}>
-        Totale score: {sum} / {maxSum} ({maxSum > 0 ? Math.round((sum / maxSum) * 100) : 0}%)
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {elements.map((el) => {
-          const answerObj = answers.find((a) => a.worksheet_element_id === el.id);
-          let questionText = "Vraag niet beschikbaar";
-          try {
-            const contentObj = typeof el.content === "string" ? JSON.parse(el.content) : el.content;
-            questionText = contentObj.question || contentObj.text || "Vraag niet beschikbaar";
-          } catch {
-            questionText = "Fout bij laden van vraagtekst";
-          }
+    <AuthenticatedLayout>
+      <div style={{ padding: "40px", maxWidth: "900px", margin: "auto", fontFamily: "sans-serif" }}>
+        <button
+          onClick={() => router.push("/teacher-submissions")}
+          style={{ marginBottom: "20px", padding: "8px 12px", cursor: "pointer" }}
+        >
+          ← Terug naar overzicht
+        </button>
+        <h1>Beoordeling: {worksheet.title}</h1>
+        <a href={`/teacher-submissions/${submissionId}`} style={{ fontSize: "0.9em", color: "#00e" }}>
+          Inzending ID: {submissionId}
+        </a>
+        <p>
+          <strong>Totale score: {sum} / {maxSum} ({maxSum > 0 ? ((sum / maxSum) * 100).toFixed(0) : 0}%)</strong>
+        </p>
+        {elements.map((el, idx) => {
+          const ans = answers.find(a => a.worksheet_element_id === el.id);
+          const content = el.content as Record<string, any>;
+          const question = content?.question || content?.title || "Vraag zonder titel";
+          const maxPoints = content?.points || 1;
           return (
-            <div key={el.id} style={{ borderBottom: "1px solid #eee", paddingBottom: 12 }}>
-              <b>{questionText}</b>
-              <div style={{ marginLeft: 16, marginBottom: 8 }}>
-                <span style={{ color: "#888" }}>Antwoord:</span> {answerObj ? answerObj.answer : <i>Geen antwoord</i>}
+            <div key={el.id} style={{ border: "1px solid #ccc", padding: "15px", marginBottom: "15px", borderRadius: "6px" }}>
+              <h3>{idx + 1}. {question}</h3>
+              <p style={{ fontSize: "0.9em", fontStyle: "italic", marginBottom: "8px" }}>
+                Antwoord: {ans?.answer || "Geen antwoord"}
+              </p>
+              <div style={{ marginTop: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px" }}>Feedback:</label>
+                <textarea
+                  value={ans?.feedback || ""}
+                  onChange={e => {
+                    const updated = answers.map(a =>
+                      a.worksheet_element_id === el.id ? { ...a, feedback: e.target.value } : a
+                    );
+                    setAnswers(updated);
+                  }}
+                  placeholder="Feedback voor deze vraag..."
+                  style={{ width: "100%", minHeight: "60px", padding: "6px" }}
+                />
               </div>
-              <form
-                onSubmit={async e => {
-                  e.preventDefault();
-                  setError(null);
-                  const answerIdx = answers.findIndex(a => a.worksheet_element_id === el.id);
-                  const answerObj = answers[answerIdx];
-                  // Debug: log submit
-                  console.log('Form submit for element', el.id, 'submissionId', submissionId, 'feedback', answerObj?.feedback, 'score', answerObj?.score);
-                  const { data: updateData, error: updateError } = await supabase
-                    .from('submission_elements')
-                    .update({ feedback: answerObj?.feedback || '', score: answerObj?.score ?? null })
-                    .eq('submission_id', submissionId)
-                    .eq('worksheet_element_id', el.id)
-                    .select();
-                  // Debug: log response
-                  console.log('Supabase update response:', updateData, updateError);
-                  if (updateError) {
-                    setError(updateError.message);
-                    console.error('Supabase update error:', updateError);
-                    alert('Supabase update error: ' + updateError.message);
-                  }
-                }}
-                style={{ marginTop: 8 }}
-              >
-                <div style={{ marginBottom: 8 }}>
-                  <label>
-                    Feedback:<br />
-                    <textarea
-                      name="feedback"
-                      value={answerObj?.feedback || ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setAnswers(prev => prev.map(a => a.worksheet_element_id === el.id ? { ...a, feedback: val } : a));
-                      }}
-                      rows={2}
-                      style={{ width: '100%', padding: 6, marginTop: 4 }}
-                      placeholder="Feedback voor deze vraag..."
-                    />
-                  </label>
-                </div>
-                <div style={{ marginBottom: 8 }}>
-                  <label>
-                    Score (0-{(el.content?.points as number) || 1}):
-                    <input
-                      name="score"
-                      type="number"
-                      min={0}
-                      max={(el.content?.points as number) || 1}
-                      step="0.1"
-                      value={answerObj?.score !== null && answerObj?.score !== undefined ? String(answerObj.score) : ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setAnswers(prev => prev.map(a => a.worksheet_element_id === el.id ? { ...a, score: val === '' ? undefined : parseFloat(val) } : a));
-                      }}
-                      style={{ width: 100, padding: 6, marginLeft: 8, marginTop: 4 }}
-                      placeholder={`Score (max ${(el.content?.points as number) || 1})`}
-                    />
-                    <span style={{ marginLeft: 8, color: '#888' }}>
-                      /{(el.content?.points as number) || 1} punten
-                    </span>
-                  </label>
-                </div>
-                <button type="submit" style={{ padding: '4px 18px', fontSize: 14 }}>Opslaan</button>
-              </form>
-              {answerObj?.feedback && (
-                <div style={{ marginTop: 6, color: '#7f7' }}><b>Feedback:</b> {answerObj.feedback}</div>
-              )}
-              {typeof answerObj?.score !== 'undefined' && answerObj?.score !== null && (
-                <div style={{ color: '#7af' }}><b>Score:</b> {answerObj.score}/{(el.content?.points as number) || 1}</div>
-              )}
+              <div style={{ marginTop: "12px" }}>
+                <label style={{ marginRight: "8px" }}>Score (0-{maxPoints}):</label>
+                <input
+                  type="number"
+                  min="0"
+                  max={maxPoints}
+                  value={String(ans?.score || 0)}
+                  onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    const updated = answers.map(a =>
+                      a.worksheet_element_id === el.id ? { ...a, score: isNaN(val) ? 0 : val } : a
+                    );
+                    setAnswers(updated);
+                  }}
+                  placeholder={`Score (max ${maxPoints} punten)`}
+                  style={{ width: "80px", padding: "4px" }}
+                />
+                <span style={{ marginLeft: "8px", fontSize: "0.9em" }}>/{maxPoints} punten</span>
+                <button
+                  onClick={() => {
+                    if (!ans?.answer) return;
+                    const autoScore = calculateAutoScore(el, ans.answer);
+                    const updated = answers.map(a =>
+                      a.worksheet_element_id === el.id ? { ...a, score: autoScore } : a
+                    );
+                    setAnswers(updated);
+                  }}
+                  style={{ marginLeft: "12px", padding: "4px 8px", fontSize: "0.9em" }}
+                >
+                  Opslaan
+                </button>
+              </div>
             </div>
           );
         })}
+        <div style={{ marginTop: "30px", display: "flex", gap: "10px" }}>
+          <button
+            onClick={handleAutoScore}
+            style={{ padding: "10px 16px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
+          >
+            🤖 Auto-score alle antwoorden
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{ padding: "10px 16px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "4px", cursor: saving ? "not-allowed" : "pointer" }}
+          >
+            {saving ? "Opslaan..." : "💾 Opslaan"}
+          </button>
+          <button
+            onClick={handleSend}
+            disabled={saving}
+            style={{ padding: "10px 16px", backgroundColor: "#17a2b8", color: "white", border: "none", borderRadius: "4px", cursor: saving ? "not-allowed" : "pointer" }}
+          >
+            {saving ? "Versturen..." : "✉️ Verstuur naar student"}
+          </button>
+        </div>
+        {error && <p style={{ color: "red", marginTop: "16px" }}>{error}</p>}
       </div>
-      <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
-        <button onClick={handleAutoScore} style={{ backgroundColor: '#28a745', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer' }} disabled={saving}>
-          🤖 Auto-score
-        </button>
-        <button onClick={handleSave} style={{ backgroundColor: '#007acc', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer' }} disabled={saving}>
-          💾 Opslaan in Database
-        </button>
-        <button onClick={handleSend} style={{ backgroundColor: '#28a745', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer' }} disabled={saving}>
-          📤 Verstuur naar Student
-        </button>
-      </div>
-      <div style={{ marginTop: 24 }}>
-        <b>Opmerking docent:</b> {submission.feedback || <i>Geen feedback</i>}
-      </div>
-      <div style={{ marginTop: 16, color: "#888" }}>
-        Ingediend op: {new Date(submission.created_at).toLocaleString()}
-      </div>
-      {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
-    </div>
+    </AuthenticatedLayout>
   );
 }

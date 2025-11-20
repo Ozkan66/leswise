@@ -9,17 +9,17 @@ interface WorksheetSharingFormProps {
   onShared?: () => void;
 }
 
-export default function WorksheetSharingForm({ 
-  worksheetId, 
-  worksheetTitle, 
-  onClose, 
-  onShared 
+export default function WorksheetSharingForm({
+  worksheetId,
+  worksheetTitle,
+  onClose,
+  onShared
 }: WorksheetSharingFormProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [existingShares, setExistingShares] = useState<WorksheetShare[]>([]);
   const [anonymousLinks, setAnonymousLinks] = useState<AnonymousLink[]>([]);
-  
+
   // Form state for new share
   const [shareTarget, setShareTarget] = useState<'user' | 'group'>('user');
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -27,12 +27,12 @@ export default function WorksheetSharingForm({
   const [permissionLevel, setPermissionLevel] = useState<'read' | 'submit' | 'edit'>('submit');
   const [maxAttempts, setMaxAttempts] = useState<string>('');
   const [expiresIn, setExpiresIn] = useState<string>('');
-  
+
   // Anonymous link form state
   const [showAnonymousForm, setShowAnonymousForm] = useState(false);
   const [anonymousMaxAttempts, setAnonymousMaxAttempts] = useState<string>('');
   const [anonymousExpiresIn, setAnonymousExpiresIn] = useState<string>('');
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,7 +44,7 @@ export default function WorksheetSharingForm({
         .from('user_profiles')
         .select('user_id, email, first_name, last_name, role')
         .in('role', ['teacher', 'student']);
-      
+
       const usersList = usersData?.map((up) => ({
         id: up.user_id || '',
         email: up.email || '',
@@ -78,7 +78,7 @@ export default function WorksheetSharingForm({
         `)
         .eq('worksheet_id', worksheetId);
       setExistingShares(sharesData || []);
-   
+
       // Fetch anonymous links  
       const { data: linksData } = await supabase
         .from('anonymous_links')
@@ -101,8 +101,14 @@ export default function WorksheetSharingForm({
 
   const handleShareSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUserId && !selectedGroupId) {
-      setError('Please select a user or group to share with');
+
+    // Validate that appropriate ID is selected based on shareTarget
+    if (shareTarget === 'user' && !selectedUserId) {
+      setError('Please select a user to share with');
+      return;
+    }
+    if (shareTarget === 'group' && !selectedGroupId) {
+      setError('Please select a group to share with');
       return;
     }
 
@@ -115,7 +121,9 @@ export default function WorksheetSharingForm({
 
       console.log('DEBUG SHARING: User authenticated:', user.id);
       console.log('DEBUG SHARING: Worksheet ID:', worksheetId);
+      console.log('DEBUG SHARING: Share target:', shareTarget);
       console.log('DEBUG SHARING: Selected user ID:', selectedUserId);
+      console.log('DEBUG SHARING: Selected group ID:', selectedGroupId);
       console.log('DEBUG SHARING: Permission level:', permissionLevel);
 
       interface ShareData {
@@ -136,17 +144,17 @@ export default function WorksheetSharingForm({
         expires_at: expiresIn ? new Date(Date.now() + parseInt(expiresIn) * 24 * 60 * 60 * 1000).toISOString() : null,
       };
 
-      if (shareTarget === 'user') {
+      if (shareTarget === 'user' && selectedUserId) {
         shareData.shared_with_user_id = selectedUserId;
-      } else {
+      } else if (shareTarget === 'group' && selectedGroupId) {
         shareData.shared_with_group_id = selectedGroupId;
       }
 
-      console.log('DEBUG SHARING: Share data to insert:', shareData);
+      console.log('DEBUG SHARING: Share data to insert:', JSON.stringify(shareData, null, 2));
 
       // Get the current auth token
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       // Use our API endpoint to bypass RLS issues
       const response = await fetch('/api/worksheet-shares', {
         method: 'POST',
@@ -172,7 +180,7 @@ export default function WorksheetSharingForm({
       setPermissionLevel('submit');
       setMaxAttempts('');
       setExpiresIn('');
-      
+
       await fetchData(); // Refresh the shares list
       if (onShared) onShared();
 
@@ -196,16 +204,16 @@ export default function WorksheetSharingForm({
 
       // Generate unique link code
       const { data: linkCode, error: rpcError } = await supabase.rpc('generate_link_code');
-      
+
       if (rpcError) {
         console.error('Error generating link code:', rpcError);
         throw new Error('Failed to generate unique link code. Please try again.');
       }
-      
+
       if (!linkCode) {
         throw new Error('Failed to generate unique link code. Please try again.');
       }
-      
+
       const linkData = {
         worksheet_id: worksheetId,
         created_by_user_id: user.id,
@@ -223,7 +231,7 @@ export default function WorksheetSharingForm({
       setShowAnonymousForm(false);
       setAnonymousMaxAttempts('');
       setAnonymousExpiresIn('');
-      
+
       await fetchData();
       if (onShared) onShared();
 
@@ -237,13 +245,13 @@ export default function WorksheetSharingForm({
 
   const handleDeleteShare = async (shareId: string) => {
     if (!window.confirm('Are you sure you want to remove this share?')) return;
-    
+
     try {
       const { error } = await supabase
         .from('worksheet_shares')
         .delete()
         .eq('id', shareId);
-      
+
       if (error) throw error;
       await fetchData();
     } catch (err) {
@@ -254,13 +262,13 @@ export default function WorksheetSharingForm({
 
   const handleDeactivateLink = async (linkId: string) => {
     if (!window.confirm('Are you sure you want to deactivate this anonymous link?')) return;
-    
+
     try {
       const { error } = await supabase
         .from('anonymous_links')
         .update({ is_active: false })
         .eq('id', linkId);
-      
+
       if (error) throw error;
       await fetchData();
     } catch (err) {
@@ -288,8 +296,8 @@ export default function WorksheetSharingForm({
       return `Group: ${share.shared_with_group.name}`;
     }
     // Fallback for older shares that might not have the joined data
-    if(share.shared_with_user_id) return `User ID: ${share.shared_with_user_id}`;
-    if(share.shared_with_group_id) return `Group ID: ${share.shared_with_group_id}`;
+    if (share.shared_with_user_id) return `User ID: ${share.shared_with_user_id}`;
+    if (share.shared_with_group_id) return `Group ID: ${share.shared_with_group_id}`;
     return 'Unknown Share';
   };
 
@@ -299,11 +307,11 @@ export default function WorksheetSharingForm({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '24px', 
-        borderRadius: '8px', 
-        maxWidth: '800px', 
+      <div style={{
+        backgroundColor: 'white',
+        padding: '24px',
+        borderRadius: '8px',
+        maxWidth: '800px',
         width: '90%',
         maxHeight: '90vh',
         overflow: 'auto'
@@ -330,8 +338,8 @@ export default function WorksheetSharingForm({
                     <span>
                       {getShareDisplayText(share)} ({share.permission_level}) - {share.max_attempts || 'unlimited'} attempts
                     </span>
-                    <button 
-                      onClick={() => handleDeleteShare(share.id)} 
+                    <button
+                      onClick={() => handleDeleteShare(share.id)}
                       className="text-red-500 hover:text-red-700 font-semibold"
                     >
                       Remove
@@ -351,7 +359,7 @@ export default function WorksheetSharingForm({
             <h3>Anonymous Links</h3>
             <div style={{ maxHeight: '200px', overflow: 'auto' }}>
               {anonymousLinks.map(link => (
-                <div key={link.id} style={{ 
+                <div key={link.id} style={{
                   padding: '8px',
                   margin: '4px 0',
                   backgroundColor: '#e8f5e8',
@@ -365,14 +373,14 @@ export default function WorksheetSharingForm({
                         {link.expires_at && ` • Expires: ${new Date(link.expires_at).toLocaleDateString()}`}
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => navigator.clipboard.writeText(getShareUrl(link.link_code))}
                       style={{ marginRight: '8px', padding: '4px 8px', fontSize: '0.8em' }}
                     >
                       Copy
                     </button>
                   </div>
-                  <button 
+                  <button
                     onClick={() => handleDeactivateLink(link.id)}
                     style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8em', marginTop: '4px' }}
                   >
@@ -387,7 +395,7 @@ export default function WorksheetSharingForm({
         {/* Share with Users/Groups Form */}
         <form onSubmit={handleShareSubmit} style={{ marginBottom: '24px' }}>
           <h3>Share with Users or Groups</h3>
-          
+
           <div style={{ marginBottom: '12px' }}>
             <label style={{ marginRight: '16px' }}>
               <input
@@ -485,8 +493,8 @@ export default function WorksheetSharingForm({
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
           >
@@ -530,10 +538,10 @@ export default function WorksheetSharingForm({
                   />
                 </div>
               </div>
-              
+
               <div>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={loading}
                   style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', marginRight: '8px' }}
                 >

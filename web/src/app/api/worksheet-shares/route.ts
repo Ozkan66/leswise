@@ -4,25 +4,27 @@ import { createClient } from '@supabase/supabase-js';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      worksheet_id, 
-      shared_by_user_id, 
-      shared_with_user_id, 
-      permission_level, 
+    const {
+      worksheet_id,
+      shared_by_user_id,
+      shared_with_user_id,
+      shared_with_group_id, // ADD: Support group sharing
+      permission_level,
       max_attempts,
-      expires_at 
+      expires_at
     } = body;
 
     console.log('SERVER: Creating worksheet share via authenticated client...', {
       worksheet_id,
       shared_by_user_id,
       shared_with_user_id,
+      shared_with_group_id, // ADD: Log group ID
       permission_level
     });
 
     // Get the auth token from the request
     const authToken = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!authToken) {
       return NextResponse.json(
         { error: 'No auth token provided' },
@@ -55,35 +57,46 @@ export async function POST(request: NextRequest) {
 
     console.log('SERVER: User authenticated:', user.id);
 
-    // Try the RPC function first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('create_worksheet_share', {
-      p_worksheet_id: worksheet_id,
-      p_shared_by_user_id: shared_by_user_id,
-      p_shared_with_user_id: shared_with_user_id,
-      p_permission_level: permission_level,
-      p_max_attempts: max_attempts,
-      p_expires_at: expires_at
-    });
+    // Try the RPC function if sharing with user
+    // Note: RPC function may not support group sharing, so we skip it for groups
+    if (shared_with_user_id && !shared_with_group_id) {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('create_worksheet_share', {
+        p_worksheet_id: worksheet_id,
+        p_shared_by_user_id: shared_by_user_id,
+        p_shared_with_user_id: shared_with_user_id,
+        p_permission_level: permission_level,
+        p_max_attempts: max_attempts,
+        p_expires_at: expires_at
+      });
 
-    if (!rpcError) {
-      console.log('SERVER: Share created successfully via RPC:', rpcData);
-      return NextResponse.json({ success: true, data: { id: rpcData } });
+      if (!rpcError) {
+        console.log('SERVER: Share created successfully via RPC:', rpcData);
+        return NextResponse.json({ success: true, data: { id: rpcData } });
+      }
+
+      console.log('SERVER: RPC failed, trying direct insert with authenticated client...');
+      console.log('RPC Error:', rpcError);
     }
 
-    console.log('SERVER: RPC failed, trying direct insert with authenticated client...');
-    console.log('RPC Error:', rpcError);
+    // Use direct insert for group sharing OR if RPC failed
+    const insertData: any = {
+      worksheet_id,
+      shared_by_user_id,
+      permission_level,
+      max_attempts,
+      expires_at
+    };
 
-    // Fall back to direct insert with authenticated client
+    // Add either user_id OR group_id (not both)
+    if (shared_with_user_id) {
+      insertData.shared_with_user_id = shared_with_user_id;
+    } else if (shared_with_group_id) {
+      insertData.shared_with_group_id = shared_with_group_id;
+    }
+
     const { data: directData, error: directError } = await supabase
       .from('worksheet_shares')
-      .insert({
-        worksheet_id,
-        shared_by_user_id,
-        shared_with_user_id,
-        permission_level,
-        max_attempts,
-        expires_at
-      })
+      .insert(insertData)
       .select()
       .single();
 

@@ -60,11 +60,11 @@ export default function JoinGroupForm({ onGroupJoined }: JoinGroupFormProps) {
       const status = group.type === "klas" ? "pending" : "active";
       const { error: memberError } = await supabase
         .from("group_members")
-        .insert([{ 
-          group_id: group.id, 
-          user_id: user.id, 
-          role: "member", 
-          status 
+        .insert([{
+          group_id: group.id,
+          user_id: user.id,
+          role: "member",
+          status
         }]);
 
       if (memberError) {
@@ -89,14 +89,9 @@ export default function JoinGroupForm({ onGroupJoined }: JoinGroupFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: 16, padding: 16, border: '1px solid #ccc', borderRadius: 8 }}>
-      <h3>Join Group</h3>
-      <p style={{ color: '#666', marginBottom: 12 }}>
-        Enter a jumper code to join an existing group.
-      </p>
-      
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="jumper-code" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="jumper-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Jumper Code *
         </label>
         <input
@@ -107,39 +102,34 @@ export default function JoinGroupForm({ onGroupJoined }: JoinGroupFormProps) {
           placeholder="Enter 6-character code"
           required
           maxLength={6}
-          style={{ 
-            width: '100%', 
-            padding: 8, 
-            border: '1px solid #ccc', 
-            borderRadius: 4,
-            textTransform: 'uppercase',
-            letterSpacing: 2,
-            fontFamily: 'monospace'
-          }}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white uppercase tracking-wider font-mono"
         />
-        <small style={{ color: '#666', fontSize: 12 }}>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Jumper codes are 6 characters long (e.g., ABC123)
-        </small>
+        </p>
       </div>
 
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         disabled={loading || jumperCode.length !== 6}
-        style={{
-          backgroundColor: (loading || jumperCode.length !== 6) ? '#ccc' : '#28a745',
-          color: 'white',
-          border: 'none',
-          padding: '10px 16px',
-          borderRadius: 4,
-          cursor: (loading || jumperCode.length !== 6) ? 'not-allowed' : 'pointer',
-          fontWeight: 'bold'
-        }}
+        className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors ${loading || jumperCode.length !== 6
+            ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-gray-500 dark:text-gray-400'
+            : 'bg-green-600 hover:bg-green-700 text-white'
+          }`}
       >
         {loading ? "Joining..." : "Join Group"}
       </button>
 
-      {error && <div style={{ color: "red", marginTop: 8, padding: 8, backgroundColor: '#ffeaea', borderRadius: 4 }}>{error}</div>}
-      {success && <div style={{ color: "green", marginTop: 8, padding: 8, backgroundColor: '#eafaf1', borderRadius: 4 }}>{success}</div>}
+      {error && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 text-sm">
+          {success}
+        </div>
+      )}
     </form>
   );
 }
