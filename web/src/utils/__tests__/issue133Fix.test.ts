@@ -22,9 +22,9 @@ describe('Issue #133 Fix Validation', () => {
   describe('user_has_worksheet_access function fix', () => {
     it('should properly handle worksheet ownership checks with correct schema references', async () => {
       const mockSupabase = supabase as jest.Mocked<typeof supabase>;
-      
+
       // Mock the function to return true for worksheet owners
-      mockSupabase.rpc.mockResolvedValue({ data: true, error: null });
+      (mockSupabase.rpc as jest.Mock).mockResolvedValue({ data: true, error: null } as any);
 
       const result = await supabase.rpc('user_has_worksheet_access', {
         p_user_id: 'test-user-id',
@@ -43,12 +43,18 @@ describe('Issue #133 Fix Validation', () => {
 
     it('should handle function errors gracefully', async () => {
       const mockSupabase = supabase as jest.Mocked<typeof supabase>;
-      
+
       // Mock the function to return an error
-      mockSupabase.rpc.mockResolvedValue({ 
-        data: null, 
-        error: { message: 'Function execution failed' } 
-      });
+      (mockSupabase.rpc as jest.Mock).mockResolvedValue({
+        data: null,
+        error: {
+          message: 'Function execution failed',
+          details: '',
+          hint: '',
+          code: '50000',
+          name: 'Error'
+        }
+      } as any);
 
       const result = await supabase.rpc('user_has_worksheet_access', {
         p_user_id: 'test-user-id',
@@ -66,7 +72,7 @@ describe('Issue #133 Fix Validation', () => {
     it('should validate that all required database functions exist', () => {
       const requiredFunctions = [
         'user_has_worksheet_access',
-        'check_and_increment_attempts', 
+        'check_and_increment_attempts',
         'generate_link_code'
       ];
 
