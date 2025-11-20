@@ -1,23 +1,31 @@
 import { useState } from "react";
 import { supabase } from "../utils/supabaseClient";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Users, School, PlusCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function GroupCreateForm({ onGroupCreated }: { onGroupCreated?: () => void }) {
   const [name, setName] = useState("");
   const [type, setType] = useState<'klas' | 'community'>('community');
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) {
-      setError("Not logged in");
+      toast.error("Je moet ingelogd zijn om een groep te maken");
       setLoading(false);
       return;
     }
+
     // Generate a random jumper code
     const jumper_code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const { data: group, error: groupError } = await supabase
@@ -27,7 +35,7 @@ export default function GroupCreateForm({ onGroupCreated }: { onGroupCreated?: (
       .single();
 
     if (groupError || !group) {
-      setError(groupError?.message || "Failed to create group");
+      toast.error(groupError?.message || "Kon groep niet aanmaken");
       setLoading(false);
       return;
     }
@@ -37,6 +45,7 @@ export default function GroupCreateForm({ onGroupCreated }: { onGroupCreated?: (
       .from("group_members")
       .insert([{ group_id: group.id, user_id: user.id, role: "leader", status: "active" }]);
 
+    toast.success("Groep succesvol aangemaakt!");
     setName("");
     setType('community');
     setDescription("");
@@ -45,72 +54,78 @@ export default function GroupCreateForm({ onGroupCreated }: { onGroupCreated?: (
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: 16, padding: 16, border: '1px solid #ccc', borderRadius: 8 }}>
-      <h3>Create New Group</h3>
-      
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="group-name" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
-          Group Name *
-        </label>
-        <input
-          id="group-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter group name"
-          required
-          style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4 }}
-        />
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <PlusCircle className="h-5 w-5 text-primary" />
+          Nieuwe Groep
+        </CardTitle>
+        <CardDescription>
+          Maak een nieuwe klas of community aan
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="group-name">Groepsnaam *</Label>
+            <Input
+              id="group-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Bijv. Wiskunde 4B"
+              required
+            />
+          </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="group-type" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
-          Group Type *
-        </label>
-        <select
-          id="group-type"
-          value={type}
-          onChange={(e) => setType(e.target.value as 'klas' | 'community')}
-          style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4 }}
-        >
-          <option value="community">Community</option>
-          <option value="klas">Klas</option>
-        </select>
-        <small style={{ color: '#666', fontSize: 12 }}>
-          Klas: For classroom settings with students. Community: For open collaboration groups.
-        </small>
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="group-type">Type *</Label>
+            <Select
+              value={type}
+              onValueChange={(value) => setType(value as 'klas' | 'community')}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="community">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span>Community (Open samenwerking)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="klas">
+                  <div className="flex items-center gap-2">
+                    <School className="h-4 w-4" />
+                    <span>Klas (Docent-student)</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="group-description" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
-          Description (Optional)
-        </label>
-        <textarea
-          id="group-description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe your group's purpose..."
-          rows={3}
-          style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4, resize: 'vertical' }}
-        />
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="group-description">Beschrijving (Optioneel)</Label>
+            <Textarea
+              id="group-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Waar is deze groep voor?"
+              rows={3}
+            />
+          </div>
 
-      <button 
-        type="submit" 
-        disabled={loading}
-        style={{
-          backgroundColor: loading ? '#ccc' : '#0070f3',
-          color: 'white',
-          border: 'none',
-          padding: '10px 16px',
-          borderRadius: 4,
-          cursor: loading ? 'not-allowed' : 'pointer',
-          fontWeight: 'bold'
-        }}
-      >
-        {loading ? "Creating..." : "Create Group"}
-      </button>
-      {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
-    </form>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Aanmaken...
+              </>
+            ) : (
+              "Groep Aanmaken"
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

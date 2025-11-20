@@ -30,7 +30,7 @@ export interface Worksheet {
   title: string;
   description?: string;
   instructions?: string;
-  folder_id?: string;
+  folder_id?: string | null;
   owner_id?: string;
   status?: 'draft' | 'published';
   created_at?: string;
@@ -56,7 +56,7 @@ export interface Task {
   title: string;
   task_type: 'open-question' | 'multiple-choice' | 'information' | 'text' | 'single_choice' | 'short_answer' | 'essay' | 'matching' | 'ordering' | 'fill_gaps';
   order_index: number;
-  content?: Record<string, any>; // For storing question details, options, etc.
+  content?: Record<string, unknown>; // For storing question details, options, etc.
   created_at?: string;
   updated_at?: string;
 }
@@ -65,7 +65,7 @@ export interface Submission {
   id: string;
   worksheet_id: string;
   user_id: string;
-  answers?: Record<string, any>;
+  answers?: Record<string, unknown>;
   feedback_data?: Record<string, { score: number; feedback: string }>;
   score?: number;
   feedback?: string;
@@ -93,9 +93,10 @@ export interface SubmissionElement {
 export interface Folder {
   id: string;
   name: string;
-  owner_id?: string;
+  owner_id: string;
   created_at?: string;
   updated_at?: string;
+  worksheets?: { count: number }[];
 }
 
 export interface Group {

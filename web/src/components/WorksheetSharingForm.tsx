@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { User, Group, WorksheetShare, AnonymousLink } from "../types/database";
@@ -306,258 +307,244 @@ export default function WorksheetSharingForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div style={{
-        backgroundColor: 'white',
-        padding: '24px',
-        borderRadius: '8px',
-        maxWidth: '800px',
-        width: '90%',
-        maxHeight: '90vh',
-        overflow: 'auto'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2>Share: {worksheetTitle}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+    <div className="space-y-6">
+
+      {error && (
+        <div style={{ color: 'red', marginBottom: '16px', padding: '8px', backgroundColor: '#ffebee', borderRadius: '4px' }}>
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div style={{ color: 'red', marginBottom: '16px', padding: '8px', backgroundColor: '#ffebee', borderRadius: '4px' }}>
-            {error}
-          </div>
-        )}
+      {/* Existing Shares */}
+      {existingShares.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <h3 className="text-lg font-semibold mb-4">Current Shares</h3>
+          {existingShares.length > 0 ? (
+            <ul className="space-y-2 mb-6 max-h-40 overflow-y-auto">
+              {existingShares.map((share) => (
+                <li key={share.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                  <span>
+                    {getShareDisplayText(share)} ({share.permission_level}) - {share.max_attempts || 'unlimited'} attempts
+                  </span>
+                  <button
+                    onClick={() => handleDeleteShare(share.id)}
+                    className="text-red-500 hover:text-red-700 font-semibold"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 text-sm">No shares found for this worksheet.</p>
+          )}
+        </div>
+      )}
 
-        {/* Existing Shares */}
-        {existingShares.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
-            <h3 className="text-lg font-semibold mb-4">Current Shares</h3>
-            {existingShares.length > 0 ? (
-              <ul className="space-y-2 mb-6 max-h-40 overflow-y-auto">
-                {existingShares.map((share) => (
-                  <li key={share.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
-                    <span>
-                      {getShareDisplayText(share)} ({share.permission_level}) - {share.max_attempts || 'unlimited'} attempts
-                    </span>
-                    <button
-                      onClick={() => handleDeleteShare(share.id)}
-                      className="text-red-500 hover:text-red-700 font-semibold"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500 text-sm">No shares found for this worksheet.</p>
-            )}
-          </div>
-        )}
-
-        {/* Anonymous Links */}
-        {anonymousLinks.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
-            <h3>Anonymous Links</h3>
-            <div style={{ maxHeight: '200px', overflow: 'auto' }}>
-              {anonymousLinks.map(link => (
-                <div key={link.id} style={{
-                  padding: '8px',
-                  margin: '4px 0',
-                  backgroundColor: '#e8f5e8',
-                  borderRadius: '4px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <code style={{ fontSize: '0.9em' }}>{getShareUrl(link.link_code)}</code>
-                      <div style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
-                        {link.max_attempts && `${link.attempts_used}/${link.max_attempts} attempts used`}
-                        {link.expires_at && ` • Expires: ${new Date(link.expires_at).toLocaleDateString()}`}
-                      </div>
+      {/* Anonymous Links */}
+      {anonymousLinks.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <h3>Anonymous Links</h3>
+          <div style={{ maxHeight: '200px', overflow: 'auto' }}>
+            {anonymousLinks.map(link => (
+              <div key={link.id} style={{
+                padding: '8px',
+                margin: '4px 0',
+                backgroundColor: '#e8f5e8',
+                borderRadius: '4px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <code style={{ fontSize: '0.9em' }}>{getShareUrl(link.link_code)}</code>
+                    <div style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
+                      {link.max_attempts && `${link.attempts_used}/${link.max_attempts} attempts used`}
+                      {link.expires_at && ` • Expires: ${new Date(link.expires_at).toLocaleDateString()}`}
                     </div>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(getShareUrl(link.link_code))}
-                      style={{ marginRight: '8px', padding: '4px 8px', fontSize: '0.8em' }}
-                    >
-                      Copy
-                    </button>
                   </div>
                   <button
-                    onClick={() => handleDeactivateLink(link.id)}
-                    style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8em', marginTop: '4px' }}
+                    onClick={() => navigator.clipboard.writeText(getShareUrl(link.link_code))}
+                    style={{ marginRight: '8px', padding: '4px 8px', fontSize: '0.8em' }}
                   >
-                    Deactivate
+                    Copy
                   </button>
                 </div>
+                <button
+                  onClick={() => handleDeactivateLink(link.id)}
+                  style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8em', marginTop: '4px' }}
+                >
+                  Deactivate
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Share with Users/Groups Form */}
+      <form onSubmit={handleShareSubmit} style={{ marginBottom: '24px' }}>
+        <h3>Share with Users or Groups</h3>
+
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ marginRight: '16px' }}>
+            <input
+              type="radio"
+              value="user"
+              checked={shareTarget === 'user'}
+              onChange={(e) => setShareTarget(e.target.value as 'user')}
+              style={{ marginRight: '4px' }}
+            />
+            Share with User
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="group"
+              checked={shareTarget === 'group'}
+              onChange={(e) => setShareTarget(e.target.value as 'group')}
+              style={{ marginRight: '4px' }}
+            />
+            Share with Group
+          </label>
+        </div>
+
+        {shareTarget === 'user' ? (
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px' }}>Select User:</label>
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              style={{ width: '100%', padding: '8px' }}
+              required
+            >
+              <option value="">Choose a user...</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.email} ({user.firstName} {user.lastName})
+                </option>
               ))}
-            </div>
+            </select>
+          </div>
+        ) : (
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px' }}>Select Group:</label>
+            <select
+              value={selectedGroupId}
+              onChange={(e) => setSelectedGroupId(e.target.value)}
+              style={{ width: '100%', padding: '8px' }}
+              required
+            >
+              <option value="">Choose a group...</option>
+              {groups.map(group => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
-        {/* Share with Users/Groups Form */}
-        <form onSubmit={handleShareSubmit} style={{ marginBottom: '24px' }}>
-          <h3>Share with Users or Groups</h3>
-
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ marginRight: '16px' }}>
-              <input
-                type="radio"
-                value="user"
-                checked={shareTarget === 'user'}
-                onChange={(e) => setShareTarget(e.target.value as 'user')}
-                style={{ marginRight: '4px' }}
-              />
-              Share with User
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="group"
-                checked={shareTarget === 'group'}
-                onChange={(e) => setShareTarget(e.target.value as 'group')}
-                style={{ marginRight: '4px' }}
-              />
-              Share with Group
-            </label>
-          </div>
-
-          {shareTarget === 'user' ? (
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px' }}>Select User:</label>
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                style={{ width: '100%', padding: '8px' }}
-                required
-              >
-                <option value="">Choose a user...</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.email} ({user.firstName} {user.lastName})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px' }}>Select Group:</label>
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                style={{ width: '100%', padding: '8px' }}
-                required
-              >
-                <option value="">Choose a group...</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px' }}>Permission Level:</label>
-            <select
-              value={permissionLevel}
-              onChange={(e) => setPermissionLevel(e.target.value as 'read' | 'submit' | 'edit')}
-              style={{ width: '100%', padding: '8px' }}
-            >
-              <option value="read">Read only (can view)</option>
-              <option value="submit">Submit (can complete worksheet)</option>
-              <option value="edit">Edit (can modify worksheet)</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '4px' }}>Max Attempts (optional):</label>
-              <input
-                type="number"
-                value={maxAttempts}
-                onChange={(e) => setMaxAttempts(e.target.value)}
-                placeholder="Unlimited"
-                min="1"
-                style={{ width: '100%', padding: '8px' }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '4px' }}>Expires in (days, optional):</label>
-              <input
-                type="number"
-                value={expiresIn}
-                onChange={(e) => setExpiresIn(e.target.value)}
-                placeholder="Never expires"
-                min="1"
-                style={{ width: '100%', padding: '8px' }}
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', marginBottom: '4px' }}>Permission Level:</label>
+          <select
+            value={permissionLevel}
+            onChange={(e) => setPermissionLevel(e.target.value as 'read' | 'submit' | 'edit')}
+            style={{ width: '100%', padding: '8px' }}
           >
-            {loading ? 'Sharing...' : 'Share Worksheet'}
-          </button>
-        </form>
-
-        {/* Anonymous Link Form */}
-        <div>
-          <h3>Anonymous Sharing</h3>
-          {!showAnonymousForm ? (
-            <button
-              onClick={() => setShowAnonymousForm(true)}
-              style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}
-            >
-              Create Anonymous Link
-            </button>
-          ) : (
-            <form onSubmit={handleCreateAnonymousLink}>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '4px' }}>Max Attempts (optional):</label>
-                  <input
-                    type="number"
-                    value={anonymousMaxAttempts}
-                    onChange={(e) => setAnonymousMaxAttempts(e.target.value)}
-                    placeholder="Unlimited"
-                    min="1"
-                    style={{ width: '100%', padding: '8px' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '4px' }}>Expires in (days, optional):</label>
-                  <input
-                    type="number"
-                    value={anonymousExpiresIn}
-                    onChange={(e) => setAnonymousExpiresIn(e.target.value)}
-                    placeholder="Never expires"
-                    min="1"
-                    style={{ width: '100%', padding: '8px' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', marginRight: '8px' }}
-                >
-                  {loading ? 'Creating...' : 'Create Link'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAnonymousForm(false)}
-                  style={{ padding: '8px 16px' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
+            <option value="read">Read only (can view)</option>
+            <option value="submit">Submit (can complete worksheet)</option>
+            <option value="edit">Edit (can modify worksheet)</option>
+          </select>
         </div>
+
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', marginBottom: '4px' }}>Max Attempts (optional):</label>
+            <input
+              type="number"
+              value={maxAttempts}
+              onChange={(e) => setMaxAttempts(e.target.value)}
+              placeholder="Unlimited"
+              min="1"
+              style={{ width: '100%', padding: '8px' }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', marginBottom: '4px' }}>Expires in (days, optional):</label>
+            <input
+              type="number"
+              value={expiresIn}
+              onChange={(e) => setExpiresIn(e.target.value)}
+              placeholder="Never expires"
+              min="1"
+              style={{ width: '100%', padding: '8px' }}
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
+        >
+          {loading ? 'Sharing...' : 'Share Worksheet'}
+        </button>
+      </form>
+
+      {/* Anonymous Link Form */}
+      <div>
+        <h3>Anonymous Sharing</h3>
+        {!showAnonymousForm ? (
+          <button
+            onClick={() => setShowAnonymousForm(true)}
+            style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}
+          >
+            Create Anonymous Link
+          </button>
+        ) : (
+          <form onSubmit={handleCreateAnonymousLink}>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '4px' }}>Max Attempts (optional):</label>
+                <input
+                  type="number"
+                  value={anonymousMaxAttempts}
+                  onChange={(e) => setAnonymousMaxAttempts(e.target.value)}
+                  placeholder="Unlimited"
+                  min="1"
+                  style={{ width: '100%', padding: '8px' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '4px' }}>Expires in (days, optional):</label>
+                <input
+                  type="number"
+                  value={anonymousExpiresIn}
+                  onChange={(e) => setAnonymousExpiresIn(e.target.value)}
+                  placeholder="Never expires"
+                  min="1"
+                  style={{ width: '100%', padding: '8px' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', marginRight: '8px' }}
+              >
+                {loading ? 'Creating...' : 'Create Link'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAnonymousForm(false)}
+                style={{ padding: '8px 16px' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

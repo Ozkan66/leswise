@@ -23,6 +23,7 @@ const CustomTabs = ({
     onStatusChange,
     onTaskAdded,
     onTaskDeleted,
+    onTasksReordered,
     initialTab = 'editor',
     newTaskType = null
 }: {
@@ -34,6 +35,7 @@ const CustomTabs = ({
     onStatusChange: (status: string) => void;
     onTaskAdded: (task: Task) => void;
     onTaskDeleted: (taskId: string) => void;
+    onTasksReordered: (tasks: Task[]) => void;
     initialTab?: string;
     newTaskType?: string | null;
 }) => {
@@ -91,6 +93,7 @@ const CustomTabs = ({
                         tasks={tasks}
                         onTaskAdded={onTaskAdded}
                         onTaskDeleted={onTaskDeleted}
+                        onTasksReordered={onTasksReordered}
                         newTaskType={newTaskType}
                     />
                 )}
@@ -185,22 +188,157 @@ const SettingsTab = ({
     </div>
 );
 
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+} from "@/components/ui/sheet";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { GripVertical, Sparkles, Plus } from "lucide-react";
+
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Sortable Task Item Component
+const SortableTaskItem = ({
+    task,
+    index,
+    onEdit,
+    onDelete
+}: {
+    task: Task;
+    index: number;
+    onEdit: (task: Task) => void;
+    onDelete: (id: string) => void;
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: task.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : 1,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes}>
+            <Card
+                className={`group hover:border-primary/50 transition-colors cursor-pointer ${isDragging ? 'shadow-lg ring-2 ring-primary/20' : ''}`}
+                onClick={() => onEdit(task)}
+            >
+                <div className="flex items-center p-4 gap-4">
+                    <div
+                        {...listeners}
+                        className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted cursor-grab active:cursor-grabbing text-muted-foreground"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <GripVertical className="h-5 w-5" />
+                    </div>
+                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted text-muted-foreground font-medium text-sm shrink-0">
+                        {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="secondary" className="text-xs capitalize">
+                                {task.task_type?.replace(/[-_]/g, ' ') || 'Task'}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                                {(task.content as any)?.points || 1} pts
+                            </span>
+                        </div>
+                        <h4 className="font-medium truncate">
+                            {task.title || (task.content as any)?.question || 'Untitled Task'}
+                        </h4>
+                        {(task.content as any)?.description && (
+                            <p className="text-sm text-muted-foreground truncate mt-1">
+                                {(task.content as any).description}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(task);
+                            }}
+                        >
+                            <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(task.id);
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
 const AddTasksTab = ({
     worksheetId,
     tasks,
     onTaskAdded,
     onTaskDeleted,
+    onTasksReordered,
     newTaskType = null
 }: {
     worksheetId: string,
     tasks: Task[],
     onTaskAdded: (task: Task) => void,
     onTaskDeleted: (taskId: string) => void,
+    onTasksReordered: (tasks: Task[]) => void,
     newTaskType?: string | null
 }) => {
     const [showAIGenerator, setShowAIGenerator] = useState(false);
-    const [showAdvancedForm, setShowAdvancedForm] = useState(!!newTaskType);
+    const [isTaskTypeSelectorOpen, setIsTaskTypeSelectorOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
+    const [activeNewTaskType, setActiveNewTaskType] = useState<string | null>(newTaskType);
+
     const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; taskId: string | null }>({
         show: false,
         taskId: null
@@ -211,8 +349,60 @@ const AddTasksTab = ({
         type: 'success'
     });
 
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    // Reset activeNewTaskType when prop changes
+    useEffect(() => {
+        if (newTaskType) {
+            setActiveNewTaskType(newTaskType);
+        }
+    }, [newTaskType]);
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (active.id !== over?.id) {
+            const oldIndex = tasks.findIndex((t) => t.id === active.id);
+            const newIndex = tasks.findIndex((t) => t.id === over?.id);
+
+            const newTasks = arrayMove(tasks, oldIndex, newIndex).map((task, index) => ({
+                ...task,
+                order_index: index
+            }));
+
+            // Optimistic update
+            onTasksReordered(newTasks);
+
+            // Persist to database
+            try {
+                const updates = newTasks.map(task => ({
+                    id: task.id,
+                    worksheet_id: worksheetId,
+                    title: task.title,
+                    task_type: task.task_type,
+                    order_index: task.order_index,
+                    content: task.content
+                }));
+
+                const { error } = await supabase
+                    .from('tasks')
+                    .upsert(updates);
+
+                if (error) throw error;
+            } catch (error) {
+                console.error('Error updating task order:', error);
+                showNotification('Failed to save new order', 'error');
+                // Revert would be complex here, relying on next fetch or user refresh
+            }
+        }
+    };
+
     const handleDelete = async (taskId: string) => {
-        // Show custom confirmation modal instead of window.confirm
         setDeleteConfirmation({ show: true, taskId });
     };
 
@@ -225,18 +415,9 @@ const AddTasksTab = ({
             alert("Could not delete the task.");
             console.error(error);
         } else {
-            // Call onTaskDeleted first to update state
             onTaskDeleted(deleteConfirmation.taskId);
-            // Close confirmation modal
             setDeleteConfirmation({ show: false, taskId: null });
-            // Then show notification after state update
-            setTimeout(() => {
-                setNotification({
-                    show: true,
-                    message: 'Task deleted successfully!',
-                    type: 'success'
-                });
-            }, 100);
+            showNotification('Task deleted successfully!', 'success');
         }
     };
 
@@ -245,160 +426,155 @@ const AddTasksTab = ({
     };
 
     const handleAITasksGenerated = (generatedTasks: Task[]) => {
-        // Add all generated tasks
         generatedTasks.forEach(task => onTaskAdded(task));
+        setShowAIGenerator(false);
+        showNotification('Tasks generated successfully!', 'success');
     };
 
     const handleEditTask = (task: Task) => {
         setEditingTask(task);
-        setShowAdvancedForm(false); // Hide new task form if open
+        setActiveNewTaskType(null);
     };
 
-    const handleUpdateTask = async (updatedTask: Task) => {
-        // Update the task in the parent state
+    const handleCreateTask = (type: string) => {
+        setActiveNewTaskType(type);
         setEditingTask(null);
-        // Use setTimeout to allow UI to update smoothly
-        setTimeout(() => {
-            onTaskAdded(updatedTask); // This will trigger a re-render
-        }, 1500);
+        setIsTaskTypeSelectorOpen(false);
+    };
+
+    const closeEditor = () => {
+        setEditingTask(null);
+        setActiveNewTaskType(null);
     };
 
     const showNotification = (message: string, type: 'success' | 'error') => {
-        setNotification({
-            show: true,
-            message,
-            type
-        });
+        setNotification({ show: true, message, type });
     };
 
+    const taskTypes = [
+        { id: 'open-question', label: 'Open Question', description: 'Standard question with text answer', icon: '📝' },
+        { id: 'multiple-choice', label: 'Multiple Choice', description: 'Select one or more correct options', icon: '☑️' },
+        { id: 'single-choice', label: 'Single Choice', description: 'Select exactly one correct option', icon: '🔘' },
+        { id: 'fill-gaps', label: 'Fill in Gaps', description: 'Complete the missing words in text', icon: '🔤' },
+        { id: 'matching', label: 'Matching', description: 'Match items from two lists', icon: '🔄' },
+        { id: 'ordering', label: 'Ordering', description: 'Arrange items in correct sequence', icon: '🔢' },
+        { id: 'information', label: 'Information', description: 'Read-only text or instructions', icon: 'ℹ️' },
+        { id: 'essay', label: 'Essay', description: 'Long form text answer', icon: '📄' },
+    ];
+
     return (
-        <div className="p-6 space-y-8">
-            {/* Quick Add Task Button */}
-            <div className="p-6 bg-muted/30 border-2 border-dashed border-border rounded-lg text-center">
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Choose how you want to add tasks
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                    Use the visual selector for a better experience, or the quick form below
-                </p>
-                <div className="flex flex-wrap justify-center gap-4">
-                    <Link
-                        href={`/worksheets/add-task?worksheet=${worksheetId}`}
-                        className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-                    >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Choose Task Type
-                    </Link>
-                    <button
+        <div className="p-6 space-y-6">
+            {/* Header Actions */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h3 className="text-lg font-semibold text-foreground">Tasks ({tasks.length})</h3>
+                    <p className="text-sm text-muted-foreground">Manage the questions and content for this worksheet.</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
                         onClick={() => setShowAIGenerator(true)}
-                        className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
+                        className="gap-2"
                     >
-                        🤖 Generate with AI
-                    </button>
+                        <Sparkles className="h-4 w-4 text-emerald-600" />
+                        Generate with AI
+                    </Button>
+                    <Button
+                        onClick={() => setIsTaskTypeSelectorOpen(true)}
+                        className="gap-2"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Task
+                    </Button>
                 </div>
-                <div className="mt-4 text-sm text-muted-foreground">or use quick form below</div>
             </div>
 
-            {/* Show Advanced Form Button */}
-            {!showAdvancedForm && !newTaskType && (
-                <div className="text-center">
-                    <button
-                        onClick={() => setShowAdvancedForm(true)}
-                        className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
+            {/* Task List with Drag and Drop */}
+            <div className="space-y-3">
+                {tasks.length > 0 ? (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
                     >
-                        ✏️ Create Detailed Task
-                    </button>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Quick Add Task</h3>
-                    <CreateTaskForm
-                        worksheetId={worksheetId}
-                        onTaskCreated={onTaskAdded}
-                        existingTasksCount={tasks.length}
-                        initialTaskType={newTaskType}
-                        onShowNotification={showNotification}
-                    />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Current Tasks ({tasks.length})</h3>
-                    <div className="space-y-4">
-                        {tasks.length > 0 ? tasks.map(task => (
-                            <div key={task.id} className="p-4 border border-border rounded-lg bg-card flex justify-between items-center shadow-sm">
-                                <div className="flex-1 min-w-0 mr-4">
-                                    <p className="font-semibold text-foreground truncate">
-                                        {(task.order_index || 0) + 1}. {
-                                            task.title ||
-                                            ((task.content as Record<string, unknown>)?.title as string) ||
-                                            ((task.content as Record<string, unknown>)?.question as string) ||
-                                            'Untitled Task'
-                                        }
-                                    </p>
-                                    <p className="text-sm text-muted-foreground capitalize mt-1">
-                                        {task.task_type?.replace(/[-_]/g, ' ') || 'Task'}
-                                    </p>
-                                    {((task.content as Record<string, unknown>)?.description as string) && (
-                                        <p className="text-xs text-muted-foreground mt-1 italic truncate">
-                                            {String((task.content as Record<string, unknown>).description)}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="flex gap-2 shrink-0">
-                                    <button
-                                        onClick={() => handleEditTask(task)}
-                                        className="p-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                                        title="Edit task"
-                                    >
-                                        <Edit3 className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleDelete(task.id);
-                                        }}
-                                        className="p-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
-                                        title="Delete task"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="text-center text-muted-foreground p-8 border-2 border-dashed border-border rounded-lg bg-muted/30">
-                                <p className="text-sm">No tasks added yet.</p>
-                                <p className="text-xs mt-2 text-muted-foreground">
-                                    Click &quot;Choose Task Type&quot; above to add your first task.
-                                </p>
-                            </div>
-                        )}
+                        <SortableContext
+                            items={tasks.map(t => t.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {tasks.map((task, index) => (
+                                <SortableTaskItem
+                                    key={task.id}
+                                    task={task}
+                                    index={index}
+                                    onEdit={handleEditTask}
+                                    onDelete={handleDelete}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
+                ) : (
+                    <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/10">
+                        <p className="text-muted-foreground mb-4">No tasks added yet.</p>
+                        <Button onClick={() => setIsTaskTypeSelectorOpen(true)}>
+                            Create your first task
+                        </Button>
                     </div>
-                </div>
+                )}
             </div>
 
-            {/* Advanced Task Form - Create or Edit Mode */}
-            {(showAdvancedForm || newTaskType || editingTask) && (
-                <AdvancedTaskForm
-                    worksheetId={worksheetId}
-                    onTaskCreated={(task) => {
-                        if (editingTask) {
-                            handleUpdateTask(task);
-                        } else {
-                            onTaskAdded(task);
-                            setShowAdvancedForm(false);
-                        }
-                    }}
-                    existingTasksCount={tasks.length}
-                    initialTaskType={newTaskType}
-                    editingTask={editingTask}
-                    onCancel={() => {
-                        setShowAdvancedForm(false);
-                        setEditingTask(null);
-                    }}
-                />
-            )}
+            {/* Task Type Selector Dialog */}
+            <Dialog open={isTaskTypeSelectorOpen} onOpenChange={setIsTaskTypeSelectorOpen}>
+                <DialogContent className="sm:max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Choose Task Type</DialogTitle>
+                        <DialogDescription>
+                            Select the type of task you want to add to this worksheet.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 py-4">
+                        {taskTypes.map((type) => (
+                            <button
+                                key={type.id}
+                                onClick={() => handleCreateTask(type.id)}
+                                className="flex flex-col items-start p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all text-left"
+                            >
+                                <span className="text-2xl mb-2">{type.icon}</span>
+                                <span className="font-medium">{type.label}</span>
+                                <span className="text-xs text-muted-foreground mt-1">{type.description}</span>
+                            </button>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Task Editor Sheet */}
+            <Sheet open={!!editingTask || !!activeNewTaskType} onOpenChange={(open) => !open && closeEditor()}>
+                <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0">
+                    <div className="p-6">
+                        <SheetHeader className="mb-6">
+                            <SheetTitle>
+                                {editingTask ? 'Edit Task' : 'Create New Task'}
+                            </SheetTitle>
+                            <SheetDescription>
+                                {editingTask ? 'Update the details of this task.' : 'Configure the new task details below.'}
+                            </SheetDescription>
+                        </SheetHeader>
+
+                        <AdvancedTaskForm
+                            worksheetId={worksheetId}
+                            onTaskCreated={(task) => {
+                                onTaskAdded(task);
+                                closeEditor();
+                                showNotification(editingTask ? 'Task updated!' : 'Task created!', 'success');
+                            }}
+                            existingTasksCount={tasks.length}
+                            initialTaskType={activeNewTaskType}
+                            editingTask={editingTask}
+                            onCancel={closeEditor}
+                        />
+                    </div>
+                </SheetContent>
+            </Sheet>
 
             {/* AI Generator Modal */}
             {showAIGenerator && (
@@ -411,34 +587,22 @@ const AddTasksTab = ({
             )}
 
             {/* Delete Confirmation Modal */}
-            {deleteConfirmation.show && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-background rounded-lg p-8 max-w-md w-[90%] shadow-xl border border-border">
-                        <h3 className="text-xl font-semibold text-foreground mb-4">
-                            Delete Task
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-6">
+            <Dialog open={deleteConfirmation.show} onOpenChange={(open) => !open && cancelDelete()}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Task</DialogTitle>
+                        <DialogDescription>
                             Are you sure you want to delete this task? This action cannot be undone.
-                        </p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={cancelDelete}
-                                className="px-4 py-2 border border-input rounded-md bg-background text-foreground text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90 transition-colors"
-                            >
-                                Delete
-                            </button>
-                        </div>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-3 mt-4">
+                        <Button variant="outline" onClick={cancelDelete}>Cancel</Button>
+                        <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
                     </div>
-                </div>
-            )}
+                </DialogContent>
+            </Dialog>
 
-            {/* Notification Modal */}
+            {/* Notification Toast (using sonner ideally, but keeping existing modal for now if needed, or better yet, replace with sonner) */}
             <NotificationModal
                 show={notification.show}
                 message={notification.message}
@@ -594,6 +758,10 @@ export default function EditWorksheetPage() {
         setTasks(currentTasks => currentTasks.filter(task => task.id !== taskId));
     };
 
+    const handleTasksReordered = (reorderedTasks: Task[]) => {
+        setTasks(reorderedTasks);
+    };
+
     if (loading) {
         return (
             <AuthenticatedLayout>
@@ -677,6 +845,7 @@ export default function EditWorksheetPage() {
                         onStatusChange={handleStatusChange}
                         onTaskAdded={handleTaskAdded}
                         onTaskDeleted={handleTaskDeleted}
+                        onTasksReordered={handleTasksReordered}
                         initialTab={initialTab}
                         newTaskType={newTaskType}
                     />

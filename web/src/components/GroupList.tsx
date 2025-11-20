@@ -3,6 +3,36 @@ import { supabase } from "../utils/supabaseClient";
 import { Group } from "../types/database";
 import GroupSettings from "./GroupSettings";
 import GroupResults from "./GroupResults";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
+import {
+  Users,
+  Settings,
+  BarChart3,
+  Trash2,
+  Edit3,
+  Save,
+  X,
+  School,
+  Hash,
+  MoreVertical,
+  Check,
+  UserX,
+  UserCheck,
+  Shield,
+  User
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { toast } from "sonner";
+import { cn } from "../lib/utils";
 
 interface GroupMember {
   user_id: string;
@@ -26,6 +56,7 @@ export default function GroupList() {
   const [showResults, setShowResults] = useState<{ groupId: string; groupName: string } | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGroups();
@@ -70,6 +101,7 @@ export default function GroupList() {
 
     if (error || !data) {
       setMembers([]);
+      toast.error("Kon leden niet laden");
     } else {
       // Normalize user_profiles from array to single object
       const normalizedMembers = (data as any[]).map((member: any) => ({
@@ -121,7 +153,10 @@ export default function GroupList() {
       .eq("user_id", userId);
 
     if (!error) {
+      toast.success("Lid goedgekeurd");
       await fetchMembers(groupId);
+    } else {
+      toast.error("Kon lid niet goedkeuren");
     }
   };
 
@@ -133,12 +168,18 @@ export default function GroupList() {
       .eq("user_id", userId);
 
     if (!error) {
+      toast.success("Verzoek afgewezen");
       await fetchMembers(groupId);
+    } else {
+      toast.error("Kon verzoek niet afwijzen");
     }
   };
 
   const handleRemoveMember = async (groupId: string, userId: string) => {
-    if (!window.confirm("Are you sure you want to remove this member?")) return;
+    // Using toast for confirmation could be tricky, but let's stick to simple confirm for now or implement a better UI
+    // For now, let's assume the user knows what they are doing or add a small confirmation step
+    // Let's use a simple confirm for member removal as it's less critical than group deletion
+    if (!window.confirm("Weet je zeker dat je dit lid wilt verwijderen?")) return;
 
     const { error } = await supabase
       .from("group_members")
@@ -147,12 +188,12 @@ export default function GroupList() {
       .eq("user_id", userId);
 
     if (!error) {
+      toast.success("Lid verwijderd");
       await fetchMembers(groupId);
+    } else {
+      toast.error("Kon lid niet verwijderen");
     }
   };
-
-  if (loading) return <div>Loading groups...</div>;
-  if (!groups.length) return <div>No groups found. Create a group or join one using a jumper code.</div>;
 
   const handleEdit = (group: Group) => {
     setEditingId(group.id);
@@ -164,15 +205,35 @@ export default function GroupList() {
       setEditingId(null);
       return;
     }
-    await supabase.from("groups").update({ name: editName }).eq("id", group.id);
-    setEditingId(null);
-    await fetchGroups();
+
+    const { error } = await supabase.from("groups").update({ name: editName }).eq("id", group.id);
+
+    if (error) {
+      toast.error("Kon groep niet bijwerken");
+    } else {
+      toast.success("Groep bijgewerkt");
+      setEditingId(null);
+      await fetchGroups();
+    }
   };
 
-  const handleDelete = async (group: Group) => {
-    if (!window.confirm(`Delete group '${group.name}'? This cannot be undone.`)) return;
-    await supabase.from("groups").delete().eq("id", group.id);
-    await fetchGroups();
+  const handleDelete = async (groupId: string) => {
+    if (confirmingDelete !== groupId) {
+      setConfirmingDelete(groupId);
+      toast.warning("Klik nogmaals om te bevestigen");
+      setTimeout(() => setConfirmingDelete(null), 3000);
+      return;
+    }
+
+    const { error } = await supabase.from("groups").delete().eq("id", groupId);
+
+    if (error) {
+      toast.error("Kon groep niet verwijderen");
+    } else {
+      toast.success("Groep verwijderd");
+      setConfirmingDelete(null);
+      await fetchGroups();
+    }
   };
 
   const formatMemberName = (member: GroupMember) => {
@@ -180,155 +241,231 @@ export default function GroupList() {
     if (profile?.first_name && profile?.last_name) {
       return `${profile.first_name} ${profile.last_name}`;
     }
-    return profile?.email || 'Unknown User';
+    return profile?.email || 'Onbekende Gebruiker';
   };
 
+  if (loading) return (
+    <div className="flex justify-center p-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>
+  );
+
+  if (!groups.length) return (
+    <div className="text-center p-8 border border-dashed rounded-xl bg-muted/50">
+      <p className="text-muted-foreground">Geen groepen gevonden. Maak een groep aan of word lid van een bestaande groep.</p>
+    </div>
+  );
+
   return (
-    <div>
-      <h2>Your Groups</h2>
-      <div style={{ display: 'grid', gap: 16 }}>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold tracking-tight">Jouw Groepen</h2>
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
         {groups.map((group) => (
-          <div key={group.id} style={{
-            border: '1px solid #ccc',
-            borderRadius: 8,
-            padding: 16,
-            backgroundColor: '#f9f9f9'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-              {editingId === group.id ? (
-                <div style={{ flex: 1 }}>
-                  <input
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    autoFocus
-                    style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4 }}
-                  />
-                  <div style={{ marginTop: 8 }}>
-                    <button
-                      style={{ marginRight: 8, backgroundColor: '#28a745', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4 }}
-                      onClick={() => handleEditSave(group)}
-                    >
-                      Save
-                    </button>
-                    <button
-                      style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4 }}
-                      onClick={() => setEditingId(null)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: 0, marginBottom: 4 }}>{group.name}</h3>
-                  <div style={{ display: 'flex', gap: 16, fontSize: 14, color: '#666', marginBottom: 8 }}>
-                    <span><strong>Type:</strong> {group.type === 'klas' ? 'Klas' : 'Community'}</span>
-                    <span><strong>Role:</strong> {group.role === 'leader' ? 'Leader' : 'Member'}</span>
-                    <span><strong>Code:</strong> <code style={{ backgroundColor: '#e9ecef', padding: '2px 4px', borderRadius: 2 }}>{group.jumper_code}</code></span>
-                  </div>
-                  {group.description && (
-                    <p style={{ margin: 0, marginBottom: 8, fontSize: 14, color: '#666' }}>{group.description}</p>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
-                      onClick={() => handleShowMembers(group.id)}
-                    >
-                      {showMembers === group.id ? 'Hide Members' : 'Show Members'}
-                    </button>
-                    <button
-                      style={{ backgroundColor: '#17a2b8', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
-                      onClick={() => handleShowResults(group.id, group.name)}
-                    >
-                      View Results
-                    </button>
-                    {group.role === 'leader' && (
-                      <>
-                        <button
-                          style={{ backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
-                          onClick={() => handleShowSettings(group.id)}
-                        >
-                          Settings
-                        </button>
-                        <button
-                          style={{ backgroundColor: '#ffc107', color: 'black', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
+          <Card key={group.id} className="overflow-hidden transition-all hover:shadow-md">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1 flex-1">
+                  {editingId === group.id ? (
+                    <div className="flex items-center gap-2 max-w-md">
+                      <Input
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        autoFocus
+                        className="h-8"
+                      />
+                      <Button size="sm" onClick={() => handleEditSave(group)} className="h-8 w-8 p-0">
+                        <Save className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} className="h-8 w-8 p-0">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">{group.name}</CardTitle>
+                      {group.role === 'leader' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
                           onClick={() => handleEdit(group)}
                         >
-                          Quick Edit
-                        </button>
-                        <button
-                          style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
-                          onClick={() => handleDelete(group)}
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <CardDescription className="text-xs line-clamp-1">{group.description || "Geen beschrijving"}</CardDescription>
                 </div>
-              )}
-            </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={group.type === 'klas' ? 'default' : 'secondary'} className="capitalize text-xs px-2 py-0.5 h-5">
+                    {group.type === 'klas' ? <School className="mr-1 h-3 w-3" /> : <Users className="mr-1 h-3 w-3" />}
+                    {group.type}
+                  </Badge>
+                  <Badge variant="outline" className={cn(
+                    "text-xs px-2 py-0.5 h-5",
+                    group.role === 'leader' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"
+                  )}>
+                    {group.role === 'leader' ? <Shield className="mr-1 h-3 w-3" /> : <User className="mr-1 h-3 w-3" />}
+                    {group.role === 'leader' ? 'Leider' : 'Lid'}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-2 px-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-md w-fit">
+                <span className="font-medium">Jumper Code:</span>
+                <code className="bg-background px-1.5 py-0.5 rounded border font-mono text-foreground text-xs">
+                  {group.jumper_code}
+                </code>
+              </div>
+            </CardContent>
+            <CardFooter className="bg-muted/20 px-4 py-2 flex justify-between items-center">
+              <div className="flex gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={showMembers === group.id ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => handleShowMembers(group.id)}
+                      >
+                        <Users className="mr-2 h-3.5 w-3.5" />
+                        Leden
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Bekijk leden</TooltipContent>
+                  </Tooltip>
 
-            {/* Members List */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => handleShowResults(group.id, group.name)}
+                      >
+                        <BarChart3 className="mr-2 h-3.5 w-3.5" />
+                        Resultaten
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Bekijk resultaten</TooltipContent>
+                  </Tooltip>
+
+                  {group.role === 'leader' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => handleShowSettings(group.id)}
+                        >
+                          <Settings className="mr-2 h-3.5 w-3.5" />
+                          Instellingen
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Groepsinstellingen</TooltipContent>
+                    </Tooltip>
+                  )}
+                </TooltipProvider>
+              </div>
+
+              {group.role === 'leader' && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={confirmingDelete === group.id ? "destructive" : "ghost"}
+                        size="sm"
+                        className={cn(
+                          "h-8 text-xs",
+                          confirmingDelete === group.id ? "animate-pulse" : "text-destructive hover:text-destructive hover:bg-destructive/10"
+                        )}
+                        onClick={() => handleDelete(group.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {confirmingDelete === group.id ? "Bevestig" : ""}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Groep verwijderen</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </CardFooter>
+
+            {/* Members List Expansion */}
             {showMembers === group.id && (
-              <div style={{
-                borderTop: '1px solid #ddd',
-                paddingTop: 12,
-                marginTop: 12,
-                backgroundColor: 'white',
-                borderRadius: 4,
-                padding: 12
-              }}>
-                <h4 style={{ margin: 0, marginBottom: 8 }}>Members</h4>
+              <div className="border-t bg-muted/10 p-3 animate-in slide-in-from-top-2 duration-200">
+                <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5" />
+                  Ledenlijst
+                </h4>
                 {loadingMembers ? (
-                  <div>Loading members...</div>
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                    Laden...
+                  </div>
                 ) : members.length === 0 ? (
-                  <div style={{ color: '#666' }}>No members found.</div>
+                  <p className="text-muted-foreground text-xs">Geen leden gevonden.</p>
                 ) : (
-                  <div style={{ display: 'grid', gap: 8 }}>
+                  <div className="grid gap-2">
                     {members.map((member) => (
-                      <div key={member.user_id} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: 8,
-                        backgroundColor: member.status === 'pending' ? '#fff3cd' : '#f8f9fa',
-                        borderRadius: 4,
-                        border: '1px solid #dee2e6'
-                      }}>
-                        <div>
-                          <strong>{formatMemberName(member)}</strong>
-                          <div style={{ fontSize: 12, color: '#666' }}>
-                            {member.role === 'leader' ? 'Leader' : 'Member'} •
-                            {member.status === 'pending' ? ' Pending approval' : ' Active'} •
-                            Joined {new Date(member.joined_at).toLocaleDateString()}
+                      <div key={member.user_id} className="flex justify-between items-center p-2 bg-background rounded-lg border shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-medium",
+                            member.role === 'leader' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                          )}>
+                            {member.user_profiles?.first_name?.[0] || member.user_profiles?.email?.[0] || '?'}
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm leading-none">{formatMemberName(member)}</div>
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <span>{member.role === 'leader' ? 'Leider' : 'Lid'}</span>
+                              <span>•</span>
+                              <span className={cn(
+                                member.status === 'pending' ? "text-amber-600 font-medium" : "text-green-600"
+                              )}>
+                                {member.status === 'pending' ? 'Wacht' : 'Actief'}
+                              </span>
+                            </div>
                           </div>
                         </div>
+
                         {group.role === 'leader' && (
-                          <div style={{ display: 'flex', gap: 4 }}>
+                          <div className="flex gap-1">
                             {member.status === 'pending' && (
                               <>
-                                <button
-                                  style={{ backgroundColor: '#28a745', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 2, fontSize: 11 }}
+                                <Button
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] bg-green-600 hover:bg-green-700 text-white"
                                   onClick={() => handleApproveMember(group.id, member.user_id)}
                                 >
-                                  Approve
-                                </button>
-                                <button
-                                  style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 2, fontSize: 11 }}
+                                  <UserCheck className="h-3 w-3 mr-1" />
+                                  Ok
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-6 px-2 text-[10px]"
                                   onClick={() => handleRejectMember(group.id, member.user_id)}
                                 >
-                                  Reject
-                                </button>
+                                  <UserX className="h-3 w-3 mr-1" />
+                                  Nee
+                                </Button>
                               </>
                             )}
                             {member.status === 'active' && member.role !== 'leader' && (
-                              <button
-                                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 2, fontSize: 11 }}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                                 onClick={() => handleRemoveMember(group.id, member.user_id)}
                               >
-                                Remove
-                              </button>
+                                <UserX className="h-3.5 w-3.5" />
+                              </Button>
                             )}
                           </div>
                         )}
@@ -338,7 +475,7 @@ export default function GroupList() {
                 )}
               </div>
             )}
-          </div>
+          </Card>
         ))}
       </div>
 

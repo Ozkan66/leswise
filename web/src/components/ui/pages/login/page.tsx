@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [userType, setUserType] = useState<"teacher" | "student" | null>(null)
   const router = useRouter()
-  const { signIn } = useAuth()
+  const { } = useAuth()
 
   const handleLogin = async () => {
     // Hier kun je eventueel Supabase authenticatie toevoegen

@@ -9,7 +9,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white border-transparent',
+  primary: 'bg-primary hover:bg-primary/90 text-primary-foreground border-transparent',
   secondary: 'bg-gray-600 hover:bg-gray-700 text-white border-transparent',
   danger: 'bg-red-600 hover:bg-red-700 text-white border-transparent',
   ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
@@ -33,7 +33,7 @@ export default function Button({
   const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
   const widthClass = fullWidth ? 'w-full' : '';
   const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
-  
+
   // Combine all classes for better readability
   const buttonClasses = [
     baseClasses,

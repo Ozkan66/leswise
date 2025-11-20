@@ -1,6 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { Group } from "../types/database";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Settings, Loader2, RefreshCw, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
 interface GroupSettingsProps {
   groupId: string;
@@ -12,8 +33,7 @@ export default function GroupSettings({ groupId, onClose, onSave }: GroupSetting
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -29,8 +49,9 @@ export default function GroupSettings({ groupId, onClose, onSave }: GroupSetting
       .single();
 
     if (error || !data) {
-      setError("Failed to load group settings");
+      toast.error("Kon groepsinstellingen niet laden");
       setLoading(false);
+      onClose();
       return;
     }
 
@@ -39,27 +60,27 @@ export default function GroupSettings({ groupId, onClose, onSave }: GroupSetting
     setDescription(data.description || "");
     setType(data.type || 'community');
     setLoading(false);
-  }, [groupId]);
+  }, [groupId, onClose]);
 
   useEffect(() => {
     fetchGroup();
   }, [fetchGroup]);
 
   const generateNewJumperCode = async () => {
-    if (!window.confirm("Generate a new jumper code? The old code will no longer work.")) return;
-    
+    if (!window.confirm("Nieuwe jumper code genereren? De oude code werkt dan niet meer.")) return;
+
     setSaving(true);
     const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
+
     const { error } = await supabase
       .from("groups")
       .update({ jumper_code: newCode })
       .eq("id", groupId);
 
     if (error) {
-      setError("Failed to generate new jumper code");
+      toast.error("Kon nieuwe code niet genereren");
     } else {
-      setSuccess("New jumper code generated successfully!");
+      toast.success("Nieuwe jumper code gegenereerd!");
       await fetchGroup(); // Refresh to show new code
     }
     setSaving(false);
@@ -68,8 +89,6 @@ export default function GroupSettings({ groupId, onClose, onSave }: GroupSetting
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     const { error } = await supabase
       .from("groups")
@@ -81,204 +100,131 @@ export default function GroupSettings({ groupId, onClose, onSave }: GroupSetting
       .eq("id", groupId);
 
     if (error) {
-      setError("Failed to save group settings");
+      toast.error("Kon instellingen niet opslaan");
     } else {
-      setSuccess("Group settings saved successfully!");
+      toast.success("Groepsinstellingen opgeslagen!");
       if (onSave) onSave();
+      onClose();
     }
     setSaving(false);
   };
 
-  if (loading) {
-    return (
-      <div style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        bottom: 0, 
-        backgroundColor: 'rgba(0,0,0,0.5)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        zIndex: 1000
-      }}>
-        <div style={{ backgroundColor: 'white', padding: 20, borderRadius: 8 }}>
-          Loading group settings...
-        </div>
-      </div>
-    );
-  }
+  const copyJumperCode = () => {
+    if (group?.jumper_code) {
+      navigator.clipboard.writeText(group.jumper_code);
+      setCopied(true);
+      toast.success("Code gekopieerd!");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
-    <div style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.5)', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: 24, 
-        borderRadius: 8, 
-        width: '90%', 
-        maxWidth: 600,
-        maxHeight: '90vh',
-        overflow: 'auto'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0 }}>Group Settings</h2>
-          <button 
-            onClick={onClose}
-            style={{ 
-              backgroundColor: 'transparent', 
-              border: 'none', 
-              fontSize: 24, 
-              cursor: 'pointer',
-              padding: 4
-            }}
-          >
-            ×
-          </button>
-        </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            Groepsinstellingen
+          </DialogTitle>
+          <DialogDescription>
+            Beheer de details en toegang van deze groep.
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSave}>
-          <div style={{ marginBottom: 16 }}>
-            <label htmlFor="settings-name" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
-              Group Name *
-            </label>
-            <input
-              id="settings-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4 }}
-            />
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="settings-name">Groepsnaam *</Label>
+              <Input
+                id="settings-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="Bijv. Wiskunde 4B"
+              />
+            </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label htmlFor="settings-type" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
-              Group Type *
-            </label>
-            <select
-              id="settings-type"
-              value={type}
-              onChange={(e) => setType(e.target.value as 'klas' | 'community')}
-              style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4 }}
-            >
-              <option value="community">Community</option>
-              <option value="klas">Klas</option>
-            </select>
-            <small style={{ color: '#666', fontSize: 12 }}>
-              Note: Changing from Community to Klas will require approval for new members.
-            </small>
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label htmlFor="settings-description" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
-              Description
-            </label>
-            <textarea
-              id="settings-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4, resize: 'vertical' }}
-              placeholder="Describe your group's purpose..."
-            />
-          </div>
-
-          <div style={{ marginBottom: 20, padding: 16, backgroundColor: '#f8f9fa', borderRadius: 4 }}>
-            <h4 style={{ margin: '0 0 12px 0' }}>Jumper Code</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 'bold', letterSpacing: 2 }}>
-                {group?.jumper_code}
-              </span>
-              <button
-                type="button"
-                onClick={generateNewJumperCode}
-                disabled={saving}
-                style={{
-                  backgroundColor: '#ffc107',
-                  color: 'black',
-                  border: 'none',
-                  padding: '6px 12px',
-                  borderRadius: 4,
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  fontSize: 12
-                }}
+            <div className="space-y-2">
+              <Label htmlFor="settings-type">Type *</Label>
+              <Select
+                value={type}
+                onValueChange={(value) => setType(value as 'klas' | 'community')}
               >
-                {saving ? 'Generating...' : 'Generate New Code'}
-              </button>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="community">Community (Open)</SelectItem>
+                  <SelectItem value="klas">Klas (Gesloten)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Let op: Bij wijzigen naar 'Klas' moeten nieuwe leden goedgekeurd worden.
+              </p>
             </div>
-            <small style={{ color: '#666', fontSize: 12 }}>
-              Share this code with people you want to join your group. Generating a new code will invalidate the old one.
-            </small>
-          </div>
 
-          {error && (
-            <div style={{ 
-              color: 'red', 
-              marginBottom: 16, 
-              padding: 8, 
-              backgroundColor: '#ffeaea', 
-              borderRadius: 4 
-            }}>
-              {error}
+            <div className="space-y-2">
+              <Label htmlFor="settings-description">Beschrijving</Label>
+              <Textarea
+                id="settings-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Waar is deze groep voor?"
+              />
             </div>
-          )}
 
-          {success && (
-            <div style={{ 
-              color: 'green', 
-              marginBottom: 16, 
-              padding: 8, 
-              backgroundColor: '#eafaf1', 
-              borderRadius: 4 
-            }}>
-              {success}
+            <div className="p-4 bg-muted/50 rounded-lg border space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="font-semibold">Jumper Code</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={generateNewJumperCode}
+                  disabled={saving}
+                >
+                  <RefreshCw className={`h-3 w-3 mr-2 ${saving ? 'animate-spin' : ''}`} />
+                  Nieuwe Code
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-background p-2 rounded border font-mono text-lg font-bold text-center tracking-widest">
+                  {group?.jumper_code}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={copyJumperCode}
+                  className="shrink-0"
+                >
+                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Deel deze code met mensen die lid willen worden.
+              </p>
             </div>
-          )}
 
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                padding: '10px 16px',
-                borderRadius: 4,
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !name.trim()}
-              style={{
-                backgroundColor: (saving || !name.trim()) ? '#ccc' : '#28a745',
-                color: 'white',
-                border: 'none',
-                padding: '10px 16px',
-                borderRadius: 4,
-                cursor: (saving || !name.trim()) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Annuleren
+              </Button>
+              <Button type="submit" disabled={saving || !name.trim()}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Opslaan
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

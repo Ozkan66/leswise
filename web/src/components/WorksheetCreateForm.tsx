@@ -24,7 +24,7 @@ export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCre
       if (!user) return;
       const { data } = await supabase
         .from("folders")
-        .select("id, name")
+        .select("id, name, owner_id")
         .eq("owner_id", user.id);
       setFolders(data || []);
     };
@@ -43,11 +43,11 @@ export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCre
     }
     const { error: worksheetError } = await supabase
       .from("worksheets")
-      .insert([{ 
-        title, 
-        description: description || null, 
+      .insert([{
+        title,
+        description: description || null,
         instructions: instructions || null,
-        owner_id: user.id, 
+        owner_id: user.id,
         folder_id: folderId || null,
         status: status
       }]);
@@ -63,7 +63,7 @@ export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCre
     setStatus('draft');
     setUseAI(false);
     setLoading(false);
-    
+
     // Call appropriate callback based on AI selection
     if (useAI && onWorksheetCreatedWithAI) {
       // For AI mode, we'll use a simpler approach - just signal AI mode
@@ -77,7 +77,7 @@ export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCre
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: 24, border: '1px solid #ccc', padding: 16, borderRadius: 4 }}>
       <h4>Create New Worksheet</h4>
-      
+
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', marginBottom: 4 }}>Title:</label>
         <input
@@ -112,9 +112,9 @@ export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCre
 
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', marginBottom: 4 }}>Folder:</label>
-        <select 
-          value={folderId} 
-          onChange={(e) => setFolderId(e.target.value)} 
+        <select
+          value={folderId}
+          onChange={(e) => setFolderId(e.target.value)}
           style={{ width: '100%', padding: 4 }}
         >
           <option value="">No folder</option>
@@ -126,9 +126,9 @@ export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCre
 
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', marginBottom: 4 }}>Status:</label>
-        <select 
-          value={status} 
-          onChange={(e) => setStatus(e.target.value as 'draft' | 'published')} 
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as 'draft' | 'published')}
           style={{ width: '100%', padding: 4 }}
         >
           <option value="draft">Draft (work in progress)</option>
@@ -156,7 +156,7 @@ export default function WorksheetCreateForm({ onWorksheetCreated, onWorksheetCre
       <button type="submit" disabled={loading} style={{ padding: '8px 16px' }}>
         {loading ? "Creating..." : "Create Worksheet"}
       </button>
-      
+
       {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
     </form>
   );

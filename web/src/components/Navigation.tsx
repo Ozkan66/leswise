@@ -25,63 +25,63 @@ export default function Navigation() {
 
   return (
     <nav className="flex items-center gap-5 px-4 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <Link 
-        href="/" 
+      <Link
+        href="/"
         className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors mr-3"
         aria-label="Leswise Home"
       >
         <span aria-hidden="true">📚</span> Leswise
       </Link>
-      
+
       {user ? (
         <>
-          <Link 
-            href="/groups" 
+          <Link
+            href="/groups"
             className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Groups
           </Link>
-          <Link 
-            href="/folders" 
+          <Link
+            href="/folders"
             className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Folders
           </Link>
-          <Link 
-            href="/worksheets" 
+          <Link
+            href="/worksheets"
             className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Worksheets
           </Link>
-          <Link 
-            href="/shared-worksheets" 
+          <Link
+            href="/shared-worksheets"
             className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Shared Worksheets
           </Link>
-          <Link 
-            href="/worksheet-submission" 
+          <Link
+            href="/worksheet-submission"
             className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Submissions
           </Link>
-          <Link 
-            href="/student-submissions" 
+          <Link
+            href="/student-submissions"
             className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Mijn Werkbladen
           </Link>
-          <Link 
-            href="/teacher-submissions" 
+          <Link
+            href="/teacher-submissions"
             className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Teacher Submissions
           </Link>
-          
+
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
-            <Link 
-              href="/profile" 
+            <Link
+              href="/profile"
               className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               Welkom, {user.user_metadata?.first_name || user.email}
@@ -97,14 +97,14 @@ export default function Navigation() {
       ) : (
         <div className="ml-auto flex items-center gap-3">
           <ThemeToggle />
-          <Link 
-            href="/login" 
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          <Link
+            href="/login"
+            className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
             Inloggen
           </Link>
-          <Link 
-            href="/register" 
+          <Link
+            href="/register"
             className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
           >
             Registreren

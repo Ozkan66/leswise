@@ -24,6 +24,7 @@ describe('Issue #133 Fix Validation', () => {
       const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 
       // Mock the function to return true for worksheet owners
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (mockSupabase.rpc as jest.Mock).mockResolvedValue({ data: true, error: null } as any);
 
       const result = await supabase.rpc('user_has_worksheet_access', {
@@ -54,6 +55,7 @@ describe('Issue #133 Fix Validation', () => {
           code: '50000',
           name: 'Error'
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await supabase.rpc('user_has_worksheet_access', {

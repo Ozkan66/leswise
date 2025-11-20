@@ -152,13 +152,13 @@ export default function StudentGroupsPage() {
                                                 )}
 
                                                 <div className="flex flex-wrap gap-3 text-sm">
-                                                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary">
                                                         {group.type === 'klas' ? '🎓 Klas' : '👥 Community'}
                                                     </span>
 
                                                     <span className={`inline-flex items-center px-3 py-1 rounded-full ${group.memberStatus === 'active'
-                                                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                                            : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                                                        ? 'bg-green-50 text-green-700 border border-green-200'
+                                                        : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
                                                         }`}>
                                                         {group.memberStatus === 'active' ? '✓ Actief' : '⏳ Wacht op goedkeuring'}
                                                     </span>

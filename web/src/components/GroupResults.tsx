@@ -1,5 +1,30 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../utils/supabaseClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from "./ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Loader2, BarChart3 } from "lucide-react";
 
 interface GroupResultsProps {
   groupId: string;
@@ -30,7 +55,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
     setError("");
 
     try {
-      // First get all group members
+      // 1. Get all group members
       const { data: membersData, error: membersError } = await supabase
         .from("group_members")
         .select("user_id")
@@ -38,7 +63,8 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
         .eq("status", "active");
 
       if (membersError || !membersData) {
-        setError("Failed to fetch group members");
+        console.error("Error fetching members:", membersError);
+        setError("Kon groepsleden niet laden");
         setLoading(false);
         return;
       }
@@ -52,37 +78,69 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
         return;
       }
 
+      // 2. Fetch submissions for these users
       const { data: submissionsData, error: submissionsError } = await supabase
         .from("submissions")
-        .select(`
-          user_id,
-          worksheet_id,
-          score,
-          created_at,
-          user_profiles(first_name, last_name, email),
-          worksheets(title)
-        `)
+        .select("user_id, worksheet_id, score, created_at")
         .in("user_id", userIds);
 
       if (submissionsError) {
-        setError("Failed to fetch submission data");
+        console.error("Error fetching submissions:", submissionsError);
+        setError(`Kon resultaten niet laden: ${submissionsError.message}`);
         setLoading(false);
         return;
       }
 
-      // Transform and flatten the data
-      const formattedResults: SubmissionResult[] = (submissionsData || []).map((sub: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-        user_id: sub.user_id,
-        worksheet_id: sub.worksheet_id,
-        user_name: sub.user_profiles?.first_name && sub.user_profiles?.last_name
-          ? `${sub.user_profiles.first_name} ${sub.user_profiles.last_name}`
-          : sub.user_profiles?.email || 'Unknown User',
-        user_email: sub.user_profiles?.email || '',
-        worksheet_title: sub.worksheets?.title || 'Unknown Worksheet',
-        score: sub.score,
-        submitted_at: sub.created_at,
-        status: sub.score !== null ? 'Completed' : 'Submitted'
-      }));
+      if (!submissionsData || submissionsData.length === 0) {
+        setResults([]);
+        setWorksheets([]);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Fetch user profiles manually
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("user_profiles")
+        .select("user_id, first_name, last_name, email")
+        .in("user_id", userIds);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        // Continue without profiles if needed, but better to show error
+      }
+
+      // 4. Fetch worksheet details manually
+      const worksheetIds = Array.from(new Set(submissionsData.map(s => s.worksheet_id)));
+      const { data: worksheetsData, error: worksheetsError } = await supabase
+        .from("worksheets")
+        .select("id, title")
+        .in("id", worksheetIds);
+
+      if (worksheetsError) {
+        console.error("Error fetching worksheets:", worksheetsError);
+      }
+
+      // 5. Combine data in memory
+      const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]));
+      const worksheetsMap = new Map(worksheetsData?.map(w => [w.id, w]));
+
+      const formattedResults: SubmissionResult[] = submissionsData.map((sub) => {
+        const profile = profilesMap.get(sub.user_id);
+        const worksheet = worksheetsMap.get(sub.worksheet_id);
+
+        return {
+          user_id: sub.user_id,
+          worksheet_id: sub.worksheet_id,
+          user_name: profile?.first_name && profile?.last_name
+            ? `${profile.first_name} ${profile.last_name}`
+            : profile?.email || 'Onbekende Gebruiker',
+          user_email: profile?.email || '',
+          worksheet_title: worksheet?.title || 'Onbekend Werkblad',
+          score: sub.score,
+          submitted_at: sub.created_at,
+          status: sub.score !== null ? 'Completed' : 'Submitted'
+        };
+      });
 
       setResults(formattedResults);
 
@@ -94,7 +152,7 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
       setWorksheets(uniqueWorksheets);
 
     } catch (err) {
-      setError("An error occurred while fetching results");
+      setError("Er is een onverwachte fout opgetreden");
       console.error(err);
     }
 
@@ -126,183 +184,141 @@ export default function GroupResults({ groupId, groupName, onClose }: GroupResul
 
   const stats = getGroupStats();
 
-  if (loading) {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-      }}>
-        <div style={{ backgroundColor: 'white', padding: 20, borderRadius: 8 }}>
-          Loading group results...
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: 24,
-        borderRadius: 8,
-        width: '95%',
-        maxWidth: 900,
-        maxHeight: '90vh',
-        overflow: 'auto'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0 }}>Results for {groupName}</h2>
-          <button
-            onClick={onClose}
-            style={{
-              backgroundColor: 'transparent',
-              border: 'none',
-              fontSize: 24,
-              cursor: 'pointer',
-              padding: 4
-            }}
-          >
-            ×
-          </button>
-        </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <BarChart3 className="h-6 w-6 text-primary" />
+            Resultaten voor {groupName}
+          </DialogTitle>
+          <DialogDescription>
+            Bekijk de voortgang en scores van de groepsleden.
+          </DialogDescription>
+        </DialogHeader>
 
-        {error && (
-          <div style={{
-            color: 'red',
-            marginBottom: 16,
-            padding: 8,
-            backgroundColor: '#ffeaea',
-            borderRadius: 4
-          }}>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-destructive/10 text-destructive rounded-md">
             {error}
           </div>
-        )}
-
-        {/* Filter and Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
-          gap: 20,
-          alignItems: 'center',
-          marginBottom: 20,
-          padding: 16,
-          backgroundColor: '#f8f9fa',
-          borderRadius: 4
-        }}>
-          <div>
-            <label htmlFor="worksheet-filter" style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
-              Filter by Worksheet:
-            </label>
-            <select
-              id="worksheet-filter"
-              value={selectedWorksheet}
-              onChange={(e) => setSelectedWorksheet(e.target.value)}
-              style={{ padding: 8, border: '1px solid #ccc', borderRadius: 4, minWidth: 200 }}
-            >
-              <option value="all">All Worksheets</option>
-              {worksheets.map(w => (
-                <option key={w.id} value={w.id}>{w.title}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 16 }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#007bff' }}>{stats.totalSubmissions}</div>
-              <div style={{ fontSize: 12, color: '#666' }}>Total Submissions</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#28a745' }}>{stats.completedSubmissions}</div>
-              <div style={{ fontSize: 12, color: '#666' }}>Completed</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#ffc107' }}>{stats.averageScore}</div>
-              <div style={{ fontSize: 12, color: '#666' }}>Avg Score</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#6f42c1' }}>{stats.completionRate}%</div>
-              <div style={{ fontSize: 12, color: '#666' }}>Completion Rate</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Results Table */}
-        {filteredResults.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#666', padding: 40 }}>
-            No submissions found for this group.
-          </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8f9fa' }}>
-                  <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Student</th>
-                  <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Worksheet</th>
-                  <th style={{ padding: 12, textAlign: 'center', borderBottom: '1px solid #dee2e6' }}>Score</th>
-                  <th style={{ padding: 12, textAlign: 'center', borderBottom: '1px solid #dee2e6' }}>Status</th>
-                  <th style={{ padding: 12, textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Submitted</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredResults.map((result, index) => (
-                  <tr key={`${result.user_id}-${result.worksheet_id}-${index}`} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: 12 }}>
-                      <div style={{ fontWeight: 'bold' }}>{result.user_name}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>{result.user_email}</div>
-                    </td>
-                    <td style={{ padding: 12 }}>{result.worksheet_title}</td>
-                    <td style={{ padding: 12, textAlign: 'center' }}>
-                      {result.score !== null ? (
-                        <span style={{
-                          fontWeight: 'bold',
-                          color: result.score >= 75 ? '#28a745' : result.score >= 50 ? '#ffc107' : '#dc3545'
-                        }}>
-                          {result.score}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#666' }}>-</span>
-                      )}
-                    </td>
-                    <td style={{ padding: 12, textAlign: 'center' }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: 4,
-                        fontSize: 12,
-                        backgroundColor: result.status === 'Completed' ? '#d4edda' : '#fff3cd',
-                        color: result.status === 'Completed' ? '#155724' : '#856404'
-                      }}>
-                        {result.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      {new Date(result.submitted_at).toLocaleDateString()} {new Date(result.submitted_at).toLocaleTimeString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Inzendingen</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.totalSubmissions}</div>
+                  <p className="text-xs text-muted-foreground">Totaal aantal</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Voltooid</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.completedSubmissions}</div>
+                  <p className="text-xs text-muted-foreground">Nagekeken</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Gem. Score</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-amber-600">{stats.averageScore}</div>
+                  <p className="text-xs text-muted-foreground">Punten</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Voltooiing</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-600">{stats.completionRate}%</div>
+                  <p className="text-xs text-muted-foreground">Percentage</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filter */}
+            <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-lg">
+              <label className="text-sm font-medium whitespace-nowrap">Filter op Werkblad:</label>
+              <Select value={selectedWorksheet} onValueChange={setSelectedWorksheet}>
+                <SelectTrigger className="w-[300px]">
+                  <SelectValue placeholder="Selecteer een werkblad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle Werkbladen</SelectItem>
+                  {worksheets.map(w => (
+                    <SelectItem key={w.id} value={w.id}>{w.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Results Table */}
+            {filteredResults.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-lg border border-dashed">
+                Geen inzendingen gevonden voor deze selectie.
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Werkblad</TableHead>
+                      <TableHead className="text-center">Score</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead>Ingeleverd op</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredResults.map((result, index) => (
+                      <TableRow key={`${result.user_id}-${result.worksheet_id}-${index}`}>
+                        <TableCell>
+                          <div className="font-medium">{result.user_name}</div>
+                          <div className="text-xs text-muted-foreground">{result.user_email}</div>
+                        </TableCell>
+                        <TableCell>{result.worksheet_title}</TableCell>
+                        <TableCell className="text-center">
+                          {result.score !== null ? (
+                            <span className={
+                              result.score >= 75 ? "text-green-600 font-bold" :
+                                result.score >= 50 ? "text-amber-600 font-bold" :
+                                  "text-red-600 font-bold"
+                            }>
+                              {result.score}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={result.status === 'Completed' ? 'default' : 'secondary'}
+                            className={result.status === 'Completed' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''}>
+                            {result.status === 'Completed' ? 'Voltooid' : 'Ingeleverd'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {new Date(result.submitted_at).toLocaleDateString()} <span className="text-xs opacity-70">{new Date(result.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

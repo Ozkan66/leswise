@@ -114,7 +114,7 @@ export default function StudentDashboard() {
             <Link href="/student-submissions" className="block group">
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 transition-transform group-hover:scale-105 shadow-sm hover:shadow-md">
                 <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                  <div className="p-3 rounded-full bg-primary/10">
                     <span className="text-2xl">📚</span>
                   </div>
                   <div className="ml-4">
@@ -132,7 +132,7 @@ export default function StudentDashboard() {
             <Link href="/student-submissions" className="block group">
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 transition-transform group-hover:scale-105 shadow-sm hover:shadow-md">
                 <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                  <div className="p-3 rounded-full bg-green-50 border border-green-200">
                     <span className="text-2xl">✅</span>
                   </div>
                   <div className="ml-4">
