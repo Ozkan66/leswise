@@ -30,6 +30,7 @@ const WorksheetSubmissionsCards = ({ worksheet }: { worksheet: Worksheet }) => {
         .from("submissions")
         .select(`
           id, 
+          worksheet_id,
           user_id, 
           submitted_at,
           created_at, 
@@ -50,7 +51,7 @@ const WorksheetSubmissionsCards = ({ worksheet }: { worksheet: Worksheet }) => {
         // Fallback without join
         const { data: data2 } = await supabase
           .from("submissions")
-          .select("id, user_id, submitted_at, created_at, feedback, score")
+          .select("id, worksheet_id, user_id, submitted_at, created_at, feedback, score")
           .eq("worksheet_id", worksheet.id)
           .order("submitted_at", { ascending: false });
         if (data2) {
