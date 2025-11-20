@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { WorksheetElement } from "../types/database";
 
@@ -56,7 +56,8 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     if (worksheetId) fetchElements();
   }, [worksheetId]);
 
-  const renderElementContent = (el: WorksheetElement) => {
+  // Memoize renderElementContent to avoid recreating on each render
+  const renderElementContent = useCallback((el: WorksheetElement) => {
     try {
       // Handle content as either string (old format) or object (new format)
       const content = typeof el.content === 'string' 
@@ -128,9 +129,9 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
     } catch {
       return <div style={{ color: 'red' }}>Invalid content format</div>;
     }
-  };
+  }, []);
 
-  const handleEdit = (el: WorksheetElement) => {
+  const handleEdit = useCallback((el: WorksheetElement) => {
     setEditingId(el.id);
     try {
       // Handle content as either string (old format) or object (new format)
@@ -142,9 +143,9 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       // Fallback for invalid content format
       setEditContent({ text: typeof el.content === 'string' ? el.content : 'Invalid content' });
     }
-  };
+  }, []);
 
-  const handleEditSave = async (el: WorksheetElement) => {
+  const handleEditSave = useCallback(async (el: WorksheetElement) => {
     if (!editContent) {
       setEditingId(null);
       return;
@@ -173,7 +174,7 @@ export default function WorksheetElementList({ worksheetId }: { worksheetId: str
       .eq("worksheet_id", worksheetId)
       .order("position", { ascending: true });
     setElements(data || []);
-  };
+  }, [editContent, worksheetId]);
 
   const renderEditForm = (el: WorksheetElement) => {
     if (!editContent) return null;

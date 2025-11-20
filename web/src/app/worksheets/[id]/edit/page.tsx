@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../utils/supabaseClient';
@@ -227,8 +227,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Sortable Task Item Component
-const SortableTaskItem = ({
+// Sortable Task Item Component - Memoized to prevent unnecessary re-renders
+const SortableTaskItem = memo(function SortableTaskItem({
     task,
     index,
     onEdit,
@@ -238,7 +238,7 @@ const SortableTaskItem = ({
     index: number;
     onEdit: (task: Task) => void;
     onDelete: (id: string) => void;
-}) => {
+}) {
     const {
         attributes,
         listeners,
@@ -317,7 +317,7 @@ const SortableTaskItem = ({
             </Card>
         </div>
     );
-};
+});
 
 const AddTasksTab = ({
     worksheetId,
@@ -402,11 +402,12 @@ const AddTasksTab = ({
         }
     };
 
-    const handleDelete = async (taskId: string) => {
+    // Memoize handlers to prevent unnecessary re-renders of child components
+    const handleDelete = useCallback(async (taskId: string) => {
         setDeleteConfirmation({ show: true, taskId });
-    };
+    }, []);
 
-    const confirmDelete = async () => {
+    const confirmDelete = useCallback(async () => {
         if (!deleteConfirmation.taskId) return;
 
         const { error } = await supabase.from('tasks').delete().eq('id', deleteConfirmation.taskId);
@@ -419,37 +420,37 @@ const AddTasksTab = ({
             setDeleteConfirmation({ show: false, taskId: null });
             showNotification('Task deleted successfully!', 'success');
         }
-    };
+    }, [deleteConfirmation.taskId, onTaskDeleted]);
 
-    const cancelDelete = () => {
+    const cancelDelete = useCallback(() => {
         setDeleteConfirmation({ show: false, taskId: null });
-    };
+    }, []);
 
-    const handleAITasksGenerated = (generatedTasks: Task[]) => {
+    const handleAITasksGenerated = useCallback((generatedTasks: Task[]) => {
         generatedTasks.forEach(task => onTaskAdded(task));
         setShowAIGenerator(false);
         showNotification('Tasks generated successfully!', 'success');
-    };
+    }, [onTaskAdded]);
 
-    const handleEditTask = (task: Task) => {
+    const handleEditTask = useCallback((task: Task) => {
         setEditingTask(task);
         setActiveNewTaskType(null);
-    };
+    }, []);
 
-    const handleCreateTask = (type: string) => {
+    const handleCreateTask = useCallback((type: string) => {
         setActiveNewTaskType(type);
         setEditingTask(null);
         setIsTaskTypeSelectorOpen(false);
-    };
+    }, []);
 
-    const closeEditor = () => {
+    const closeEditor = useCallback(() => {
         setEditingTask(null);
         setActiveNewTaskType(null);
-    };
+    }, []);
 
-    const showNotification = (message: string, type: 'success' | 'error') => {
+    const showNotification = useCallback((message: string, type: 'success' | 'error') => {
         setNotification({ show: true, message, type });
-    };
+    }, []);
 
     const taskTypes = [
         { id: 'open-question', label: 'Open Question', description: 'Standard question with text answer', icon: '📝' },
