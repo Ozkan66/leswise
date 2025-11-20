@@ -71,11 +71,11 @@ describe('JoinGroupForm', () => {
     render(<JoinGroupForm onGroupJoined={onGroupJoined} />);
 
     // Enter jumper code
-    const codeInput = screen.getByPlaceholderText('Enter 6-character code');
+    const codeInput = screen.getByPlaceholderText('ABC123');
     fireEvent.change(codeInput, { target: { value: 'ABC123' } });
 
     // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Join Group' });
+    const submitButton = screen.getByRole('button', { name: 'Deelnemen' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -142,11 +142,11 @@ describe('JoinGroupForm', () => {
     render(<JoinGroupForm onGroupJoined={onGroupJoined} />);
 
     // Enter jumper code
-    const codeInput = screen.getByPlaceholderText('Enter 6-character code');
+    const codeInput = screen.getByPlaceholderText('ABC123');
     fireEvent.change(codeInput, { target: { value: 'DEF456' } });
 
     // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Join Group' });
+    const submitButton = screen.getByRole('button', { name: 'Deelnemen' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -189,11 +189,11 @@ describe('JoinGroupForm', () => {
     render(<JoinGroupForm />);
 
     // Enter invalid jumper code (6 characters but not found)
-    const codeInput = screen.getByPlaceholderText('Enter 6-character code');
+    const codeInput = screen.getByPlaceholderText('ABC123');
     fireEvent.change(codeInput, { target: { value: 'NOTFND' } });
 
     // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Join Group' });
+    const submitButton = screen.getByRole('button', { name: 'Deelnemen' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -242,11 +242,11 @@ describe('JoinGroupForm', () => {
     render(<JoinGroupForm />);
 
     // Enter jumper code
-    const codeInput = screen.getByPlaceholderText('Enter 6-character code');
+    const codeInput = screen.getByPlaceholderText('ABC123');
     fireEvent.change(codeInput, { target: { value: 'ABC123' } });
 
     // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Join Group' });
+    const submitButton = screen.getByRole('button', { name: 'Deelnemen' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -264,11 +264,11 @@ describe('JoinGroupForm', () => {
     render(<JoinGroupForm />);
 
     // Enter jumper code
-    const codeInput = screen.getByPlaceholderText('Enter 6-character code');
+    const codeInput = screen.getByPlaceholderText('ABC123');
     fireEvent.change(codeInput, { target: { value: 'ABC123' } });
 
     // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Join Group' });
+    const submitButton = screen.getByRole('button', { name: 'Deelnemen' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -279,7 +279,7 @@ describe('JoinGroupForm', () => {
   test('should auto-format jumper code to uppercase', () => {
     render(<JoinGroupForm />);
 
-    const codeInput = screen.getByPlaceholderText('Enter 6-character code');
+    const codeInput = screen.getByPlaceholderText('ABC123');
     fireEvent.change(codeInput, { target: { value: 'abc123' } });
 
     expect(codeInput).toHaveValue('ABC123');
@@ -288,10 +288,10 @@ describe('JoinGroupForm', () => {
   test('should disable submit button for invalid code length', () => {
     render(<JoinGroupForm />);
 
-    const submitButton = screen.getByRole('button', { name: 'Join Group' });
+    const submitButton = screen.getByRole('button', { name: 'Deelnemen' });
     expect(submitButton).toBeDisabled();
 
-    const codeInput = screen.getByPlaceholderText('Enter 6-character code');
+    const codeInput = screen.getByPlaceholderText('ABC123');
     fireEvent.change(codeInput, { target: { value: 'ABC' } });
 
     expect(submitButton).toBeDisabled();
